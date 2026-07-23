@@ -4,6 +4,8 @@
 
 Claude Code や Cursor などの AI エージェントから Figma を直接操作できる MCP ブリッジ。**30 の統合ツール** + Plugin API エスケープハッチで、読み取り・作成・編集・品質チェックまで対応します。
 
+<img src="assets/plugin-ui.png" alt="Plugin UI" width="380" />
+
 
 ```
 AI (Claude Code / Cursor)

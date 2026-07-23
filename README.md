@@ -4,6 +4,8 @@ English | [日本語](README.ja.md) | [中文](README.zh.md)
 
 An MCP bridge that lets any AI agent (Claude Code, Cursor, …) drive Figma directly — read, create, edit, and quality-check designs with **30 consolidated tools** plus a Plugin-API escape hatch.
 
+<img src="assets/plugin-ui.png" alt="Plugin UI" width="380" />
+
 
 ```
 AI (Claude Code / Cursor)

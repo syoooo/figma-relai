@@ -4,6 +4,8 @@
 
 让任意 AI 智能体（Claude Code、Cursor 等）直接操作 Figma 的 MCP 桥——**30 个整合工具** + Plugin API 逃生门，覆盖设计的读取、创建、编辑与质量检查。
 
+<img src="assets/plugin-ui.png" alt="Plugin UI" width="380" />
+
 
 ```
 AI (Claude Code / Cursor)
