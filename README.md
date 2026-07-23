@@ -57,7 +57,7 @@ Requires [Node.js](https://nodejs.org/) 18+, [Figma Desktop](https://www.figma.c
 
 ### 1. Install the Figma plugin
 
-[Install from Figma Community](https://www.figma.com/community/plugin/1613474334525847301) and run it. It connects automatically and remembers its room across restarts.
+[Install from Figma Community](https://www.figma.com/community/plugin/1662131506342078142) and run it. It connects automatically and remembers its room across restarts.
 
 ### 2. Register the MCP server
 

@@ -57,7 +57,7 @@ Figma                 … デザインデータの読み書き
 
 ### 1. Figma プラグインをインストール
 
-[Figma Community からインストール](https://www.figma.com/community/plugin/1613474334525847301)して実行するだけ。自動的に接続し、ルームは再起動をまたいで記憶されます。
+[Figma Community からインストール](https://www.figma.com/community/plugin/1662131506342078142)して実行するだけ。自動的に接続し、ルームは再起動をまたいで記憶されます。
 
 ### 2. MCP サーバーを登録
 
