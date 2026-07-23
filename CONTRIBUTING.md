@@ -7,7 +7,7 @@ Thanks for your interest in contributing!
 Prerequisites: [Bun](https://bun.sh/) v1.0+, [Figma Desktop](https://www.figma.com/downloads/).
 
 ```bash
-git clone <repo-url> figma-relai
+git clone https://github.com/syoooo/figma-relai.git
 cd figma-relai
 bun install
 bun run build

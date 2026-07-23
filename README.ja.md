@@ -82,7 +82,7 @@ Cursor の場合は `.cursor/mcp.json` に：
 ## ソースから（コントリビューター向け）
 
 ```bash
-git clone <repo-url> figma-relai
+git clone https://github.com/syoooo/figma-relai.git
 cd figma-relai
 bun setup
 ```

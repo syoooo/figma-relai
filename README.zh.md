@@ -82,7 +82,7 @@ Cursor 用户在 `.cursor/mcp.json` 中添加：
 ## 从源码运行（贡献者）
 
 ```bash
-git clone <repo-url> figma-relai
+git clone https://github.com/syoooo/figma-relai.git
 cd figma-relai
 bun setup
 ```

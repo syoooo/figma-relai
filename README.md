@@ -82,7 +82,7 @@ That's it. The MCP server hosts the relay itself, discovers the plugin's room, a
 ## From source (contributors)
 
 ```bash
-git clone <repo-url> figma-relai
+git clone https://github.com/syoooo/figma-relai.git
 cd figma-relai
 bun setup
 ```

@@ -14,7 +14,7 @@ Key properties and limitations:
 - **The relay binds to `127.0.0.1` by default.** Setting `HOST=0.0.0.0` exposes the relay to your network; only do this on a network where you trust every host, since it allows session eavesdropping and hijacking by anyone who obtains or brute-forces a room name.
 - **The Figma plugin's network access is restricted** by its manifest to `ws://localhost:9055`; it cannot reach other hosts.
 - **No eval:** the plugin executes a fixed set of named commands; it does not execute arbitrary code sent over the wire.
-- The MCP server runs with the permissions of the AI client that spawned it. Anything the AI can do through the 147 tools (including deleting nodes and pages) happens in whatever Figma file the plugin is open in.
+- The MCP server runs with the permissions of the AI client that spawned it. Anything the AI can do through its tools (including deleting nodes and pages) happens in whatever Figma file the plugin is open in.
 
 ## Reporting a vulnerability
 

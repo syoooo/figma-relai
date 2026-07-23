@@ -4,7 +4,7 @@
 
 Initial release.
 
-- **29 consolidated MCP tools** over a granular, precondition-checked plugin command layer: context/analysis/verification (semantic layer with summaries and recommended next steps), declarative editing (`set_properties`, `create_node`, `edit_structure`, `set_text`), design-system management (`manage_components` / `manage_variables` / `manage_styles`, library imports), assets, annotations, and `batch_execute`.
+- **30 consolidated MCP tools** over a granular, precondition-checked plugin command layer: context/analysis/verification (semantic layer with summaries and recommended next steps), declarative editing (`set_properties`, `create_node`, `edit_structure`, `set_text`), design-system management (`manage_components` / `manage_variables` / `manage_styles`, library imports), assets, annotations, and `batch_execute`.
 - **`execute_figma`**: run JavaScript against the Figma Plugin API in the plugin sandbox — gated by a persisted "Allow code execution" toggle in the plugin UI (default on); console output captured, results serialized through a node budget.
 - **Embedded relay**: the MCP server hosts the WebSocket relay on 127.0.0.1:9055 (bind-or-connect; multiple MCP clients negotiate a host automatically, with takeover when the host exits). A standalone relay (`bun socket`) remains for remote setups.
 - **Zero-copy pairing**: the plugin persists its room and auto-connects; the server persists it too, auto-rejoins after reconnects, and auto-discovers the plugin's room — `join_room` exists only to disambiguate multiple plugins. Presence is displayed in the plugin ("AI connected ✓") and turns plugin-absent timeouts into immediate errors.
