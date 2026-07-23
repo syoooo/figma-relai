@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Fix: on rapid server restarts (MCP client reconnect, successive CLI runs), the new process could hit the relay port-handoff window and stay disconnected permanently — host takeover now also runs when the initial connection fails, so the first command self-heals.
+
 ## 0.1.0
 
 Initial release.
