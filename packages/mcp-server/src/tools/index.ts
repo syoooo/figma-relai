@@ -19,6 +19,7 @@ import * as library from "./core/library.js";
 import * as annotate from "./core/annotate.js";
 import * as read from "./core/read.js";
 import * as execute from "./core/execute.js";
+import * as comments from "./core/comments.js";
 import * as batch from "./batch.js";
 
 // v2 semantic layer: context, analysis, verification
@@ -43,6 +44,7 @@ const moduleCategories: [ToolModuleLike, string][] = [
   [navigate, "document"],
   [assets, "assets"],
   [annotate, "annotations"],
+  [comments, "comments"],
   [batch, "advanced"],
   [execute, "advanced"],
 ];
@@ -92,26 +94,36 @@ export function registerRoomTool(
 }
 
 // Designer-activity polling tool; events also piggyback on command results
-// as a designer_events field
+// as a designer_events field. scope:"agent" returns this session's own
+// command log — an audit trail of what the AI actually did.
 export function registerEventsTool(
   server: McpServer,
-  consumeEvents: () => unknown[]
+  consumeEvents: () => unknown[],
+  getSessionLog: () => unknown[]
 ): void {
   server.tool(
     "get_events",
-    "What has the designer done since the last command? Returns buffered selection/node/page-change events (also included as designer_events on command results). Useful after idle periods or before acting on 'the selection'.",
-    {},
+    "Activity since the last check. scope 'designer' (default): the designer's selection/node/page changes (also piggybacked as designer_events on command results). scope 'agent': this session's own command log — every plugin command sent, with success/duration — useful for summarizing what was changed. 'all': both.",
+    {
+      scope: z.enum(["designer", "agent", "all"]).optional(),
+    },
     { readOnlyHint: true },
-    async () => {
-      const events = consumeEvents();
+    async ({ scope = "designer" }) => {
+      const parts: Record<string, unknown> = {};
+      if (scope === "designer" || scope === "all") {
+        parts.designer_events = consumeEvents();
+      }
+      if (scope === "agent" || scope === "all") {
+        parts.session_log = getSessionLog();
+      }
+      const empty = Object.values(parts).every((v) => Array.isArray(v) && v.length === 0);
       return {
         content: [
           {
             type: "text" as const,
-            text:
-              events.length === 0
-                ? "No designer activity since the last check."
-                : JSON.stringify(events, null, 2),
+            text: empty
+              ? "No activity recorded."
+              : JSON.stringify(parts, null, 2),
           },
         ],
       };

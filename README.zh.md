@@ -2,13 +2,13 @@
 
 [English](README.md) | [日本語](README.ja.md) | 中文
 
-让任意 AI 智能体（Claude Code、Cursor 等）直接操作 Figma 的 MCP 桥——**29 个整合工具** + Plugin API 逃生门，覆盖设计的读取、创建、编辑与质量检查。
+让任意 AI 智能体（Claude Code、Cursor 等）直接操作 Figma 的 MCP 桥——**30 个整合工具** + Plugin API 逃生门，覆盖设计的读取、创建、编辑与质量检查。
 
 
 ```
 AI (Claude Code / Cursor)
   ↕ stdio
-MCP Server            … 29 个工具、分析、验证
+MCP Server            … 30 个工具、分析、验证
   (内嵌 relay)         … 端口 9055 的 WebSocket 房间中枢
   ↕ WebSocket
 Figma Plugin          … 执行 Figma API 调用
@@ -89,12 +89,12 @@ bun setup
 
 ---
 
-## 29 个工具
+## 30 个工具
 
 | 分组 | 工具 |
 |------|------|
 | 上下文 | `get_document_overview` · `get_selection_context` · `get_node_details` · `search_nodes` · `get_design_tokens` · `screenshot` · `get_events` |
-| 分析 | `analyze_design`（color / layout / components / accessibility）· `diff_nodes` |
+| 分析 | `analyze_design`（color / layout / components / accessibility / **overall** — 加权 0-100 健康评分）· `diff_nodes`（双节点比较或检查点保存/对比） |
 | 验证 | `verify_changes` · `validate_design_rules` · `verify_visual` |
 | 读取 | `get_node_data`（summary / tree / full / css / variables） |
 | 创建与编辑 | `create_node` · `set_properties` · `set_text` · `edit_structure` |
@@ -103,6 +103,7 @@ bun setup
 | 文档 | `manage_pages` · `navigate` |
 | 资产 | `export_asset` · `add_image` |
 | 标注 | `annotate` |
+| 评论 | `manage_comments` — 列出 / 添加 / 回复 / 删除（需 `FIGMA_TOKEN`，见下） |
 | 高级 | `batch_execute` · `execute_figma` · `join_room` |
 
 每个工具都是自描述的，AI 能看到完整的参数文档。整合后的工具面把常驻上下文控制在 LLM 能可靠使用工具的范围内，插件侧执行的仍是带前置条件校验的细粒度命令。随包附带 6 份 skill 文档（token 策略、组件规约、审计工作流、`execute_figma` 用 Plugin API 速查表），以 MCP prompts 形式提供。
@@ -114,6 +115,7 @@ bun setup
 - **活动流** — 每条命令的状态、耗时与错误文本；有节点目标的条目可点击定位到画布。
 - **停止按钮** — 取消批量操作中排队的工作（正在执行的单条原子命令会跑完，这是 JavaScript 单线程的限制）。
 - **设计师事件** — 选区/节点/页面变更通过下一次响应的 `designer_events`（或 `get_events`）送达 AI，无需轮询。
+- **审计轨迹** — `get_events` 的 scope `agent` 返回本会话 AI 执行过的全部命令（含结果与耗时）；`diff_nodes` 的检查点能精确展示一个节点在编辑会话前后的变化。
 - **中英日 UI** — 语言切换会被记住。
 
 ## 端口与安全
@@ -121,6 +123,7 @@ bun setup
 - relay 只绑定 **127.0.0.1:9055**。Figma 插件沙箱在 manifest 中只允许 `ws://localhost:9055–9057`——**其他端口不修改 `manifest.json` 就无法工作**，因此 UI 中有意不提供端口设置。
 - 房间名包含加密随机后缀。威胁模型见 [SECURITY.md](SECURITY.md)。
 - `execute_figma` 在插件沙箱中运行 AI 编写的代码。默认开启（活动流中可见），可用插件的"允许代码执行"开关关闭。
+- 评论走 Figma REST API，需要个人访问令牌：在 figma.com → Settings → Security 生成后，在 MCP 配置中加入 `"env": { "FIGMA_TOKEN": "figd_..." }`。令牌只保存在你的配置文件里、只发往 `api.figma.com`；其余所有工具无需令牌即可使用。
 
 ## 高级用法：独立 relay
 

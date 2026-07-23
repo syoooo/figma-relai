@@ -2,13 +2,13 @@
 
 English | [日本語](README.ja.md) | [中文](README.zh.md)
 
-An MCP bridge that lets any AI agent (Claude Code, Cursor, …) drive Figma directly — read, create, edit, and quality-check designs with **29 consolidated tools** plus a Plugin-API escape hatch.
+An MCP bridge that lets any AI agent (Claude Code, Cursor, …) drive Figma directly — read, create, edit, and quality-check designs with **30 consolidated tools** plus a Plugin-API escape hatch.
 
 
 ```
 AI (Claude Code / Cursor)
   ↕ stdio
-MCP Server            … 29 tools, analysis, verification
+MCP Server            … 30 tools, analysis, verification
   (embedded relay)    … WebSocket room hub on port 9055
   ↕ WebSocket
 Figma Plugin          … executes Figma API calls
@@ -89,12 +89,12 @@ Requires [Bun](https://bun.sh/) v1.0+ (bash script — on Windows, use WSL). Ins
 
 ---
 
-## The 29 tools
+## The 30 tools
 
 | Group | Tools |
 |-------|-------|
 | Context | `get_document_overview` · `get_selection_context` · `get_node_details` · `search_nodes` · `get_design_tokens` · `screenshot` · `get_events` |
-| Analysis | `analyze_design` (color / layout / components / accessibility) · `diff_nodes` |
+| Analysis | `analyze_design` (color / layout / components / accessibility / **overall** — weighted 0-100 health score) · `diff_nodes` (two nodes, or checkpoint save/compare) |
 | Verification | `verify_changes` · `validate_design_rules` · `verify_visual` |
 | Read | `get_node_data` (summary / tree / full / css / variables) |
 | Create & edit | `create_node` · `set_properties` · `set_text` · `edit_structure` |
@@ -103,6 +103,7 @@ Requires [Bun](https://bun.sh/) v1.0+ (bash script — on Windows, use WSL). Ins
 | Document | `manage_pages` · `navigate` |
 | Assets | `export_asset` · `add_image` |
 | Annotations | `annotate` |
+| Comments | `manage_comments` — list / add / reply / delete (requires `FIGMA_TOKEN`, see below) |
 | Advanced | `batch_execute` · `execute_figma` · `join_room` |
 
 Each tool is self-describing; the AI sees full parameter docs. The consolidated surface keeps the always-loaded tool context small — well inside the range where LLMs use tools reliably — while the plugin executes granular, precondition-checked commands underneath. Six skill documents (token strategy, component conventions, audit workflows, a Plugin API cheat sheet for `execute_figma`) ship as MCP prompts.
@@ -114,6 +115,7 @@ Each tool is self-describing; the AI sees full parameter docs. The consolidated 
 - **Activity feed** — every command with status, duration, and error text; entries with a node target are click-to-focus on canvas.
 - **Stop button** — cancels queued work in batch operations (the in-flight atomic command finishes; that's a JavaScript single-thread limit).
 - **Designer events** — selection / node / page changes reach the AI as `designer_events` on the next response (or via `get_events`), so it knows what you did without polling.
+- **Audit trail** — `get_events` scope `agent` returns every command the AI ran this session (with outcomes and durations), and `diff_nodes` checkpoints show exactly what changed on a node across an editing session.
 - **English / Japanese / Chinese UI** — toggle persists.
 
 ## Ports & security
@@ -121,6 +123,7 @@ Each tool is self-describing; the AI sees full parameter docs. The consolidated 
 - The relay binds **127.0.0.1:9055** only. Figma's plugin sandbox allowlists `ws://localhost:9055–9057` in the manifest — **other ports cannot work** without editing `manifest.json`; there is deliberately no port setting in the UI.
 - Room names include a crypto-random suffix. Anyone on your machine who knows a room name can join it — see [SECURITY.md](SECURITY.md) for the threat model.
 - `execute_figma` runs AI-authored code in the plugin sandbox. It is on by default (visible in the activity feed) and can be disabled with the plugin's "Allow code execution" toggle.
+- Comments use Figma's REST API, which needs a personal access token: generate one at figma.com → Settings → Security, then set `"env": { "FIGMA_TOKEN": "figd_..." }` in your MCP config. The token stays in your config and is sent only to `api.figma.com`; every other tool works without it.
 
 ## Advanced: standalone relay
 

@@ -11,5 +11,8 @@ Initial release.
 - **Plugin UI**: English/Japanese toggle, live activity feed (status, duration, click-to-focus), Stop button with cooperative cancellation, reconnection without losing the connected view, tool list generated at build time.
 - **Designer events**: selection/node/page changes are buffered (self-edits suppressed) and surfaced as `designer_events` on responses plus a `get_events` tool. `verify_visual` combines screenshot and property assertions.
 - **Errors are actionable**: plugin errors carry command, node id, and node type; handlers validate preconditions (node types, auto-layout membership, dimension bounds, text ranges, gradient stops) and messages name the fix. Schemas reject impossible values at the MCP boundary.
+- **Design health score**: `analyze_design` aspect `overall` runs all four audits and returns a weighted 0-100 score with per-category breakdown. Accessibility checks follow WCAG thresholds (3:1 for large text, 4.5:1 for body), factor fill/node opacity into contrast, flag text over image/gradient backgrounds, and catch sub-11px text.
+- **Audit trail**: `get_events` scope `agent` returns the session's full command log (outcomes, durations); `diff_nodes` gains checkpoint save/compare to show exactly what changed on a node across an editing session.
+- **Comments** (`manage_comments`): list/add/reply/delete file comments — including node-anchored ones — via Figma's REST API. Opt-in with a `FIGMA_TOKEN` env var; every other tool works without it. The file key is auto-detected from the open plugin when possible.
 - Six skill documents ship as MCP prompts, including a Plugin API cheat sheet for `execute_figma`.
 - MIT licensed; unit tests (`bun test`) and CI (build, typecheck, test).

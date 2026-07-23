@@ -13,10 +13,12 @@ registerHandler("move_node", async (params) => {
 registerHandler("resize_node", async (params) => {
   const node = await resolveNode(params.nodeId as string);
   assertSupports(node, "resize");
-  const width = params.width as number;
-  const height = params.height as number;
+  // Partial resize keeps the other dimension (set_properties may send just one)
+  const sized = node as SceneNode & { width: number; height: number; resize: (w: number, h: number) => void };
+  const width = (params.width as number | undefined) ?? sized.width;
+  const height = (params.height as number | undefined) ?? sized.height;
   assertPositiveSize(width, height);
-  (node as SceneNode & { resize: (w: number, h: number) => void }).resize(width, height);
+  sized.resize(width, height);
   return { id: node.id, name: node.name, width, height };
 });
 

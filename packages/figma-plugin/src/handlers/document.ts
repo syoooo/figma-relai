@@ -65,3 +65,9 @@ registerHandler("read_my_design", async (params) => {
     nodes: selection.map((node) => serializeNode(node, opts)),
   };
 });
+
+registerHandler("get_file_info", async () => {
+  // fileKey is undefined in some contexts (e.g. unsaved drafts); callers
+  // fall back to asking for the file URL
+  return { fileKey: figma.fileKey ?? null, fileName: figma.root.name };
+});

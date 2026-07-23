@@ -5,6 +5,7 @@ import type { SendCommandFn } from "../../tool-registry.js";
 import { standardResult } from "../../semantic/response.js";
 import { errorResult, noSelectionError } from "../../semantic/errors.js";
 import { normalizeNode } from "../../semantic/normalize.js";
+import { computeHealthScore, type HealthInputs } from "../../semantic/health.js";
 import { rgbaToHex } from "@figma-relai/shared";
 import type {
   ColorUsageData,
@@ -50,18 +51,104 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
 
   server.tool(
     "analyze_design",
-    "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), or accessibility (contrast ratios, touch target sizes). Returns issues with fix suggestions. Defaults to the current selection.",
+    "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), or overall (runs all four and returns a weighted 0-100 health score with per-category breakdown — good for audits and reports). Defaults to the current selection.",
     {
-      aspect: z.enum(["color", "layout", "components", "accessibility"]),
+      aspect: z.enum(["color", "layout", "components", "accessibility", "overall"]),
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
     },
     { readOnlyHint: true },
     async ({ aspect, nodeId }) => {
+      if (aspect === "overall") {
+        return runOverallAudit(aspectHandlers, nodeId);
+      }
       const handler = aspectHandlers.get(ASPECT_TOOL[aspect]);
       if (!handler) throw new Error(`Unknown aspect: ${aspect}`);
       return handler({ nodeId });
     }
   );
+}
+
+// Runs all four aspect analyses and folds them into one weighted score.
+// A failed aspect is excluded and the remaining weights renormalize.
+async function runOverallAudit(
+  aspectHandlers: Map<string, (args: { nodeId?: string }) => Promise<CallToolResult>>,
+  nodeId?: string
+): Promise<CallToolResult> {
+  const parse = (result: CallToolResult): any => {
+    try {
+      const text = (result.content?.[0] as { text?: string })?.text ?? "";
+      const parsed = JSON.parse(text);
+      return parsed?.data ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const run = async (tool: string) => {
+    const handler = aspectHandlers.get(tool);
+    if (!handler) return null;
+    try {
+      return parse(await handler({ nodeId }));
+    } catch {
+      return null;
+    }
+  };
+
+  const [color, layout, components, accessibility] = await Promise.all([
+    run("analyze_color_usage"),
+    run("analyze_layout_quality"),
+    run("analyze_component_health"),
+    run("analyze_accessibility"),
+  ]);
+
+  const inputs: HealthInputs = {
+    color: color
+      ? { tokenCoverage: color.tokenCoverage ?? 0, unboundCount: color.unboundCount ?? 0 }
+      : null,
+    layout: layout
+      ? {
+          autoLayoutCoverage: layout.autoLayoutCoverage ?? 0,
+          issueCount: layout.issues?.length ?? 0,
+        }
+      : null,
+    components: components
+      ? {
+          totalInstances: components.totalInstances ?? 0,
+          detachedCount: components.detachedCount ?? 0,
+        }
+      : null,
+    accessibility: accessibility ? { issueCount: accessibility.issueCount ?? 0 } : null,
+  };
+
+  const health = computeHealthScore(inputs);
+  const excluded = (Object.keys(inputs) as Array<keyof HealthInputs>).filter((k) => !inputs[k]);
+
+  const worst = [...health.categories].sort((a, b) => a.score - b.score)[0];
+  return standardResult({
+    summary: `Design health: ${health.score}/100 (grade ${health.grade}). Weakest area: ${worst ? `${worst.category} at ${worst.score}` : "n/a"}.`,
+    data: {
+      ...health,
+      ...(excluded.length > 0 ? { excluded } : {}),
+      details: { color, layout, components, accessibility },
+    },
+    warnings:
+      health.grade === "A"
+        ? []
+        : health.categories
+            .filter((c) => c.score < 75)
+            .map((c) => ({
+              category: "general" as const,
+              message: `${c.category}: ${c.score}/100 — ${c.note}`,
+            })),
+    recommended_next: worst
+      ? [
+          {
+            tool: "analyze_design",
+            reason: `Drill into the weakest area with aspect: "${worst.category}"`,
+          },
+        ]
+      : [],
+  });
 }
 
 function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): void {
@@ -328,16 +415,85 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
   );
 
   // ─── diff_nodes ─────────────────────────────────────────────────
+  const CHECKPOINT_KEY = "relai.checkpoint";
   server.tool(
     "diff_nodes",
-    "Compare two nodes and list their differences (fills, strokes, size, layout, etc.). Use to verify changes or check consistency between similar elements. Follow with update_node to align differences.",
+    "Compare two nodes and list their differences (fills, strokes, size, layout, etc.), or audit changes over time with checkpoints: checkpoint:\"save\" snapshots nodeIdA's key properties; checkpoint:\"compare\" later diffs the current state against that snapshot — useful before/after an editing session to show the designer exactly what changed.",
     {
-      nodeIdA: z.string().describe("First node ID"),
-      nodeIdB: z.string().describe("Second node ID"),
+      nodeIdA: z.string().describe("First node ID (or the checkpoint target)"),
+      nodeIdB: z.string().optional().describe("Second node ID (omit when using checkpoint)"),
+      checkpoint: z.enum(["save", "compare"]).optional()
+        .describe("save: snapshot nodeIdA now; compare: diff current vs saved snapshot"),
     },
     { readOnlyHint: true },
-    async ({ nodeIdA, nodeIdB }) => {
+    async ({ nodeIdA, nodeIdB, checkpoint }) => {
       try {
+        if (checkpoint === "save") {
+          const node = (await sendCommand("get_node_info", { nodeId: nodeIdA, depth: 2 })) as any;
+          if (!node) return errorResult("invalid_input", `Node '${nodeIdA}' not found`, { suggestion: "Check node ID", tool: "search_nodes" });
+          const summary = normalizeNode(node);
+          await sendCommand("set_plugin_data", {
+            nodeId: nodeIdA,
+            key: CHECKPOINT_KEY,
+            value: JSON.stringify({ ts: Date.now(), name: node.name, summary }),
+          });
+          return standardResult({
+            summary: `Checkpoint saved for '${node.name}' (${nodeIdA}). Run diff_nodes with checkpoint:"compare" after editing to see what changed.`,
+            data: { nodeId: nodeIdA, saved: true },
+            recommended_next: [],
+          });
+        }
+
+        if (checkpoint === "compare") {
+          const [node, stored] = await Promise.all([
+            sendCommand("get_node_info", { nodeId: nodeIdA, depth: 2 }) as Promise<any>,
+            sendCommand("get_plugin_data", { nodeId: nodeIdA, key: CHECKPOINT_KEY }) as Promise<any>,
+          ]);
+          if (!node) return errorResult("invalid_input", `Node '${nodeIdA}' not found`, { suggestion: "Check node ID", tool: "search_nodes" });
+          const raw = typeof stored === "string" ? stored : stored?.value;
+          if (!raw) {
+            return errorResult("invalid_input", `No checkpoint saved on '${nodeIdA}'`, {
+              suggestion: 'Save one first with checkpoint:"save"', tool: "diff_nodes",
+            });
+          }
+          const saved = JSON.parse(raw);
+          const before = saved.summary;
+          const after = normalizeNode(node);
+
+          const differences: NodeDiffField[] = [];
+          if (before && after) {
+            compareField(differences, "type", before.type, after.type);
+            compareField(differences, "fill", before.fill, after.fill);
+            compareField(differences, "stroke", before.stroke, after.stroke);
+            compareField(differences, "cornerRadius", before.cornerRadius, after.cornerRadius);
+            compareField(differences, "opacity", before.opacity, after.opacity);
+            compareField(differences, "width", before.size?.width, after.size.width);
+            compareField(differences, "height", before.size?.height, after.size.height);
+            compareField(differences, "layout.mode", before.layout?.mode, after.layout?.mode);
+            compareField(differences, "layout.gap", before.layout?.gap, after.layout?.gap);
+            compareField(differences, "layout.padding", before.layout?.padding, after.layout?.padding);
+          }
+          const age = Math.round((Date.now() - (saved.ts ?? Date.now())) / 1000);
+          return standardResult({
+            summary: differences.length === 0
+              ? `'${node.name}' is unchanged since the checkpoint ${age}s ago`
+              : `${differences.length} propert${differences.length === 1 ? "y" : "ies"} changed on '${node.name}' since the checkpoint ${age}s ago`,
+            data: {
+              nodeId: nodeIdA,
+              checkpointTs: saved.ts,
+              identical: differences.length === 0,
+              differences,
+            },
+            recommended_next: [],
+          });
+        }
+
+        if (!nodeIdB) {
+          return errorResult("invalid_input", "Provide nodeIdB, or use checkpoint:\"save\"/\"compare\" with nodeIdA alone", {
+            suggestion: "Two-node diff needs both ids", tool: "diff_nodes",
+          });
+        }
+
         const [nodeA, nodeB] = await Promise.all([
           sendCommand("get_node_info", { nodeId: nodeIdA, depth: 2 }) as Promise<any>,
           sendCommand("get_node_info", { nodeId: nodeIdB, depth: 2 }) as Promise<any>,
@@ -484,7 +640,7 @@ function analyzeLayoutNode(node: any, issues: LayoutIssue[], _counters: { totalF
   }
 }
 
-function checkAccessibility(node: any, parentBgColor: any, issues: AccessibilityIssue[]) {
+function checkAccessibility(node: any, parentBg: any, issues: AccessibilityIssue[]) {
   // Check touch target sizes for interactive elements
   if (node.type === "INSTANCE" || node.name?.toLowerCase().includes("button")) {
     const w = node.width ?? node.absoluteBoundingBox?.width ?? 0;
@@ -498,35 +654,87 @@ function checkAccessibility(node: any, parentBgColor: any, issues: Accessibility
     }
   }
 
-  // Check text contrast (simplified — uses parent fill as background)
-  if (node.type === "TEXT" && node.fills?.length > 0 && parentBgColor) {
-    const textFill = node.fills.find((f: any) => f.type === "SOLID" && f.visible !== false);
-    if (textFill?.color) {
-      const ratio = calculateContrastRatio(textFill.color, parentBgColor);
-      if (ratio < 4.5) {
+  if (node.type === "TEXT") {
+    const fontSize = typeof node.fontSize === "number" ? node.fontSize : null;
+    const fontWeight = typeof node.fontWeight === "number" ? node.fontWeight : 400;
+
+    // Minimum readable size (common floor; WCAG has no hard px but <11 is trouble)
+    if (fontSize !== null && fontSize < 11) {
+      issues.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        issue: `Text size ${fontSize}px is below the 11px readability floor`,
+      });
+    }
+
+    const textFill = node.fills?.find((f: any) => f.type === "SOLID" && f.visible !== false);
+    if (textFill?.color && parentBg?.color) {
+      if (parentBg.solid) {
+        // WCAG 1.4.3: large text (≥24px, or ≥18.66px bold) needs 3:1; else 4.5:1.
+        // Effective color accounts for fill and node opacity blended over the bg.
+        const alpha =
+          (textFill.opacity ?? 1) *
+          (typeof node.opacity === "number" ? node.opacity : 1) *
+          (textFill.color.a ?? 1);
+        const effective = blendOver(textFill.color, parentBg.color, alpha);
+        const isLarge =
+          fontSize !== null && (fontSize >= 24 || (fontSize >= 18.66 && fontWeight >= 700));
+        const required = isLarge ? 3 : 4.5;
+        const ratio = calculateContrastRatio(effective, parentBg.color);
+        if (ratio < required) {
+          issues.push({
+            nodeId: node.id,
+            nodeName: node.name,
+            issue: `Low contrast ratio: ${ratio.toFixed(1)}:1 (minimum ${required}:1 for ${isLarge ? "large" : "body"} text${alpha < 1 ? ", opacity included" : ""})`,
+            contrastRatio: Math.round(ratio * 10) / 10,
+            requiredRatio: required,
+          });
+        }
+      } else {
+        // Text sits on an image/gradient — contrast can't be computed statically
         issues.push({
           nodeId: node.id,
           nodeName: node.name,
-          issue: `Low contrast ratio: ${ratio.toFixed(1)}:1 (minimum 4.5:1 for body text)`,
-          contrastRatio: Math.round(ratio * 10) / 10,
-          requiredRatio: 4.5,
+          issue: `Text sits on a ${parentBg.kind} background — contrast cannot be verified automatically; check manually or add a solid scrim`,
         });
       }
     }
   }
 
-  // Extract background color for children
-  let bgColor = parentBgColor;
-  if (node.fills?.length > 0) {
-    const solidFill = node.fills.find((f: any) => f.type === "SOLID" && f.visible !== false);
-    if (solidFill?.color) bgColor = solidFill.color;
+  // Track the nearest background for children: solid color when available,
+  // otherwise remember that it's an image/gradient so contrast is flagged
+  let bg = parentBg;
+  if (node.type !== "TEXT" && node.fills?.length > 0) {
+    const visible = node.fills.filter((f: any) => f.visible !== false);
+    const solid = visible.find((f: any) => f.type === "SOLID");
+    const nonSolid = visible.find((f: any) => f.type !== "SOLID");
+    if (nonSolid) {
+      const type = String(nonSolid.type ?? "IMAGE");
+      bg = {
+        color: solid?.color ?? { r: 0.5, g: 0.5, b: 0.5 },
+        solid: false,
+        kind: type.startsWith("GRADIENT") ? "gradient" : type.toLowerCase(),
+      };
+    } else if (solid?.color) {
+      bg = { color: solid.color, solid: true, kind: "solid" };
+    }
   }
 
   if (node.children) {
     for (const child of node.children) {
-      checkAccessibility(child, bgColor, issues);
+      checkAccessibility(child, bg, issues);
     }
   }
+}
+
+// Alpha-composite fg over bg (both 0-1 RGB)
+function blendOver(fg: any, bg: any, alpha: number): { r: number; g: number; b: number } {
+  const a = Math.max(0, Math.min(1, alpha));
+  return {
+    r: fg.r * a + bg.r * (1 - a),
+    g: fg.g * a + bg.g * (1 - a),
+    b: fg.b * a + bg.b * (1 - a),
+  };
 }
 
 function calculateContrastRatio(fg: any, bg: any): number {

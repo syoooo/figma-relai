@@ -11,6 +11,7 @@ import {
 import { startEmbeddedRelay, type EmbeddedRelay } from "./embedded-relay.js";
 import { loadState, saveState } from "./state.js";
 import { registerPrompts } from "./prompts.js";
+import { recordCommand, getSessionLog } from "./session-log.js";
 
 const VERSION = "0.1.0";
 
@@ -64,16 +65,35 @@ async function main() {
   // Register the join_room tool
   registerRoomTool(server, (room) => connection.joinRoom(room));
 
-  // Register designer-activity polling
-  registerEventsTool(server, () => connection.consumeEvents());
+  // Register designer-activity polling + the AI's own audit trail
+  registerEventsTool(server, () => connection.consumeEvents(), getSessionLog);
 
   // Expose skill documents as MCP prompts (inlined at build time)
   registerPrompts(server);
 
-  // Register all domain tools
-  registerAllTools(server, (command, params, timeoutMs) =>
-    connection.sendCommand(command, params, timeoutMs)
-  );
+  // Register all domain tools; every plugin command lands in the session log
+  registerAllTools(server, async (command, params, timeoutMs) => {
+    const t0 = Date.now();
+    const nodeId =
+      typeof (params as { nodeId?: unknown })?.nodeId === "string"
+        ? ((params as { nodeId: string }).nodeId)
+        : undefined;
+    try {
+      const result = await connection.sendCommand(command, params, timeoutMs);
+      recordCommand({ ts: t0, command, nodeId, ok: true, ms: Date.now() - t0 });
+      return result;
+    } catch (error) {
+      recordCommand({
+        ts: t0,
+        command,
+        nodeId,
+        ok: false,
+        ms: Date.now() - t0,
+        error: error instanceof Error ? error.message.slice(0, 200) : String(error),
+      });
+      throw error;
+    }
+  });
 
   // Connect to relay (auto-reconnects on failure)
   try {

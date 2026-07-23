@@ -3,6 +3,7 @@
 export type FigmaCommand =
   // Document & Selection
   | "get_document_info"
+  | "get_file_info"
   | "get_selection"
   | "read_my_design"
   | "get_node_info"

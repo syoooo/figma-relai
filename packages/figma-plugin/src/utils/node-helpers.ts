@@ -106,6 +106,13 @@ function serializeSubtree(
   }
   if ("layoutMode" in node) result.layoutMode = (node as FrameNode).layoutMode;
 
+  // Text metrics for accessibility checks (mixed ranges become "mixed")
+  if (node.type === "TEXT") {
+    const text = node as TextNode;
+    result.fontSize = typeof text.fontSize === "number" ? text.fontSize : "mixed";
+    result.fontWeight = typeof text.fontWeight === "number" ? text.fontWeight : "mixed";
+  }
+
   if ("children" in node) {
     const children = (node as FrameNode).children;
     result.childCount = children.length;

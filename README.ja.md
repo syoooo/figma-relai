@@ -2,13 +2,13 @@
 
 [English](README.md) | 日本語 | [中文](README.zh.md)
 
-Claude Code や Cursor などの AI エージェントから Figma を直接操作できる MCP ブリッジ。**29 の統合ツール** + Plugin API エスケープハッチで、読み取り・作成・編集・品質チェックまで対応します。
+Claude Code や Cursor などの AI エージェントから Figma を直接操作できる MCP ブリッジ。**30 の統合ツール** + Plugin API エスケープハッチで、読み取り・作成・編集・品質チェックまで対応します。
 
 
 ```
 AI (Claude Code / Cursor)
   ↕ stdio
-MCP Server            … 29 ツール・分析・検証
+MCP Server            … 30 ツール・分析・検証
   (内蔵リレー)         … ポート 9055 の WebSocket ルームハブ
   ↕ WebSocket
 Figma Plugin          … Figma API を実行
@@ -89,12 +89,12 @@ bun setup
 
 ---
 
-## 29 のツール
+## 30 のツール
 
 | グループ | ツール |
 |---------|--------|
 | コンテキスト | `get_document_overview` · `get_selection_context` · `get_node_details` · `search_nodes` · `get_design_tokens` · `screenshot` · `get_events` |
-| 分析 | `analyze_design`（color / layout / components / accessibility）· `diff_nodes` |
+| 分析 | `analyze_design`（color / layout / components / accessibility / **overall** — 重み付き 0-100 健全性スコア）· `diff_nodes`（2 ノード比較またはチェックポイント保存/比較） |
 | 検証 | `verify_changes` · `validate_design_rules` · `verify_visual` |
 | 読み取り | `get_node_data`（summary / tree / full / css / variables） |
 | 作成・編集 | `create_node` · `set_properties` · `set_text` · `edit_structure` |
@@ -103,6 +103,7 @@ bun setup
 | ドキュメント | `manage_pages` · `navigate` |
 | アセット | `export_asset` · `add_image` |
 | アノテーション | `annotate` |
+| コメント | `manage_comments` — 一覧 / 追加 / 返信 / 削除（`FIGMA_TOKEN` が必要、下記参照） |
 | 高度な操作 | `batch_execute` · `execute_figma` · `join_room` |
 
 各ツールは自己記述的で、AI にはパラメータの完全なドキュメントが見えます。統合されたツール面は常時ロードされるコンテキストを小さく保ち（LLM がツールを確実に使い分けられる範囲内）、プラグイン側では事前条件チェック付きの粒度コマンドが実行されます。6 つのスキルドキュメント（トークン戦略・コンポーネント規約・監査ワークフロー・`execute_figma` 用 Plugin API チートシート）が MCP prompts として同梱されます。
@@ -114,6 +115,7 @@ bun setup
 - **実行フィード** — 全コマンドをステータス・所要時間・エラー付きで表示。ノード対象の項目はクリックでキャンバス上にフォーカス。
 - **停止ボタン** — バッチ処理の残り作業をキャンセル（実行中の単一コマンドは完了まで走ります。JavaScript のシングルスレッド制約です）。
 - **デザイナーイベント** — 選択・ノード・ページの変更が次のレスポンスの `designer_events`（または `get_events`）で AI に届くため、ポーリング不要。
+- **監査トレイル** — `get_events` の scope `agent` はこのセッションで AI が実行した全コマンド（結果・所要時間つき）を返し、`diff_nodes` のチェックポイントは編集セッションをまたいだノードの変更点を正確に示します。
 - **英語 / 日本語 / 中文 UI** — 切り替えは保存されます。
 
 ## ポートとセキュリティ
@@ -121,6 +123,7 @@ bun setup
 - リレーは **127.0.0.1:9055** のみにバインドします。Figma のプラグインサンドボックスは manifest で `ws://localhost:9055–9057` のみ許可しており、**それ以外のポートは manifest を編集しない限り動作しません**。そのため UI にポート設定は意図的にありません。
 - ルーム名には暗号学的乱数のサフィックスが付きます。脅威モデルは [SECURITY.md](SECURITY.md) を参照してください。
 - `execute_figma` は AI が書いたコードをプラグインサンドボックスで実行します。デフォルトで有効（実行フィードに表示）、プラグインの「コード実行を許可」トグルで無効化できます。
+- コメントは Figma の REST API を使うため個人アクセストークンが必要です。figma.com → Settings → Security で生成し、MCP 設定に `"env": { "FIGMA_TOKEN": "figd_..." }` を追加してください。トークンは設定ファイル内に留まり `api.figma.com` にのみ送信されます。他のツールはトークンなしで動作します。
 
 ## 高度な使い方：スタンドアロンリレー
 

@@ -19,7 +19,11 @@ You control Figma through ~30 consolidated tools. Pairing with the Figma plugin 
   get_design_tokens — variable collections, modes, styles
   screenshot — see the canvas (use this to verify your work visually)
 
-🔍 DIAGNOSE: analyze_design (aspect: color/layout/components/accessibility) · diff_nodes
+🔍 DIAGNOSE:
+  analyze_design — aspect: color/layout/components/accessibility, or
+    "overall" for a weighted 0-100 health score across all four
+  diff_nodes — compare two nodes, or checkpoint save/compare to audit
+    what changed on a node over an editing session
 
 ✏️ EDIT:
   create_node — any node type (rectangle/frame/text/svg/image/…)
@@ -37,6 +41,8 @@ You control Figma through ~30 consolidated tools. Pairing with the Figma plugin 
 
 📦 ASSETS: export_asset (PNG/JPG/SVG/PDF) · add_image (URL or fill)
 📝 ANNOTATIONS: annotate (Dev Mode annotations)
+💬 COMMENTS: manage_comments — read/apply/reply to file comments
+  (needs FIGMA_TOKEN env; the tool explains setup when missing)
 
 ✅ VERIFY: verify_changes · validate_design_rules
 
