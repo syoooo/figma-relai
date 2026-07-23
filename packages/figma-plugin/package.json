@@ -1,0 +1,18 @@
+{
+  "name": "@figma-relai/figma-plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun run scripts/inject-tools.ts && bun run esbuild.config.ts",
+    "dev": "bun run esbuild.config.ts --watch"
+  },
+  "dependencies": {
+    "@figma-relai/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.103.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  },
+  "license": "MIT"
+}

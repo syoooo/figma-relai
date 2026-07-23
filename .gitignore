@@ -1,0 +1,9 @@
+node_modules/
+dist/
+code.js
+*.js.map
+.DS_Store
+CLAUDE.md
+.cursor
+.claude/
+.mcp.json

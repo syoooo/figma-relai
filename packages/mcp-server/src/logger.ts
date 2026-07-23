@@ -1,0 +1,8 @@
+// Logger that writes to stderr to keep stdout clean for MCP protocol
+
+export const logger = {
+  info: (message: string) => process.stderr.write(`[INFO] ${message}\n`),
+  debug: (message: string) => process.stderr.write(`[DEBUG] ${message}\n`),
+  warn: (message: string) => process.stderr.write(`[WARN] ${message}\n`),
+  error: (message: string) => process.stderr.write(`[ERROR] ${message}\n`),
+};

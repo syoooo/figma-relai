@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    :root {
+      /* Phosphor terminal palette */
+      --bg: #0f0e0c;
+      --panel: #161410;
+      --panel-2: #1c1913;
+      --line: #2c2819;
+      --line-soft: #221f15;
+      --amber: #ffb000;
+      --amber-dim: #9a7a28;
+      --amber-glow: rgba(255, 176, 0, 0.45);
+      --text: #e8e2d0;
+      --muted: #8d8672;
+      --faint: #5c5747;
+      --ok: #58e07a;
+      --ok-glow: rgba(88, 224, 122, 0.45);
+      --err: #ff5f56;
+      --err-glow: rgba(255, 95, 86, 0.4);
+
+      --mono: "SF Mono", "Menlo", "Cascadia Code", "Consolas", "Noto Sans Mono", monospace;
+
+      --sp-2: 2px; --sp-4: 4px; --sp-6: 6px; --sp-8: 8px;
+      --sp-12: 12px; --sp-16: 16px; --sp-20: 20px; --sp-24: 24px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.7;
+      letter-spacing: 0.02em;
+      padding: var(--sp-16);
+      background: var(--bg);
+      /* Drafting-paper dot grid, barely above the noise floor */
+      background-image: radial-gradient(rgba(232, 226, 208, 0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: var(--text);
+      position: relative;
+    }
+
+    /* CRT scanlines — the one deliberate flourish; barely-there */
+    body::after {
+      content: "";
+      position: fixed; inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.022) 0px,
+        rgba(255, 255, 255, 0.022) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::after, *::before { animation: none !important; transition: none !important; }
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: var(--sp-16);
+    }
+    .logo svg { display: block; }
+
+    .seg {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .seg button {
+      font-family: var(--mono); font-size: 9px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      background: none; border: none;
+      padding: 3px 8px;
+      cursor: pointer;
+      border-right: 1px solid var(--line);
+    }
+    .seg button:last-child { border-right: none; }
+    .seg button:hover { color: var(--text); }
+    .seg button.active {
+      color: var(--bg);
+      background: var(--amber);
+      font-weight: 700;
+    }
+    .seg button:focus-visible { outline: 1px dashed var(--amber); outline-offset: -3px; }
+    .client-seg { margin-top: var(--sp-8); }
+
+    /* ── Section rules:  ── LABEL ───────── ─────────────── */
+    .rule {
+      display: flex; align-items: center; gap: var(--sp-8);
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--muted);
+      margin: var(--sp-16) 0 var(--sp-8);
+      user-select: none;
+    }
+    .rule::before { content: ""; width: 12px; border-top: 1px solid var(--line); }
+    .rule::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
+    .rule .chev { color: var(--faint); font-size: 8px; transition: transform 0.15s; }
+    .rule.clickable { cursor: pointer; }
+    .rule.clickable:hover { color: var(--text); }
+    .rule.open .chev { transform: rotate(90deg); }
+
+    /* ── Status lamps & leader lines ────────────────────── */
+    .lamp {
+      display: inline-block; width: 7px; height: 7px; flex-shrink: 0;
+    }
+    .lamp.off { background: var(--faint); }
+    .lamp.on { background: var(--ok); box-shadow: 0 0 6px var(--ok-glow); }
+    .lamp.warn { background: var(--amber); box-shadow: 0 0 6px var(--amber-glow); animation: blink 1.2s steps(1) infinite; }
+    .lamp.err { background: var(--err); box-shadow: 0 0 6px var(--err-glow); }
+
+    .leader-row {
+      display: flex; align-items: center; gap: var(--sp-8);
+      font-size: 10px;
+      color: var(--muted);
+      padding: var(--sp-2) 0;
+    }
+    .leader-row .key { letter-spacing: 0.14em; text-transform: uppercase; font-size: 9px; }
+    .leader-row .dots { flex: 1; border-bottom: 1px dotted var(--line); margin: 0 var(--sp-4); height: 0.9em; }
+    .leader-row .val { display: flex; align-items: center; gap: var(--sp-6); color: var(--text); }
+    .leader-row .val.ok { color: var(--ok); }
+    .leader-row .val.warn { color: var(--amber); }
+    .leader-row .val.err { color: var(--err); }
+    .leader-row .val.muted { color: var(--faint); }
+
+    /* ── Panels ─────────────────────────────────────────── */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: var(--sp-12);
+      position: relative;
+    }
+    .panel + .panel { margin-top: var(--sp-8); }
+    /* Blueprint corner registration marks (top-left / bottom-right) */
+    .panel::before,
+    .panel::after {
+      content: "+";
+      position: absolute;
+      font-size: 11px; line-height: 1;
+      color: var(--amber-dim);
+      pointer-events: none;
+      user-select: none;
+    }
+    .panel::before { top: -6px; left: -4px; }
+    .panel::after { bottom: -6px; right: -4px; }
+
+    .room-display {
+      font-size: 15px; font-weight: 700;
+      color: var(--amber);
+      text-shadow: 0 0 10px var(--amber-glow);
+      letter-spacing: 0.03em;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      margin-bottom: var(--sp-6);
+    }
+
+    /* ── Inputs ─────────────────────────────────────────── */
+    .field-row { display: flex; gap: var(--sp-8); align-items: stretch; }
+    .field-row .input-wrap { position: relative; flex: 1; }
+    input[type="text"] {
+      width: 100%;
+      padding: var(--sp-6) 28px var(--sp-6) var(--sp-8);
+      font-family: var(--mono); font-size: 11px;
+      letter-spacing: 0.02em;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+    input[type="text"]:focus { outline: none; border-color: var(--amber-dim); }
+    input[type="text"]:focus-visible { outline: 1px dashed var(--amber); outline-offset: 2px; }
+
+    .refresh-btn {
+      position: absolute; right: 4px; top: 0; bottom: 0;
+      background: none; border: none; cursor: pointer;
+      color: var(--faint); padding: 4px; line-height: 1;
+      display: flex; align-items: center;
+    }
+    .refresh-btn:hover { color: var(--amber); }
+    .refresh-btn:focus-visible { outline: 1px dashed var(--amber); }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .btn {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      padding: var(--sp-6) var(--sp-16);
+      background: transparent;
+      border: 1px solid var(--amber-dim);
+      color: var(--amber);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+    }
+    .btn:hover { background: var(--amber); color: var(--bg); }
+    .btn:focus-visible { outline: 1px dashed var(--amber); outline-offset: 2px; }
+
+    .link-btn {
+      display: block; width: 100%;
+      margin-top: var(--sp-16); padding: var(--sp-6);
+      background: none; border: none;
+      font-family: var(--mono); font-size: 9px;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--faint); cursor: pointer; text-align: center;
+    }
+    .link-btn:hover { color: var(--err); }
+    .link-btn:focus-visible { outline: 1px dashed var(--err); outline-offset: 2px; }
+
+    /* ── Copy command block ─────────────────────────────── */
+    .cmd-block {
+      display: flex; align-items: center; gap: var(--sp-8);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      padding: var(--sp-6) var(--sp-8);
+      cursor: pointer;
+      margin-top: var(--sp-6);
+    }
+    .cmd-block:hover { border-color: var(--amber-dim); }
+    .cmd-block code {
+      flex: 1; font-family: var(--mono); font-size: 10px;
+      color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .cmd-block code::before { content: "$ "; color: var(--amber); }
+    .cmd-block .copy-label {
+      font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--faint); white-space: nowrap;
+    }
+    .cmd-block.copied .copy-label { color: var(--ok); }
+    /* JSON snippets are config, not shell — no "$" prompt */
+    .cmd-block.json code::before { content: none; }
+
+    .hint-text { font-size: 10px; color: var(--muted); }
+    .hint-text b { color: var(--text); font-weight: 700; }
+    .hint-text code {
+      color: var(--amber); font-size: 10px;
+      background: var(--panel-2);
+      padding: 0 var(--sp-4);
+    }
+
+    /* ── Collapse bodies ────────────────────────────────── */
+    .collapse-body { display: none; }
+    .collapse-body.open { display: block; }
+    .collapse-body ol {
+      list-style: none;
+      counter-reset: step;
+    }
+    .collapse-body ol li {
+      counter-increment: step;
+      padding-left: 26px;
+      position: relative;
+      margin-bottom: var(--sp-8);
+      font-size: 10px; color: var(--muted);
+    }
+    .collapse-body ol li::before {
+      content: "0" counter(step);
+      position: absolute; left: 0; top: 0;
+      color: var(--amber-dim); font-weight: 700; font-size: 9px;
+      letter-spacing: 0.1em;
+    }
+    .collapse-body ol li b { color: var(--text); }
+    .collapse-body ol li code {
+      color: var(--amber);
+      background: var(--panel-2);
+      padding: 0 var(--sp-4);
+      font-size: 9.5px;
+    }
+
+    /* ── Activity feed ──────────────────────────────────── */
+    .feed-head-extra { display: flex; align-items: center; gap: var(--sp-8); }
+    .stop-btn {
+      display: none;
+      font-family: var(--mono); font-size: 8px; font-weight: 700;
+      letter-spacing: 0.16em;
+      padding: 1px var(--sp-8);
+      background: transparent;
+      border: 1px solid var(--err);
+      color: var(--err);
+      cursor: pointer;
+    }
+    .stop-btn.show { display: inline-block; }
+    .stop-btn:hover { background: var(--err); color: var(--bg); }
+    .stop-btn:focus-visible { outline: 1px dashed var(--err); outline-offset: 2px; }
+
+    .feed {
+      max-height: 300px; overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+    }
+    .feed-empty {
+      padding: var(--sp-16) var(--sp-12);
+      font-size: 10px; color: var(--faint);
+      text-align: center;
+    }
+    .feed-empty .cursor { animation: blink 1.2s steps(1) infinite; color: var(--amber); }
+    .feed-entry {
+      display: flex; align-items: baseline; gap: var(--sp-8);
+      padding: 3px var(--sp-8);
+      border-bottom: 1px solid var(--line-soft);
+      font-size: 10px;
+    }
+    .feed-entry:last-child { border-bottom: none; }
+    .feed-entry .t { color: var(--faint); font-size: 9px; flex-shrink: 0; }
+    .feed-entry .st { flex-shrink: 0; width: 10px; text-align: center; }
+    .feed-entry .st.running { color: var(--amber); animation: blink 1s steps(1) infinite; }
+    .feed-entry .st.ok { color: var(--ok); }
+    .feed-entry .st.err { color: var(--err); }
+    .feed-entry .cmd {
+      flex: 1; color: var(--text);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .feed-entry.clickable .cmd { cursor: pointer; border-bottom: 1px dotted var(--faint); }
+    .feed-entry.clickable .cmd:hover { color: var(--amber); border-bottom-color: var(--amber); }
+    .feed-entry .dur { color: var(--faint); font-size: 9px; flex-shrink: 0; }
+    .feed-entry .err-msg {
+      display: block; color: var(--err); font-size: 9px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ── Settings toggles ───────────────────────────────── */
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--sp-12);
+      padding: var(--sp-6) 0;
+    }
+    .setting-row + .setting-row { border-top: 1px dashed var(--line-soft); }
+    .setting-row .label { font-size: 10px; color: var(--text); }
+    .setting-row .sub { display: block; font-size: 9px; color: var(--faint); }
+
+    .switch { position: relative; cursor: pointer; flex-shrink: 0; }
+    .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+    .switch .track {
+      display: flex; align-items: center;
+      width: 40px; height: 16px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      font-size: 7px; font-weight: 700; letter-spacing: 0.1em;
+      color: var(--faint);
+      position: relative;
+    }
+    .switch .track::before {
+      content: ""; position: absolute;
+      width: 12px; height: 10px;
+      left: 2px; top: 2px;
+      background: var(--faint);
+      transition: transform 0.12s, background 0.12s;
+    }
+    .switch .track::after {
+      content: "OFF"; position: absolute; right: 4px;
+    }
+    .switch input:checked + .track { border-color: var(--amber-dim); }
+    .switch input:checked + .track::before {
+      transform: translateX(22px);
+      background: var(--amber);
+      box-shadow: 0 0 6px var(--amber-glow);
+    }
+    .switch input:checked + .track::after { content: "ON"; left: 5px; right: auto; color: var(--amber); }
+    .switch input:focus-visible + .track { outline: 1px dashed var(--amber); outline-offset: 2px; }
+
+    /* ── Tools list ─────────────────────────────────────── */
+    .tools-list {
+      max-height: 220px; overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: var(--sp-4);
+      font-size: 10px;
+    }
+    .cat-details summary {
+      cursor: pointer; padding: var(--sp-2) var(--sp-6);
+      user-select: none; list-style: none;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+    .cat-details summary::-webkit-details-marker { display: none; }
+    .cat-details summary:hover { color: var(--text); background: var(--panel-2); }
+    .cat-details summary .cat-arrow {
+      display: inline-block; font-size: 8px; margin-right: var(--sp-4);
+      transition: transform 0.15s; width: 8px; text-align: center;
+      color: var(--amber-dim);
+    }
+    .cat-details[open] summary .cat-arrow { transform: rotate(90deg); }
+    .cat-tools {
+      padding: var(--sp-4) var(--sp-6) var(--sp-8) var(--sp-20);
+      display: flex; flex-wrap: wrap; gap: var(--sp-4);
+    }
+    .tool-tag {
+      font-size: 9px;
+      padding: 0 var(--sp-4);
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    /* ── Progress ───────────────────────────────────────── */
+    .progress-container { margin: var(--sp-8) 0; display: none; }
+    .progress-bar {
+      height: 3px; background: var(--line);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--amber);
+      box-shadow: 0 0 8px var(--amber-glow);
+      transition: width 0.3s; width: 0%;
+    }
+    .progress-text { margin-top: var(--sp-4); font-size: 9px; color: var(--muted); }
+
+    /* ── Sections & footer ──────────────────────────────── */
+    .connected-section { display: none; }
+    .footer {
+      margin-top: var(--sp-24); padding-top: var(--sp-8);
+      border-top: 1px solid var(--line);
+      font-size: 9px; letter-spacing: 0.18em;
+      color: var(--faint); text-align: center;
+      text-transform: uppercase;
+    }
+    .footer .deco { color: var(--amber-dim); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <svg width="72" height="24" viewBox="0 0 110 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M102.934 35V10H109.143V35H102.934ZM106.018 7.25C105.045 7.25 104.212 6.91667 103.518 6.25C102.851 5.55555 102.518 4.72222 102.518 3.75C102.518 2.77778 102.851 1.95833 103.518 1.29167C104.212 0.597222 105.045 0.25 106.018 0.25C106.99 0.25 107.809 0.597222 108.476 1.29167C109.17 1.95833 109.518 2.77778 109.518 3.75C109.518 4.72222 109.17 5.55555 108.476 6.25C107.809 6.91667 106.99 7.25 106.018 7.25Z" fill="#FFB000"/>
+        <path d="M81.6992 35.4583C78.7825 35.4583 76.4908 34.75 74.8242 33.3333C73.1853 31.9167 72.3658 30.0417 72.3658 27.7083C72.3658 25.2639 73.1992 23.375 74.8658 22.0417C76.5603 20.7083 78.9908 20.0417 82.1575 20.0417H89.7825V19.0417C89.7825 15.9861 88.0047 14.4583 84.4492 14.4583C81.4492 14.4583 79.6297 15.5417 78.9908 17.7083H72.7825C73.2825 15.0417 74.5325 13.0139 76.5325 11.625C78.5603 10.2083 81.1992 9.5 84.4492 9.5C88.1158 9.5 90.9075 10.3333 92.8242 12C94.7408 13.6389 95.6992 16.0417 95.6992 19.2083V28.7917H98.6575V35H92.2825V31H90.5325C89.6714 32.4167 88.5047 33.5139 87.0325 34.2917C85.5881 35.0694 83.8103 35.4583 81.6992 35.4583ZM82.6158 30.6667C83.977 30.6667 85.1992 30.4167 86.2825 29.9167C87.3658 29.3889 88.2131 28.6944 88.8242 27.8333C89.4631 26.9444 89.7825 25.9583 89.7825 24.875V24.2917H82.4908C79.6853 24.2917 78.2825 25.3333 78.2825 27.4167C78.2825 28.4444 78.6575 29.25 79.4075 29.8333C80.1853 30.3889 81.2547 30.6667 82.6158 30.6667Z" fill="#FFB000"/>
+        <path d="M62.0885 35V0H68.2968V35H62.0885Z" fill="#E8E2D0"/>
+        <path d="M45.8515 35.5C43.157 35.5 40.8237 34.9722 38.8515 33.9167C36.8793 32.8333 35.3515 31.3194 34.2681 29.375C33.2126 27.4028 32.6848 25.0833 32.6848 22.4167C32.6848 19.75 33.2126 17.4583 34.2681 15.5417C35.3237 13.5972 36.8237 12.1111 38.7681 11.0833C40.7126 10.0278 42.9904 9.5 45.6015 9.5C48.157 9.5 50.3515 10 52.1848 11C54.0181 11.9722 55.4348 13.3889 56.4348 15.25C57.4348 17.0833 57.9348 19.2639 57.9348 21.7917V23.9583H38.6848C38.907 26.0694 39.6293 27.6944 40.8515 28.8333C42.1015 29.9444 43.7543 30.5 45.8098 30.5C47.3376 30.5 48.5737 30.2222 49.5181 29.6667C50.4904 29.0833 51.1709 28.2222 51.5598 27.0833H57.8098C57.2265 29.7222 55.8793 31.7917 53.7681 33.2917C51.6848 34.7639 49.0459 35.5 45.8515 35.5ZM38.8098 19.75H51.9765C51.7265 18.0278 51.0598 16.7222 49.9765 15.8333C48.8931 14.9167 47.4348 14.4583 45.6015 14.4583C43.7959 14.4583 42.3098 14.9167 41.1431 15.8333C39.9765 16.75 39.1987 18.0556 38.8098 19.75Z" fill="#E8E2D0"/>
+        <path d="M0 35V1.25H17.0833C20.6389 1.25 23.4167 2.06944 25.4167 3.70833C27.4444 5.31945 28.4583 7.56945 28.4583 10.4583C28.4583 12.1806 28.0556 13.6667 27.25 14.9167C26.4722 16.1667 25.3333 17.0972 23.8333 17.7083V17.875C25.3056 17.875 26.4444 18.2778 27.25 19.0833C28.0556 19.8611 28.4583 21.0139 28.4583 22.5417V35H22.125V21.8333H6.375V35H0ZM6.375 16.4167H16.625C18.4028 16.4167 19.7778 16 20.75 15.1667C21.7222 14.3056 22.2083 13.1111 22.2083 11.5833C22.2083 10.0278 21.7222 8.83333 20.75 8C19.7778 7.13889 18.4028 6.70833 16.625 6.70833H6.375V16.4167Z" fill="#E8E2D0"/>
+      </svg>
+    </div>
+    <div class="seg" role="group" aria-label="Language">
+      <button id="langEn" onclick="setLang('en')">EN</button>
+      <button id="langJa" onclick="setLang('ja')">日</button>
+      <button id="langZh" onclick="setLang('zh')">中</button>
+    </div>
+  </div>
+
+  <!-- ===== SETUP SECTION (first run / relay unreachable / manual disconnect) ===== -->
+  <div class="setup-section" id="setupSection">
+
+    <div class="leader-row">
+      <span class="key" data-i18n="status_label">STATUS</span>
+      <span class="dots"></span>
+      <span class="val muted" id="statusVal"><span class="lamp off" id="statusLamp"></span> <span id="statusText" data-i18n="status_disconnected">OFFLINE</span></span>
+    </div>
+
+    <div class="rule"><span data-i18n="room_label">ROOM</span></div>
+    <div class="field-row">
+      <div class="input-wrap">
+        <input type="text" id="room" readonly>
+        <button class="refresh-btn" onclick="refreshRoom()" data-i18n-title="regenerate" title="Regenerate"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg></button>
+      </div>
+      <button class="btn" id="connectBtn" onclick="connect()" data-i18n="connect">Connect</button>
+    </div>
+
+    <!-- Shown when the relay can't be reached: the MCP server isn't running -->
+    <div class="panel" id="mcpHint" style="display:none; margin-top: var(--sp-12);">
+      <div class="hint-text" data-i18n-html="mcp_hint">The relay lives inside the MCP server — <b>no server detected on ports 9055–9057.</b> Register it in your AI client, then start a conversation:</div>
+      <div class="seg client-seg" role="group" aria-label="AI client">
+        <button id="clientClaude" onclick="setClient('claude')">CLAUDE</button>
+        <button id="clientCodex" onclick="setClient('codex')">CODEX</button>
+        <button id="clientCursor" onclick="setClient('cursor')">CURSOR</button>
+      </div>
+      <div class="cmd-block" id="cmdBlock" onclick="copyCmd()">
+        <code id="cmdText"></code>
+        <span class="copy-label" id="cmdCopyLabel" data-i18n="copy">copy</span>
+      </div>
+      <div class="hint-text" id="clientHint" style="margin-top: var(--sp-6);"></div>
+    </div>
+
+    <div class="rule clickable" id="guideToggle" onclick="toggleGuide()"><span class="chev">&#9654;</span> <span data-i18n="guide_title">How it works</span></div>
+    <div class="collapse-body" id="guideContent">
+      <ol>
+        <li data-i18n-html="guide_step1">Your AI client launches the MCP server (<code>npx -y figma-relai</code>) — and that server hosts the relay on port 9055. Nothing else to install or keep running.</li>
+        <li data-i18n-html="guide_step2">This plugin simply dials <code>ws://localhost:9055</code>. Either side can start first; both reconnect automatically.</li>
+        <li data-i18n-html="guide_step3">Talk to your AI — it discovers this plugin's room and pairs on its own. Nothing to copy.</li>
+        <li data-i18n-html="guide_step4">Contributors: clone the repo and run <code>bun setup</code> to point your MCP config at a local build.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ===== CONNECTED SECTION ===== -->
+  <div class="connected-section" id="connectedSection">
+
+    <div class="panel">
+      <div class="room-display" id="connectedRoom"></div>
+      <div class="leader-row">
+        <span class="key">RELAY</span>
+        <span class="dots"></span>
+        <span class="val ok" id="relayVal"><span class="lamp on"></span> <span id="relayText" data-i18n="relay_link">LINK</span></span>
+      </div>
+      <div class="leader-row">
+        <span class="key">AGENT</span>
+        <span class="dots"></span>
+        <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText" data-i18n="ai_waiting">WAITING</span></span>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="progressContainer" class="progress-container">
+      <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      <div id="progressText" class="progress-text"></div>
+    </div>
+
+    <!-- Activity feed -->
+    <div class="rule"><span data-i18n="activity">Activity</span><span class="feed-head-extra" style="margin-left:auto"><button class="stop-btn" id="stopBtn" onclick="stopAll()">&#9632; <span data-i18n="stop">STOP</span></button></span></div>
+    <div class="feed" id="feed">
+      <div class="feed-empty" id="feedEmpty"><span data-i18n="feed_empty">awaiting commands</span> <span class="cursor">▊</span></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="rule"><span data-i18n="settings">Config</span></div>
+    <div class="panel">
+      <div class="setting-row">
+        <span class="label"><span data-i18n="allow_exec">Allow code execution</span><span class="sub" data-i18n="allow_exec_hint">execute_figma — AI-written Plugin API scripts</span></span>
+        <label class="switch"><input type="checkbox" id="allowExec" checked onchange="onSettingChange()"><span class="track"></span></label>
+      </div>
+      <div class="setting-row">
+        <span class="label"><span data-i18n="auto_connect">Connect automatically</span><span class="sub" data-i18n="auto_connect_hint">rejoin this room when the plugin opens</span></span>
+        <label class="switch"><input type="checkbox" id="autoConnect" checked onchange="onSettingChange()"><span class="track"></span></label>
+      </div>
+    </div>
+
+    <!-- Tool reference (injected at build time; do not edit between markers) -->
+    <div class="rule clickable" id="toolsToggle" onclick="toggleTools()"><span class="chev">&#9654;</span> <span data-i18n="tools_title">Toolset</span></div>
+    <div class="tools-list collapse-body" id="toolsContent">
+      <!-- TOOLS:START -->
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> advanced (3)</summary><div class="cat-tools"><span class="tool-tag">join_room</span><span class="tool-tag">batch_execute</span><span class="tool-tag">execute_figma</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> context (7)</summary><div class="cat-tools"><span class="tool-tag">get_events</span><span class="tool-tag">get_document_overview</span><span class="tool-tag">get_selection_context</span><span class="tool-tag">get_node_details</span><span class="tool-tag">search_nodes</span><span class="tool-tag">get_design_tokens</span><span class="tool-tag">screenshot</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> analysis (2)</summary><div class="cat-tools"><span class="tool-tag">diff_nodes</span><span class="tool-tag">analyze_design</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> verification (3)</summary><div class="cat-tools"><span class="tool-tag">verify_changes</span><span class="tool-tag">validate_design_rules</span><span class="tool-tag">verify_visual</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> read (1)</summary><div class="cat-tools"><span class="tool-tag">get_node_data</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> create (1)</summary><div class="cat-tools"><span class="tool-tag">create_node</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> edit (3)</summary><div class="cat-tools"><span class="tool-tag">set_properties</span><span class="tool-tag">edit_structure</span><span class="tool-tag">set_text</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> components (1)</summary><div class="cat-tools"><span class="tool-tag">manage_components</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> design-system (3)</summary><div class="cat-tools"><span class="tool-tag">manage_variables</span><span class="tool-tag">manage_styles</span><span class="tool-tag">import_from_library</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> document (2)</summary><div class="cat-tools"><span class="tool-tag">manage_pages</span><span class="tool-tag">navigate</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> assets (2)</summary><div class="cat-tools"><span class="tool-tag">export_asset</span><span class="tool-tag">add_image</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> annotations (1)</summary><div class="cat-tools"><span class="tool-tag">annotate</span></div></details>
+      <!-- TOOLS:END -->
+    </div>
+
+    <!-- Disconnect -->
+    <button class="link-btn" onclick="disconnect()" data-i18n="disconnect">Disconnect</button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer"><span class="deco">▚</span> Relai v0.1.0 <span class="deco">▞</span></div>
+
+  <script>
+    // ---------- i18n ----------
+    var I18N = {
+      en: {
+        status_label: 'STATUS',
+        status_disconnected: 'OFFLINE',
+        status_connecting: 'DIALING…',
+        status_unreachable: 'NO SERVER',
+        room_label: 'Room',
+        regenerate: 'Regenerate',
+        connect: 'Connect',
+        copy: 'copy',
+        mcp_hint: 'The relay lives inside the MCP server — <b>no server detected on ports 9055–9057.</b> Register it in your AI client, then start a conversation:',
+        client_hint_claude: 'Claude Code — run in any terminal, then restart your session. Needs Node 18+.',
+        client_hint_codex: 'Codex CLI — run in any terminal; the server is saved to <code>~/.codex/config.toml</code>. Needs Node 18+.',
+        client_hint_cursor: 'Cursor — paste into <code>.cursor/mcp.json</code> (project) or <code>~/.cursor/mcp.json</code> (global). Needs Node 18+.',
+        guide_title: 'How it works',
+        guide_step1: 'Your AI client launches the MCP server (<code>npx -y figma-relai</code>) — and that server hosts the relay on port 9055. Nothing else to install or keep running.',
+        guide_step2: 'This plugin simply dials <code>ws://localhost:9055</code>. Either side can start first; both reconnect automatically.',
+        guide_step3: 'Talk to your AI — it discovers this plugin’s room and pairs on its own. Nothing to copy.',
+        guide_step4: 'Contributors: clone the repo and run <code>bun setup</code> to point your MCP config at a local build.',
+        relay_link: 'LINK',
+        relay_reconnecting: 'RETRY…',
+        ai_waiting: 'WAITING',
+        ai_connected: 'CONNECTED',
+        activity: 'Activity',
+        stop: 'STOP',
+        feed_empty: 'awaiting commands',
+        cancelled: 'Cancelled by designer',
+        settings: 'Config',
+        allow_exec: 'Allow code execution',
+        allow_exec_hint: 'execute_figma — AI-written Plugin API scripts',
+        auto_connect: 'Connect automatically',
+        auto_connect_hint: 'rejoin this room when the plugin opens',
+        tools_title: 'Toolset',
+        disconnect: 'Disconnect'
+      },
+      ja: {
+        status_label: 'STATUS',
+        status_disconnected: 'OFFLINE',
+        status_connecting: '接続中…',
+        status_unreachable: 'サーバー未検出',
+        room_label: 'ルーム',
+        regenerate: '再生成',
+        connect: '接続',
+        copy: 'コピー',
+        mcp_hint: 'Relay は MCP サーバーに内蔵されています — <b>ポート 9055–9057 にサーバーが見つかりません。</b>AI クライアントに登録して、会話を始めてください：',
+        client_hint_claude: 'Claude Code — ターミナルで実行し、セッションを再起動してください。Node 18+ が必要です。',
+        client_hint_codex: 'Codex CLI — ターミナルで実行すると <code>~/.codex/config.toml</code> に保存されます。Node 18+ が必要です。',
+        client_hint_cursor: 'Cursor — <code>.cursor/mcp.json</code>（プロジェクト）または <code>~/.cursor/mcp.json</code>（グローバル）に貼り付けてください。Node 18+ が必要です。',
+        guide_title: '仕組み',
+        guide_step1: 'AI クライアントが MCP サーバー（<code>npx -y figma-relai</code>）を起動し、そのサーバーがポート 9055 で Relay をホストします。他にインストール・常駐するものはありません。',
+        guide_step2: 'このプラグインは <code>ws://localhost:9055</code> に接続するだけ。どちらが先に起動しても、双方が自動で再接続します。',
+        guide_step3: 'AI に話しかけるだけで、このプラグインのルームを自動発見してペアリングします。コピーは不要です。',
+        guide_step4: 'コントリビューター向け：リポジトリを clone して <code>bun setup</code> を実行すると、ローカルビルドを指す MCP 設定が書き出されます。',
+        relay_link: 'LINK',
+        relay_reconnecting: '再接続…',
+        ai_waiting: '待機中',
+        ai_connected: '接続済み',
+        activity: 'アクティビティ',
+        stop: '停止',
+        feed_empty: 'コマンド待機中',
+        cancelled: 'デザイナーによりキャンセル',
+        settings: '設定',
+        allow_exec: 'コード実行を許可',
+        allow_exec_hint: 'execute_figma — AI が書いた Plugin API スクリプト',
+        auto_connect: '自動接続',
+        auto_connect_hint: 'プラグイン起動時にこのルームへ再接続',
+        tools_title: 'ツール一覧',
+        disconnect: '切断'
+      },
+      zh: {
+        status_label: 'STATUS',
+        status_disconnected: 'OFFLINE',
+        status_connecting: '连接中…',
+        status_unreachable: '未检测到服务器',
+        room_label: '房间',
+        regenerate: '重新生成',
+        connect: '连接',
+        copy: '复制',
+        mcp_hint: 'Relay 内嵌于 MCP 服务器 — <b>端口 9055–9057 上未检测到服务器。</b>在你的 AI 客户端注册后，开始对话即可：',
+        client_hint_claude: 'Claude Code — 在任意终端运行，然后重启会话。需要 Node 18+。',
+        client_hint_codex: 'Codex CLI — 在任意终端运行，配置会保存到 <code>~/.codex/config.toml</code>。需要 Node 18+。',
+        client_hint_cursor: 'Cursor — 粘贴到 <code>.cursor/mcp.json</code>（项目级）或 <code>~/.cursor/mcp.json</code>（全局）。需要 Node 18+。',
+        guide_title: '工作原理',
+        guide_step1: '你的 AI 客户端会启动 MCP 服务器（<code>npx -y figma-relai</code>），该服务器在端口 9055 托管 Relay。无需安装或常驻任何其他程序。',
+        guide_step2: '本插件只做一件事：连接 <code>ws://localhost:9055</code>。谁先启动都可以，双方都会自动重连。',
+        guide_step3: '直接对 AI 说话——它会自动发现本插件的房间并配对，无需复制任何内容。',
+        guide_step4: '贡献者：clone 仓库后运行 <code>bun setup</code>，会写出指向本地构建的 MCP 配置。',
+        relay_link: 'LINK',
+        relay_reconnecting: '重连中…',
+        ai_waiting: '等待中',
+        ai_connected: '已连接',
+        activity: '活动',
+        stop: '停止',
+        feed_empty: '等待命令',
+        cancelled: '已被设计师取消',
+        settings: '设置',
+        allow_exec: '允许代码执行',
+        allow_exec_hint: 'execute_figma — AI 编写的 Plugin API 脚本',
+        auto_connect: '自动连接',
+        auto_connect_hint: '插件启动时自动重连到此房间',
+        tools_title: '工具列表',
+        disconnect: '断开'
+      }
+    };
+    var LOCALES = ['en', 'ja', 'zh'];
+    var locale = 'en';
+
+    function t(key) { return (I18N[locale] && I18N[locale][key]) || I18N.en[key] || key; }
+    function applyI18n() {
+      document.querySelectorAll('[data-i18n]').forEach(function (el) {
+        el.textContent = t(el.getAttribute('data-i18n'));
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(function (el) {
+        el.innerHTML = t(el.getAttribute('data-i18n-html'));
+      });
+      document.querySelectorAll('[data-i18n-title]').forEach(function (el) {
+        el.title = t(el.getAttribute('data-i18n-title'));
+      });
+      var ids = { en: 'langEn', ja: 'langJa', zh: 'langZh' };
+      for (var l in ids) {
+        document.getElementById(ids[l]).className = l === locale ? 'active' : '';
+      }
+      // Re-render state-dependent labels
+      refreshStatusTexts();
+      renderClient();
+    }
+    function setLang(l) {
+      locale = l;
+      applyI18n();
+      saveSettings({ locale: locale });
+    }
+
+    // ---------- AI client picker (setup hint) ----------
+    var CLIENTS = {
+      claude: { cmd: 'claude mcp add Relai -- npx -y figma-relai', json: false },
+      codex: { cmd: 'codex mcp add Relai -- npx -y figma-relai', json: false },
+      cursor: {
+        cmd: '{"mcpServers":{"Relai":{"command":"npx","args":["-y","figma-relai"]}}}',
+        json: true
+      }
+    };
+    var client = 'claude';
+
+    function renderClient() {
+      var ids = { claude: 'clientClaude', codex: 'clientCodex', cursor: 'clientCursor' };
+      for (var c in ids) {
+        document.getElementById(ids[c]).className = c === client ? 'active' : '';
+      }
+      document.getElementById('cmdText').textContent = CLIENTS[client].cmd;
+      document.getElementById('cmdBlock').className =
+        'cmd-block' + (CLIENTS[client].json ? ' json' : '');
+      document.getElementById('clientHint').innerHTML = t('client_hint_' + client);
+    }
+
+    function setClient(c) {
+      client = c;
+      renderClient();
+      saveSettings({ client: c });
+    }
+
+    // ---------- State ----------
+    var PORTS = [9055, 9056, 9057];
+    var portIndex = 0;
+    var ws = null;
+    var roomName = '';
+    var fileName = '';
+    var reconnectTimer = null;
+    // True from the moment a connection is wanted (auto-connect or the
+    // Connect button) until the designer explicitly disconnects. Drives the
+    // retry loop — including retries BEFORE the first successful open, so a
+    // missing MCP server shows guidance and keeps dialing instead of going
+    // silently offline.
+    var wantConnection = false;
+    var failedOnce = false;
+    var everConnected = false;
+    var settingsReady = false;
+    var agentPresent = false;
+    var relayUp = false;
+
+    function randomRoom() {
+      var adj = ['brisk','bold','pixel','vivid','clean','swift','fresh','sleek',
+                 'prime','smart','lucid','crisp','clear','sharp','fluid','pure',
+                 'warm','cool','calm','keen'];
+      var noun = ['motif','canvas','frame','grid','layer','token','swatch','figma',
+                  'sketch','proto','atlas','craft','nexus','prism','bloom','forge',
+                  'slate','pulse','drift','blend'];
+      // Readable prefix + crypto-random suffix so room names can't be guessed
+      var bytes = new Uint8Array(4);
+      crypto.getRandomValues(bytes);
+      var suffix = '';
+      for (var i = 0; i < bytes.length; i++) {
+        suffix += ('0' + bytes[i].toString(16)).slice(-2);
+      }
+      return adj[Math.floor(Math.random() * adj.length)] + '-' +
+             noun[Math.floor(Math.random() * noun.length)] + '-' + suffix;
+    }
+
+    function saveSettings(patch) {
+      parent.postMessage({ pluginMessage: { type: 'save-settings', settings: patch } }, '*');
+    }
+
+    function onSettingChange() {
+      saveSettings({
+        allowCodeExec: document.getElementById('allowExec').checked,
+        autoConnect: document.getElementById('autoConnect').checked
+      });
+    }
+
+    // ---------- Collapse toggles ----------
+    function toggleRule(ruleId, bodyId) {
+      document.getElementById(ruleId).classList.toggle('open');
+      document.getElementById(bodyId).classList.toggle('open');
+    }
+    function toggleGuide() { toggleRule('guideToggle', 'guideContent'); }
+    function toggleTools() { toggleRule('toolsToggle', 'toolsContent'); }
+
+    function refreshRoom() {
+      roomName = randomRoom();
+      document.getElementById('room').value = roomName;
+      saveSettings({ room: roomName });
+    }
+
+    // ---------- Copy command ----------
+    function copyCmd() {
+      var ta = document.createElement('textarea');
+      ta.value = CLIENTS[client].cmd;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      var block = document.getElementById('cmdBlock');
+      var label = document.getElementById('cmdCopyLabel');
+      block.classList.add('copied');
+      label.textContent = 'OK';
+      setTimeout(function () {
+        block.classList.remove('copied');
+        label.textContent = t('copy');
+      }, 1500);
+    }
+
+    // ---------- Status rendering ----------
+    var setupState = 'off';
+    function setSetupStatus(state) {
+      // state: 'off' | 'dialing' | 'unreachable'
+      setupState = state;
+      var lamp = document.getElementById('statusLamp');
+      var text = document.getElementById('statusText');
+      var hint = document.getElementById('mcpHint');
+      if (state === 'dialing') {
+        lamp.className = 'lamp warn';
+        text.textContent = t('status_connecting');
+      } else if (state === 'unreachable') {
+        lamp.className = 'lamp err';
+        text.textContent = t('status_unreachable');
+      } else {
+        lamp.className = 'lamp off';
+        text.textContent = t('status_disconnected');
+      }
+      hint.style.display = state === 'unreachable' ? 'block' : 'none';
+    }
+
+    function renderRelay() {
+      var val = document.getElementById('relayVal');
+      var text = document.getElementById('relayText');
+      if (relayUp) {
+        val.className = 'val ok';
+        val.querySelector('.lamp').className = 'lamp on';
+        text.textContent = t('relay_link');
+      } else {
+        val.className = 'val warn';
+        val.querySelector('.lamp').className = 'lamp warn';
+        text.textContent = t('relay_reconnecting');
+      }
+    }
+
+    function renderAgent() {
+      var val = document.getElementById('agentVal');
+      var text = document.getElementById('agentText');
+      if (agentPresent && relayUp) {
+        val.className = 'val ok';
+        document.getElementById('agentLamp').className = 'lamp on';
+        text.textContent = t('ai_connected');
+      } else {
+        val.className = 'val muted';
+        document.getElementById('agentLamp').className = 'lamp off';
+        text.textContent = t('ai_waiting');
+      }
+    }
+
+    function refreshStatusTexts() {
+      if (document.getElementById('connectedSection').style.display === 'block') {
+        renderRelay();
+        renderAgent();
+      } else {
+        setSetupStatus(setupState);
+      }
+    }
+
+    function showConnected() {
+      document.getElementById('setupSection').style.display = 'none';
+      document.getElementById('connectedSection').style.display = 'block';
+      document.getElementById('connectedRoom').textContent = roomName;
+      renderRelay();
+      renderAgent();
+    }
+
+    function showSetup() {
+      document.getElementById('setupSection').style.display = 'block';
+      document.getElementById('connectedSection').style.display = 'none';
+    }
+
+    // ---------- Activity feed ----------
+    var entries = {};      // id -> {el, cmd, t0, nodeId, status}
+    var runningCount = 0;
+    var FEED_MAX = 50;
+
+    function timeStamp() {
+      var d = new Date();
+      var p = function (n) { return ('0' + n).slice(-2); };
+      return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    }
+
+    function feedAdd(id, command, nodeId) {
+      var feed = document.getElementById('feed');
+      document.getElementById('feedEmpty').style.display = 'none';
+
+      var el = document.createElement('div');
+      el.className = 'feed-entry' + (nodeId ? ' clickable' : '');
+      el.innerHTML = '<span class="t"></span><span class="st running">▸</span>' +
+        '<span class="cmd"></span><span class="dur"></span>';
+      el.querySelector('.t').textContent = timeStamp();
+      el.querySelector('.cmd').textContent = command;
+      if (nodeId) {
+        el.querySelector('.cmd').onclick = function () {
+          parent.postMessage({ pluginMessage: { type: 'focus-node', nodeId: nodeId } }, '*');
+        };
+      }
+      // Newest first, right after the (hidden) empty-state placeholder
+      feed.insertBefore(el, feed.children[1] || null);
+
+      entries[id] = { el: el, cmd: command, t0: Date.now(), nodeId: nodeId, status: 'running' };
+      runningCount++;
+      updateStopBtn();
+
+      while (feed.children.length > FEED_MAX + 1) feed.removeChild(feed.lastChild);
+    }
+
+    function feedSettle(id, ok, errMsg) {
+      var e = entries[id];
+      if (!e || e.status !== 'running') return;
+      e.status = ok ? 'ok' : 'err';
+      runningCount = Math.max(0, runningCount - 1);
+      updateStopBtn();
+
+      var st = e.el.querySelector('.st');
+      st.className = 'st ' + (ok ? 'ok' : 'err');
+      st.textContent = ok ? '✓' : '✕';
+      e.el.querySelector('.dur').textContent = ((Date.now() - e.t0) / 1000).toFixed(1) + 's';
+      if (!ok && errMsg) {
+        var m = document.createElement('span');
+        m.className = 'err-msg';
+        m.textContent = errMsg;
+        e.el.querySelector('.cmd').appendChild(m);
+      }
+    }
+
+    function updateStopBtn() {
+      document.getElementById('stopBtn').className = 'stop-btn' + (runningCount > 0 ? ' show' : '');
+    }
+
+    function stopAll() {
+      for (var id in entries) {
+        var e = entries[id];
+        if (e.status !== 'running') continue;
+        parent.postMessage({ pluginMessage: { type: 'cancel-command', id: id } }, '*');
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'message',
+            room: roomName,
+            id: id,
+            message: { id: id, error: { message: 'Cancelled by designer', cancelled: true, command: e.cmd } }
+          }));
+        }
+        feedSettle(id, false, t('cancelled'));
+      }
+    }
+
+    // ---------- Connection ----------
+    function currentPort() { return PORTS[portIndex % PORTS.length]; }
+
+    function connect() {
+      if (!roomName) refreshRoom();
+      wantConnection = true;
+
+      // Once dialing has failed, keep the "no server" guidance on screen
+      // instead of flickering back to DIALING every retry
+      if (!everConnected) setSetupStatus(failedOnce ? 'unreachable' : 'dialing');
+
+      ws = new WebSocket('ws://localhost:' + currentPort());
+      var opened = false;
+
+      ws.onopen = function () {
+        opened = true;
+        failedOnce = false;
+        everConnected = true;
+        relayUp = true;
+        agentPresent = false;
+        showConnected();
+
+        ws.send(JSON.stringify({
+          type: 'join',
+          room: roomName,
+          id: 'join-' + Date.now(),
+          role: 'plugin',
+          meta: { fileName: fileName },
+          message: {
+            id: 'join-' + Date.now(),
+            command: 'join',
+            params: { room: roomName }
+          }
+        }));
+      };
+
+      ws.onmessage = function (event) {
+        try {
+          var data = JSON.parse(event.data);
+
+          if (data.type === 'presence') {
+            if (data.room === roomName) {
+              agentPresent = (data.peers || []).some(function (p) { return p.role === 'agent'; });
+              renderAgent();
+            }
+            return;
+          }
+
+          if (data.type === 'broadcast' && data.message) {
+            var msg = data.message;
+            if (msg.command) {
+              feedAdd(msg.id, msg.command, msg.params && msg.params.nodeId);
+              parent.postMessage({
+                pluginMessage: {
+                  type: 'execute-command',
+                  id: msg.id,
+                  command: msg.command,
+                  params: msg.params || {},
+                }
+              }, '*');
+            }
+          }
+        } catch (err) {
+          // Ignore malformed frames
+        }
+      };
+
+      ws.onclose = function () {
+        ws = null;
+        if (!wantConnection) {
+          setSetupStatus('off');
+          showSetup();
+          return;
+        }
+        if (everConnected) {
+          // Keep the connected view; flip the RELAY line to retry state
+          relayUp = false;
+          agentPresent = false;
+          renderRelay();
+          renderAgent();
+        } else {
+          // Never connected yet: the MCP server likely isn't running.
+          // Show the setup guidance and keep dialing in the background.
+          failedOnce = true;
+          setSetupStatus('unreachable');
+        }
+        reconnectTimer = setTimeout(connect, 2000);
+      };
+
+      ws.onerror = function () {
+        if (!opened) {
+          // Try the next allowed port (9055-9057) on the following attempt
+          portIndex++;
+        }
+      };
+    }
+
+    function disconnect() {
+      wantConnection = false;
+      failedOnce = false;
+      everConnected = false;
+      relayUp = false;
+      agentPresent = false;
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      if (ws) { ws.close(); ws = null; }
+      setSetupStatus('off');
+      showSetup();
+    }
+
+    // ---------- Messages from the plugin main thread ----------
+    window.onmessage = function (event) {
+      var msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      if (msg.type === 'init-settings') {
+        settingsReady = true;
+        fileName = msg.fileName || '';
+        var s = msg.settings || {};
+        if (LOCALES.indexOf(s.locale) !== -1) locale = s.locale;
+        if (CLIENTS[s.client]) client = s.client;
+        applyI18n();
+        roomName = s.room || randomRoom();
+        document.getElementById('room').value = roomName;
+        if (!s.room) saveSettings({ room: roomName });
+        document.getElementById('allowExec').checked = s.allowCodeExec !== false;
+        document.getElementById('autoConnect').checked = s.autoConnect !== false;
+        if (s.autoConnect !== false) connect();
+        return;
+      }
+
+      if (msg.type === 'command-result' && ws && ws.readyState === WebSocket.OPEN) {
+        feedSettle(msg.id, true);
+        ws.send(JSON.stringify({
+          type: 'message',
+          room: roomName,
+          id: msg.id,
+          message: { id: msg.id, result: msg.result, events: msg.events }
+        }));
+      }
+
+      if (msg.type === 'command-error' && ws && ws.readyState === WebSocket.OPEN) {
+        var errText = typeof msg.error === 'string' ? msg.error : (msg.error && msg.error.message);
+        feedSettle(msg.id, false, errText);
+        ws.send(JSON.stringify({
+          type: 'message',
+          room: roomName,
+          id: msg.id,
+          message: { id: msg.id, error: msg.error }
+        }));
+      }
+
+      if (msg.type === 'command_progress') {
+        var container = document.getElementById('progressContainer');
+        var fill = document.getElementById('progressFill');
+        var text = document.getElementById('progressText');
+
+        container.style.display = 'block';
+        fill.style.width = msg.progress + '%';
+        text.textContent = msg.message || (msg.progress + '%');
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'progress_update',
+            id: msg.commandId,
+            room: roomName,
+            message: { data: msg }
+          }));
+        }
+
+        if (msg.status === 'completed' || msg.status === 'error') {
+          setTimeout(function () { container.style.display = 'none'; }, 3000);
+        }
+      }
+    };
+
+    applyI18n();
+    // Fallback: if the main thread never sends settings (unexpected), still
+    // provide a usable setup screen after a short wait
+    setTimeout(function () {
+      if (!settingsReady && !roomName) {
+        roomName = randomRoom();
+        document.getElementById('room').value = roomName;
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "figma-relai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run build:shared && bun run build:server && bun run build:plugin",
+    "build:shared": "cd packages/shared && bun run build",
+    "build:server": "cd packages/mcp-server && bun run build",
+    "build:plugin": "cd packages/figma-plugin && bun run build",
+    "dev": "cd packages/mcp-server && bun run dev",
+    "socket": "bun run packages/relay/src/index.ts",
+    "start": "node packages/mcp-server/dist/index.js",
+    "setup": "bash scripts/setup.sh",
+    "test": "bun test",
+    "typecheck": "cd packages/shared && bun x tsc --noEmit && cd ../mcp-server && bun x tsc --noEmit && cd ../figma-plugin && bun x tsc --noEmit"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "^1.3.14"
+  }
+}

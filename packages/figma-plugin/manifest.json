@@ -1,0 +1,18 @@
+{
+  "name": "Relai",
+  "id": "1613474334525847301",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "documentAccess": "dynamic-page",
+  "editorType": ["figma", "figjam"],
+  "networkAccess": {
+    "allowedDomains": [
+      "ws://localhost:9055",
+      "ws://localhost:9056",
+      "ws://localhost:9057"
+    ],
+    "devAllowedDomains": ["http://localhost:9055", "ws://localhost:9055"],
+    "reasoning": "WebSocket connection to local relay server for MCP communication. Fallback ports 9056/9057 are tried when 9055 is occupied by another app."
+  }
+}
