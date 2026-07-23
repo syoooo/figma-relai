@@ -13,10 +13,17 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
         .string()
         .optional()
         .describe("One line shown in the plugin's activity feed describing what this does"),
+      timeoutMs: z
+        .number()
+        .int()
+        .min(1000)
+        .max(300000)
+        .optional()
+        .describe("Execution timeout in ms (default 60000) — raise for scripts creating hundreds of nodes"),
     },
-    async ({ code, description }) => {
+    async ({ code, description, timeoutMs }) => {
       try {
-        const result = await sendCommand("execute_code", { code, description }, 60000);
+        const result = await sendCommand("execute_code", { code, description }, timeoutMs ?? 60000);
         return jsonResult(result);
       } catch (error) {
         return errorResult(error);

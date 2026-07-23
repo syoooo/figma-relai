@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `execute_figma` accepts an optional `timeoutMs` (up to 300000) for scripts that create hundreds of nodes — the 60s default remains.
+
 ## 0.1.1
 
 - Fix: on rapid server restarts (MCP client reconnect, successive CLI runs), the new process could hit the relay port-handoff window and stay disconnected permanently — host takeover now also runs when the initial connection fails, so the first command self-heals.
