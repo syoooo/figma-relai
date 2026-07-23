@@ -300,9 +300,20 @@ export class FigmaConnection {
       try {
         await this.connect();
       } catch {
-        throw new Error(
-          "Not connected to the relay. The MCP server hosts it automatically — if this persists, another app may be occupying the port."
-        );
+        // The relay host may have just exited (port-handoff race on rapid
+        // server restarts): try to take over hosting, then dial once more.
+        try {
+          await this.options.beforeReconnect?.();
+        } catch {
+          // Takeover failure is fine; the retry below may reach another host
+        }
+        try {
+          await this.connect();
+        } catch {
+          throw new Error(
+            "Not connected to the relay. The MCP server hosts it automatically — if this persists, another app may be occupying the port."
+          );
+        }
       }
     }
 
