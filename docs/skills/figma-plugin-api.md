@@ -46,8 +46,10 @@ node.setBoundVariable("fills", v);                 // binding paint needs figma.
 const bytes = await node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 2 } });
 ```
 
-## Pitfalls that throw
+## Pitfalls that throw (or silently do the wrong thing)
 
+- **Shadow `spread` renders only on shapes or frames with `clipsContent: true`** — a focus ring built from spread shadows is invisible on a non-clipping frame/component.
+- **`resize()` on an auto-layout frame pins that axis to FIXED**, silently overriding `primaryAxisSizingMode: "AUTO"`. To hug content, append children first, then set `layoutSizingHorizontal = "HUG"` (and use `resize` only for the fixed cross-axis).
 - `resize(w, h)` with `w <= 0 || h <= 0`; resizing nodes without `resize` (e.g. some text auto-resize modes — set `textAutoResize` first).
 - Setting layout-child props (`layoutSizing*`, `layoutAlign`) when the **parent** has `layoutMode: "NONE"`.
 - `layoutWrap = "WRAP"` on VERTICAL; `counterAxisAlignItems = "BASELINE"` on VERTICAL.
