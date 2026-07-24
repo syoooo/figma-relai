@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - **`relai.*` sandbox helpers**: `execute_figma` scripts get a `relai` object alongside `figma` — `text()` (font-safe), `autoLayout()`, `set()` (ordering-safe), `hug()`, `focusRing()`, `page()` (content-based lookup), `query()` (CSS-like selector subset: types, name matchers, descendant/child combinators, comma), and `placeholder()` (construction veil for work-in-progress sections). The correct way is now the shortest way.
 - **Atomic scripts**: a failed `execute_figma` script rolls back its partial changes (undo-step based) — errors leave the file untouched.
