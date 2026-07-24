@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+- Plugin: redial immediately when the Figma window regains attention — backgrounded windows suspend the plugin iframe, freezing the 2s retry loop until now (the relay's staleness sweep would kick the silent socket; the full causal chain is recorded as a pitfall).
+- Localization pass across the panel and READMEs: natural-Japanese rewrite of 8 panel strings and 12 README.ja passages; 6 panel strings and full-width punctuation normalization in Chinese; lock label renamed for clarity in ja/zh (選択範囲に限定 / 仅限选区).
+- npm publishing: `npm run release` wraps publish so the root README/LICENSE are in place before npm captures metadata — lifecycle hooks alone proved too late, which is why 0.2.2/0.2.3 pages showed no README.
+
 ## 0.2.3
 
 - `get_design_system` adds a top-level `TRUNCATED` note when a component list is capped, naming how many items are hidden and that usage-sorting cuts exactly the newest zero-usage components (the per-list field existed but proved missable in a real audit).

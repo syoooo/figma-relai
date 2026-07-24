@@ -14,7 +14,7 @@ const PORT = parseInt(process.env.PORT || "9055");
 const HOST = process.env.HOST || "127.0.0.1";
 
 const core = new RelayCore<ServerWebSocket<unknown>>({
-  version: "0.2.3",
+  version: "0.2.4",
   log: (msg) => console.log(msg),
 });
 

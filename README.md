@@ -93,7 +93,7 @@ Each tool is self-describing, so the AI sees full parameter docs. The same contr
 
 ## Relai and Figma's official MCP
 
-Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are excellent, and both belong to full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: every plan including free, whatever model and subscription you already use, everything running on your machine, and the designer holding the controls. If you have the seats, the two coexist happily — run both.
+Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are excellent, and both are reserved for full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: every plan including free, whatever model and subscription you already use, everything running on your machine, and the designer holding the controls. If you have the seats, the two coexist happily — run both.
 
 ## Optional: comments
 
