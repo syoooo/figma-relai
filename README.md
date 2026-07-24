@@ -47,13 +47,15 @@ Bulk edits. "Translate every button label to English" or "recolor this for dark 
 
 Audits. `analyze_design` checks color-token coverage, auto-layout quality, component health, and accessibility (WCAG contrast, touch targets, text sizes) — or all four at once as a weighted 0–100 health score you can put in a review.
 
-Design systems. Variable collections with modes, token binding, shared styles, components with proper variants, team-library imports. These run as declarative operations with precondition checks, so the same request behaves the same way every time, and a failure tells the AI what to do next ("call set_layout_mode first") instead of dumping a stack trace.
+Design systems. Variable collections with modes, token binding, shared styles, components with proper variants, team-library imports. `get_design_system` inventories what the file — and the libraries it uses — already has, so the AI builds from your components instead of redrawing near-copies; `analyze_design`'s tokens aspect finds hardcoded values that visually match an existing variable, and one `tokenize` call binds them all. These run as declarative operations with precondition checks, so the same request behaves the same way every time, and a failure tells the AI what to do next ("call set_layout_mode first") instead of dumping a stack trace.
 
 Everything else. `execute_figma` runs JavaScript against the Figma Plugin API directly — the same escape-hatch approach as Figma's official MCP — with a `relai.*` helper library that makes the correct pattern the shortest one, hints attached to known errors, and a lint that flags silent mistakes. If you'd rather the AI never ran code, turn it off with the plugin's "Allow code execution" toggle.
 
 ## You stay in control
 
-The plugin is the designer's side of the deal: a live activity feed of everything the AI does, an "AI connected" indicator that means an agent is actually paired (not just that a server is running), and a Stop button that cancels pending work. Selection and page changes you make flow back to the AI as events, so "now do the same to this one" works without re-explaining. The UI speaks English, 日本語, and 中文.
+The plugin is the designer's side of the deal: a live activity feed of everything the AI does, an "AI connected" indicator that means an agent is actually paired (not just that a server is running), and a Stop button that cancels pending work. Selection and page changes you make flow back to the AI as events, so "now do the same to this one" works without re-explaining.
+
+Three dials go further when you want them. **Approvals** ("Ask before big edits") holds bulk writes and code execution until you press Approve in the panel. **Lock to selection** rejects edits outside whatever you've selected — the AI gets a clear error, not a silent pass. And **file conventions** are a little CLAUDE.md stored inside the Figma file itself: naming rules, spacing habits, do-not-touch pages — every future session, from any AI client, reads it before working. The UI speaks English, 日本語, and 中文.
 
 ## How it works
 
@@ -80,18 +82,18 @@ Ports are fixed by Figma's plugin sandbox: the manifest allowlists `ws://localho
 | Read | `get_node_data` (summary / tree / full / css / variables) |
 | Create & edit | `create_node` · `set_properties` · `set_text` · `edit_structure` |
 | Components | `manage_components` |
-| Design system | `manage_variables` · `manage_styles` · `import_from_library` |
+| Design system | `get_design_system` · `manage_variables` · `manage_styles` · `import_from_library` · `manage_conventions` |
 | Document | `manage_pages` · `navigate` |
 | Assets | `export_asset` · `add_image` |
 | Annotations | `annotate` |
 | Comments | `manage_comments` (needs a token — see below) |
 | Advanced | `batch_execute` · `execute_figma` · `join_room` |
 
-Each tool is self-describing, so the AI sees full parameter docs. Six skill documents ship alongside as MCP prompts: token strategy, component conventions, audit workflows, and a Plugin API cheat sheet for `execute_figma`.
+Each tool is self-describing, so the AI sees full parameter docs. Nine skill documents ship alongside as MCP prompts: token strategy, component conventions, audit workflows, a Plugin API cheat sheet for `execute_figma`, and recipes for design-system-first building, bulk cleanup, and comment-driven collaboration.
 
 ## Relai and Figma's official MCP
 
-Figma's official MCP server is built for turning finished designs into code, and its design context and Code Connect integration are the right tool for that hand-off. Relai works the other direction: it helps a designer make and maintain the design itself, with any client and model, on any plan. If your team has the seats, run both.
+Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are excellent, and both belong to full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: every plan including free, whatever model and subscription you already use, everything running on your machine, and the designer holding the controls. If you have the seats, the two coexist happily — run both.
 
 ## Optional: comments
 
@@ -102,7 +104,7 @@ Comments live behind Figma's REST API, which needs a personal access token. Gene
   "env": { "FIGMA_TOKEN": "figd_..." } } } }
 ```
 
-The token stays in your config file and is sent only to `api.figma.com`. Every other tool works without it. With it, "apply the feedback in the comments" becomes a thing the AI can actually do: read the threads, make the edits, reply.
+The token stays in your config file and is sent only to `api.figma.com`. Every other tool works without it. With it, "apply the feedback in the comments" becomes a thing the AI can actually do: read the threads, make the edits, reply. It also unlocks a quiet workflow: leave an @-comment on the canvas as a task, then tell your AI to "check the comments" — it claims the thread, does the work, and reports back on it.
 
 ## Troubleshooting
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0
+
+Design-system intelligence and designer-side trust controls. All additive — no breaking changes. Tool count: 30 → 32.
+
+- **`get_design_system`** — the "look before you draw" inventory: local components/styles/variable collections with usage counts, remote items the file already uses, and enabled libraries' variable collections. Honest three-tier model for imported libraries; full library catalogs via REST when `FIGMA_TOKEN` + `libraryFileUrl` are provided. `execute_figma` now steers UI building through the file's own system first.
+- **Token drift**: `analyze_design` gains a `tokens` aspect — hardcoded colors (OKLab ΔE match) and numbers that visually equal an existing variable, each finding naming the variable to bind. `manage_variables action:"tokenize" fix:true` binds them in one pass.
+- **Approval gate**: a plugin setting ("Ask before big edits": off / bulk / all) holds bulk writes and code execution until the designer presses Approve in the panel. Keepalive progress prevents MCP-side timeouts while the card waits; Deny returns the cancelled envelope.
+- **Scope lock**: restrict edits to the current selection. Declarative commands are pre-checked (including batch sub-commands); `execute_figma` cannot be intercepted up front and is instead linted after the fact, with violations reported loudly — documented honestly.
+- **Dry-run**: `batch_execute` and `set_properties` accept `dryRun:true` and return the exact command plan without touching the canvas.
+- **File conventions** (`manage_conventions`) — a CLAUDE.md that lives inside the Figma file (shared plugin data): naming rules, spacing habits, do-not-touch areas. `get_document_overview` auto-includes it; the panel shows a RULES row when present.
+- **Comment-driven tasks**: `manage_comments` list gains `since` / `unresolved` filters and a `checkedAt` cursor; a new skill documents the scan → claim → execute → report-back loop (polling, honestly labeled).
+- Three new skill prompts: `design-system-first`, `janitorial-cleanup`, `comment-driven-tasks` (nine total).
+
 ## 0.1.4
 
 - The plugin's connected card now leads with the **file name**; the room name — infrastructure since auto-pairing, and a secret besides — moved to a small hover-to-copy line. Room listings carry the plugin's file name, so the multiple-plugins error reads `"Landing v2" (room …)` instead of bare room strings.
