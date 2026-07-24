@@ -68,12 +68,21 @@ registerHandler("execute_code", async (params) => {
   // (Never wrap `figma` in a Proxy — its methods are non-configurable, so a
   // get trap returning wrappers violates Proxy invariants and throws
   // "proxy: inconsistent get".)
-  const fn = new Function(
-    "figma",
-    "console",
-    "relai",
-    `"use strict"; return (async () => { ${code}\n })();`
-  );
+  let fn: (...args: unknown[]) => Promise<unknown>;
+  try {
+    fn = new Function(
+      "figma",
+      "console",
+      "relai",
+      `"use strict"; return (async () => { ${code}\n })();`
+    ) as typeof fn;
+  } catch (error) {
+    // Compile-time failures (syntax errors, sandbox-VM compiler bugs like
+    // "stack underflow" on `for (… of await …)`) deserve hints too
+    const message = error instanceof Error ? error.message : String(error);
+    const hint = pitfallHint(message);
+    throw new Error(hint ? `${message} — Hint: ${hint}` : message);
+  }
 
   let value: unknown;
   try {

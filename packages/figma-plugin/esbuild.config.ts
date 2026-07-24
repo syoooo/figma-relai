@@ -7,7 +7,7 @@ const options: esbuild.BuildOptions = {
   bundle: true,
   outfile: "code.js",
   format: "iife",
-  target: "es2015",
+  target: "es2017",
   sourcemap: false,
   minify: false,
 };

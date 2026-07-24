@@ -90,11 +90,6 @@ export const PITFALLS: Pitfall[] = [
     hint: "",
     doc: "**Instance children can't be added or removed** — detach first, or edit the main component.",
   },
-  {
-    pattern: "stack underflow",
-    hint: "Figma's sandbox VM cannot compile `for (const x of await f())` — assign the awaited value to a variable first (`const list = await f(); for (const x of list) …`), then retry.",
-    doc: "**`for (const x of await f())` crashes the sandbox compiler** (`InternalError: stack underflow`) — always assign the awaited iterable to a variable before looping.",
-  },
 ];
 
 // First matching pitfall's hint, or null. Doc-only entries never match.

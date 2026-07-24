@@ -4,11 +4,12 @@ import { join } from "node:path";
 import { getQuickJS } from "quickjs-emscripten";
 
 // Figma's plugin sandbox runs on an old QuickJS build whose compiler rejects
-// some syntax that modern engines (and esbuild's es2015 output) accept — e.g.
-// `for (const x of await f())` fails the WHOLE bundle with "InternalError:
-// stack underflow", bricking the plugin at launch. This test compiles the
-// built code.js in quickjs-emscripten (the same VM family) so that class of
-// bug is caught in CI instead of in Figma.
+// some bytecode shapes modern engines accept. Notably: esbuild's ES2015
+// lowering turns `await` into generator `yield`, and `for (const x of yield …)`
+// fails the WHOLE bundle with "InternalError: stack underflow", bricking the
+// plugin at launch. That is why esbuild.config.ts targets es2017 (native
+// async) — this test compiles the built code.js in quickjs-emscripten (the
+// same VM family) so any regression of that class is caught in CI, not Figma.
 //
 // Compile success = anything but InternalError; a ReferenceError for the
 // missing `figma` global is expected (compilation finished, execution began).
@@ -34,9 +35,10 @@ describe("sandbox VM compatibility", () => {
     }
   });
 
-  test("the for-of-await pattern itself still reproduces (canary)", async () => {
-    // If this canary ever starts passing, Figma upgraded their VM and the
-    // pitfall entry can be retired.
+  test("es2015-style lowered await-in-for-of still crashes the VM (canary)", async () => {
+    // This is what esbuild target:es2015 would emit — it MUST keep failing
+    // here, or the es2017 target requirement no longer applies and this
+    // guard can be retired. Never lower the esbuild target below es2017.
     const QuickJS = await getQuickJS();
     const vm = QuickJS.newContext();
     try {

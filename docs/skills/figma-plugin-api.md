@@ -90,7 +90,6 @@ When one of these throws inside `execute_figma`, the error already carries the r
 - **`resize()` on an auto-layout frame silently pins that axis to FIXED**, overriding `primaryAxisSizingMode: "AUTO"`. Append children first, then set `layoutSizingHorizontal = "HUG"`; use `resize` only for the fixed cross-axis.
 - **Per-corner radius** (`topLeftRadius` …) only exists on RectangleCornerMixin nodes (rectangles, frames, components) — polygons, stars and lines throw.
 - **Instance children can't be added or removed** — detach first, or edit the main component.
-- **`for (const x of await f())` crashes the sandbox compiler** (`InternalError: stack underflow`) — always assign the awaited iterable to a variable before looping.
 <!-- PITFALLS:END -->
 
 Also: `resize(w, h)` throws on `w <= 0 || h <= 0`; `layoutWrap = "WRAP"` is HORIZONTAL-only, `counterAxisAlignItems = "BASELINE"` too; writing to `locked` nodes is allowed by the API but surprises designers — check first.

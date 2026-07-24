@@ -251,9 +251,6 @@ registerHandler("scan_token_drift", async (params) => {
   // Candidate pool: local variables, resolved to concrete values
   const colorCandidates: ColorCandidate[] = [];
   const numberCandidates: Array<{ id: string; name: string; value: number }> = [];
-  // NOTE: never `for (… of await …)` — the awaited iterable must be assigned
-  // first, or Figma's sandbox VM fails to compile the whole plugin with
-  // "InternalError: stack underflow" (see pitfalls.ts + sandbox-vm.test.ts)
   const localCollections = await figma.variables.getLocalVariableCollectionsAsync();
   for (const collection of localCollections) {
     const modeId = collection.modes[0]?.modeId;
@@ -278,9 +275,12 @@ registerHandler("scan_token_drift", async (params) => {
   }
 
   const findings: DriftFinding[] = [];
-  const nodes = (root as ChildrenMixin & BaseNode).findAll
-    ? (root as unknown as ChildrenMixin).findAll(() => true)
+  // The scan covers the root itself too — a leaf node passed as nodeId would
+  // otherwise scan nothing (findAll only returns descendants)
+  const nodes: SceneNode[] = (root as ChildrenMixin & BaseNode).findAll
+    ? ((root as unknown as ChildrenMixin).findAll(() => true) as SceneNode[])
     : [];
+  if (root.type !== "PAGE" && root.type !== "DOCUMENT") nodes.unshift(root as SceneNode);
   let matched = 0;
   let fixed = 0;
 
