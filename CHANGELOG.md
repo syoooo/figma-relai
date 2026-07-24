@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- The plugin's connected card now leads with the **file name**; the room name — infrastructure since auto-pairing, and a secret besides — moved to a small hover-to-copy line. Room listings carry the plugin's file name, so the multiple-plugins error reads `"Landing v2" (room …)` instead of bare room strings.
+- Motion polish: named easing tokens replace the browser-default `ease`, the progress bar animates `transform` instead of `width`, and transitions declare explicit properties.
+- Docs rewritten for their audience (designer-first README in three languages, truthful SECURITY.md, embedded-relay CONTRIBUTING).
+
 ## 0.1.3
 
 Fixes from an adversarial smoke pass against live Figma:
