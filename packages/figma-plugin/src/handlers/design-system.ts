@@ -219,6 +219,45 @@ const NUMBER_FIELDS = [
   "paddingBottom",
 ] as const;
 
+// Scope discipline: 16 can equal font-size/md, space/16 AND radius/xl at
+// once — binding by value alone picks nonsense. A candidate qualifies only
+// when its scopes fit the field being bound (ALL_SCOPES always qualifies).
+const NUMBER_FIELD_SCOPES: Record<(typeof NUMBER_FIELDS)[number], VariableScope[]> = {
+  cornerRadius: ["CORNER_RADIUS"],
+  itemSpacing: ["GAP"],
+  paddingLeft: ["GAP"],
+  paddingRight: ["GAP"],
+  paddingTop: ["GAP"],
+  paddingBottom: ["GAP"],
+};
+
+function paintScopesFor(node: SceneNode, listProp: "fills" | "strokes"): VariableScope[] {
+  if (listProp === "strokes") return ["STROKE_COLOR", "ALL_FILLS"];
+  if (node.type === "TEXT") return ["TEXT_FILL", "ALL_FILLS"];
+  if (
+    node.type === "FRAME" ||
+    node.type === "COMPONENT" ||
+    node.type === "COMPONENT_SET" ||
+    node.type === "INSTANCE" ||
+    node.type === "SECTION"
+  ) {
+    return ["FRAME_FILL", "ALL_FILLS"];
+  }
+  return ["SHAPE_FILL", "ALL_FILLS"];
+}
+
+function scopeAllows(scopes: readonly VariableScope[], allowed: VariableScope[]): boolean {
+  return scopes.includes("ALL_SCOPES") || allowed.some((s) => scopes.includes(s));
+}
+
+// Uniform cornerRadius is not a bindable field — the four corners are
+const CORNER_FIELDS = [
+  "topLeftRadius",
+  "topRightRadius",
+  "bottomLeftRadius",
+  "bottomRightRadius",
+] as const;
+
 // Follow alias chains to a concrete value (depth-capped)
 async function resolveVariableValue(
   variable: Variable,
@@ -248,9 +287,14 @@ registerHandler("scan_token_drift", async (params) => {
     if (!root) throw new Error(`Node not found: ${params.nodeId}`);
   }
 
-  // Candidate pool: local variables, resolved to concrete values
-  const colorCandidates: ColorCandidate[] = [];
-  const numberCandidates: Array<{ id: string; name: string; value: number }> = [];
+  // Candidate pool: local variables, resolved to concrete values + scopes
+  const colorCandidates: Array<ColorCandidate & { scopes: readonly VariableScope[] }> = [];
+  const numberCandidates: Array<{
+    id: string;
+    name: string;
+    value: number;
+    scopes: readonly VariableScope[];
+  }> = [];
   const localCollections = await figma.variables.getLocalVariableCollectionsAsync();
   for (const collection of localCollections) {
     const modeId = collection.modes[0]?.modeId;
@@ -259,9 +303,19 @@ registerHandler("scan_token_drift", async (params) => {
       if (!variable) continue;
       const value = await resolveVariableValue(variable, modeId);
       if (variable.resolvedType === "COLOR" && value && typeof value === "object" && "r" in value) {
-        colorCandidates.push({ id: variable.id, name: variable.name, color: value as RGB });
+        colorCandidates.push({
+          id: variable.id,
+          name: variable.name,
+          color: value as RGB,
+          scopes: variable.scopes,
+        });
       } else if (variable.resolvedType === "FLOAT" && typeof value === "number") {
-        numberCandidates.push({ id: variable.id, name: variable.name, value });
+        numberCandidates.push({
+          id: variable.id,
+          name: variable.name,
+          value,
+          scopes: variable.scopes,
+        });
       }
     }
   }
@@ -304,10 +358,12 @@ registerHandler("scan_token_drift", async (params) => {
     for (const listProp of ["fills", "strokes"] as const) {
       const paints = (node as unknown as Record<string, unknown>)[listProp];
       if (!Array.isArray(paints)) continue;
+      const allowedPaintScopes = paintScopesFor(node, listProp);
+      const scopedColors = colorCandidates.filter((c) => scopeAllows(c.scopes, allowedPaintScopes));
       for (let pi = 0; pi < paints.length; pi++) {
         const paint = paints[pi] as SolidPaint;
         if (paint.type !== "SOLID" || paint.boundVariables?.color) continue;
-        const hit = nearestColorMatch(paint.color, colorCandidates, tolerance);
+        const hit = nearestColorMatch(paint.color, scopedColors, tolerance);
         if (!hit) continue;
         matched++;
         const finding: DriftFinding = {
@@ -337,13 +393,18 @@ registerHandler("scan_token_drift", async (params) => {
       }
     }
 
-    // Number drift: exact matches only (rounded to 2dp)
+    // Number drift: exact matches only (rounded to 2dp), scope-filtered
     for (const field of NUMBER_FIELDS) {
       const value = (node as unknown as Record<string, unknown>)[field];
       if (typeof value !== "number" || value === 0) continue;
-      if ((node.boundVariables as Record<string, unknown> | undefined)?.[field]) continue;
+      const bv = node.boundVariables as Record<string, unknown> | undefined;
+      const boundKeys: readonly string[] =
+        field === "cornerRadius" ? ["cornerRadius", ...CORNER_FIELDS] : [field];
+      if (boundKeys.some((k) => bv?.[k])) continue;
       const candidate = numberCandidates.find(
-        (c) => Math.round(c.value * 100) === Math.round(value * 100)
+        (c) =>
+          Math.round(c.value * 100) === Math.round(value * 100) &&
+          scopeAllows(c.scopes, NUMBER_FIELD_SCOPES[field])
       );
       if (!candidate) continue;
       matched++;
@@ -359,7 +420,14 @@ registerHandler("scan_token_drift", async (params) => {
         try {
           const variable = await figma.variables.getVariableByIdAsync(candidate.id);
           if (variable) {
-            (node as FrameNode).setBoundVariable(field as VariableBindableNodeField, variable);
+            if (field === "cornerRadius") {
+              // Uniform cornerRadius silently no-ops as a binding target
+              for (const corner of CORNER_FIELDS) {
+                (node as FrameNode).setBoundVariable(corner, variable);
+              }
+            } else {
+              (node as FrameNode).setBoundVariable(field as VariableBindableNodeField, variable);
+            }
             finding.fixed = true;
             fixed++;
           }
