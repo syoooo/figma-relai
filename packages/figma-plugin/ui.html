@@ -104,7 +104,7 @@
     }
     .rule::before { content: ""; width: 12px; border-top: 1px solid var(--line); }
     .rule::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
-    .rule .chev { color: var(--faint); font-size: 8px; transition: transform 0.15s; }
+    .rule .chev { color: var(--faint); font-size: 8px; transition: transform var(--dur-fast) var(--ease-out); }
     .rule.clickable { cursor: pointer; }
     .rule.clickable:hover { color: var(--text); }
     .rule.open .chev { transform: rotate(90deg); }
@@ -153,7 +153,7 @@
     .panel::before { top: -6px; left: -4px; }
     .panel::after { bottom: -6px; right: -4px; }
 
-    .room-display {
+    .file-display {
       font-size: 15px; font-weight: 700;
       color: var(--amber);
       text-shadow: 0 0 10px var(--amber-glow);
@@ -161,6 +161,23 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       margin-bottom: var(--sp-6);
     }
+    .room-line {
+      display: flex; align-items: center; gap: var(--sp-6);
+      margin-top: var(--sp-8);
+      font-size: 9.5px; color: var(--faint);
+      cursor: pointer; user-select: none;
+    }
+    .room-line .room-key { letter-spacing: 0.14em; text-transform: uppercase; }
+    .room-line .room-value {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      color: var(--muted);
+    }
+    .room-line .copy-label {
+      font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase;
+      opacity: 0; transition: opacity var(--dur-fast) var(--ease-out);
+    }
+    .room-line:hover .copy-label { opacity: 1; color: var(--amber); }
+    .room-line.copied .copy-label { opacity: 1; color: var(--ok); }
 
     /* ── Inputs ─────────────────────────────────────────── */
     .field-row { display: flex; gap: var(--sp-8); align-items: stretch; }
@@ -195,7 +212,7 @@
       border: 1px solid var(--amber-dim);
       color: var(--amber);
       cursor: pointer;
-      transition: background 0.1s, color 0.1s;
+      transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
     }
     .btn:hover { background: var(--amber); color: var(--bg); }
     .btn:focus-visible { outline: 1px dashed var(--amber); outline-offset: 2px; }
@@ -348,7 +365,7 @@
       width: 12px; height: 10px;
       left: 2px; top: 2px;
       background: var(--faint);
-      transition: transform 0.12s, background 0.12s;
+      transition: transform var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
     }
     .switch .track::after {
       content: "OFF"; position: absolute; right: 4px;
@@ -380,7 +397,7 @@
     .cat-details summary:hover { color: var(--text); background: var(--panel-2); }
     .cat-details summary .cat-arrow {
       display: inline-block; font-size: 8px; margin-right: var(--sp-4);
-      transition: transform 0.15s; width: 8px; text-align: center;
+      transition: transform var(--dur-fast) var(--ease-out); width: 8px; text-align: center;
       color: var(--amber-dim);
     }
     .cat-details[open] summary .cat-arrow { transform: rotate(90deg); }
@@ -405,7 +422,8 @@
     .progress-fill {
       height: 100%; background: var(--amber);
       box-shadow: 0 0 8px var(--amber-glow);
-      transition: width 0.3s; width: 0%;
+      width: 100%; transform: scaleX(0); transform-origin: left;
+      transition: transform var(--dur-med) var(--ease-out);
     }
     .progress-text { margin-top: var(--sp-4); font-size: 9px; color: var(--muted); }
 
@@ -487,7 +505,7 @@
   <div class="connected-section" id="connectedSection">
 
     <div class="panel">
-      <div class="room-display" id="connectedRoom"></div>
+      <div class="file-display" id="connectedFile"></div>
       <div class="leader-row">
         <span class="key">RELAY</span>
         <span class="dots"></span>
@@ -497,6 +515,11 @@
         <span class="key">AGENT</span>
         <span class="dots"></span>
         <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText" data-i18n="ai_waiting">WAITING</span></span>
+      </div>
+      <div class="room-line" id="roomLine" onclick="copyConnectedRoom()">
+        <span class="room-key" data-i18n="room_label">Room</span>
+        <span class="room-value" id="connectedRoom"></span>
+        <span class="copy-label" data-i18n="copy">copy</span>
       </div>
     </div>
 
@@ -560,6 +583,7 @@
         status_disconnected: 'OFFLINE',
         status_connecting: 'DIALING…',
         status_unreachable: 'NO SERVER',
+        untitled: 'Untitled',
         room_label: 'Room',
         regenerate: 'Regenerate',
         connect: 'Connect',
@@ -594,6 +618,7 @@
         status_disconnected: 'OFFLINE',
         status_connecting: '接続中…',
         status_unreachable: 'サーバー未検出',
+        untitled: '無題',
         room_label: 'ルーム',
         regenerate: '再生成',
         connect: '接続',
@@ -628,6 +653,7 @@
         status_disconnected: 'OFFLINE',
         status_connecting: '连接中…',
         status_unreachable: '未检测到服务器',
+        untitled: '未命名',
         room_label: '房间',
         regenerate: '重新生成',
         connect: '连接',
@@ -770,6 +796,18 @@
     function toggleGuide() { toggleRule('guideToggle', 'guideContent'); }
     function toggleTools() { toggleRule('toolsToggle', 'toolsContent'); }
 
+    function copyConnectedRoom() {
+      var ta = document.createElement('textarea');
+      ta.value = roomName;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      var line = document.getElementById('roomLine');
+      line.classList.add('copied');
+      setTimeout(function () { line.classList.remove('copied'); }, 1200);
+    }
+
     function refreshRoom() {
       roomName = randomRoom();
       document.getElementById('room').value = roomName;
@@ -855,6 +893,7 @@
     function showConnected() {
       document.getElementById('setupSection').style.display = 'none';
       document.getElementById('connectedSection').style.display = 'block';
+      document.getElementById('connectedFile').textContent = fileName || t('untitled');
       document.getElementById('connectedRoom').textContent = roomName;
       renderRelay();
       renderAgent();
@@ -1098,7 +1137,7 @@
         var text = document.getElementById('progressText');
 
         container.style.display = 'block';
-        fill.style.width = msg.progress + '%';
+        fill.style.transform = 'scaleX(' + Math.max(0, Math.min(1, msg.progress / 100)) + ')';
         text.textContent = msg.message || (msg.progress + '%');
 
         if (ws && ws.readyState === WebSocket.OPEN) {

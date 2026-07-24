@@ -88,6 +88,19 @@ describe("RelayCore", () => {
     expect(result.rooms).toEqual([{ room: "r1", hasPlugin: true, agentCount: 1 }]);
   });
 
+  test("list_rooms carries the plugin's fileName when provided", () => {
+    const core = new RelayCore<FakeSocket>();
+    const plugin = connect(core);
+    core.handleMessage(plugin, JSON.stringify({
+      type: "join", id: "j1", room: "r1", role: "plugin", meta: { fileName: "Landing v2" },
+    }));
+    const asker = connect(core);
+    core.handleMessage(asker, JSON.stringify({ type: "list_rooms", id: "q" }));
+    expect(asker.ofType("list_rooms_result")[0].rooms).toEqual([
+      { room: "r1", hasPlugin: true, agentCount: 0, fileName: "Landing v2" },
+    ]);
+  });
+
   test("message broadcasts to peers but not the sender, and requires membership", () => {
     const core = new RelayCore<FakeSocket>();
     const a = connect(core);

@@ -18,6 +18,8 @@ export interface RoomSummary {
   room: string;
   hasPlugin: boolean;
   agentCount: number;
+  /** File name reported by the plugin peer, when known */
+  fileName?: string;
 }
 
 export interface RelayCoreOptions {
@@ -95,10 +97,14 @@ export class RelayCore<S extends RelaySocket = RelaySocket> {
         const rooms: RoomSummary[] = [];
         for (const [room, peers] of this.rooms) {
           if (peers.size === 0) continue;
+          const pluginPeer = [...peers.values()].find((p) => p.role === "plugin");
+          const fileName =
+            typeof pluginPeer?.meta?.fileName === "string" ? pluginPeer.meta.fileName : undefined;
           rooms.push({
             room,
-            hasPlugin: [...peers.values()].some((p) => p.role === "plugin"),
+            hasPlugin: pluginPeer !== undefined,
             agentCount: [...peers.values()].filter((p) => p.role === "agent").length,
+            ...(fileName ? { fileName } : {}),
           });
         }
         this.send(ws, { type: "list_rooms_result", id: data.id, rooms });

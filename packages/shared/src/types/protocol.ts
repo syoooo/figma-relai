@@ -40,7 +40,7 @@ export interface WsListRoomsMessage {
 export interface WsListRoomsResultMessage {
   type: "list_rooms_result";
   id: string;
-  rooms: Array<{ room: string; hasPlugin: boolean; agentCount: number }>;
+  rooms: Array<{ room: string; hasPlugin: boolean; agentCount: number; fileName?: string }>;
 }
 
 export interface WsCommandMessage {

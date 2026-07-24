@@ -284,9 +284,9 @@ export class FigmaConnection {
       );
     }
     throw new Error(
-      `Multiple Figma plugins are connected (rooms: ${withPlugin
-        .map((r) => r.room)
-        .join(", ")}). Call join_room with the room shown in the plugin you want to control.`
+      `Multiple Figma plugins are connected: ${withPlugin
+        .map((r) => (r.fileName ? `"${r.fileName}" (room ${r.room})` : `room ${r.room}`))
+        .join(", ")}. Call join_room with the room of the file you want to control.`
     );
   }
 
