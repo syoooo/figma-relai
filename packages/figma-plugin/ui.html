@@ -379,12 +379,10 @@
     .switch input:checked + .track::after { content: "ON"; left: 5px; right: auto; color: var(--amber); }
     .switch input:focus-visible + .track { outline: 1px dashed var(--amber); outline-offset: 2px; }
 
-    /* ── Approval gate card ─────────────────────────────── */
+    /* ── Approval gate card — a .panel wearing the signal color ── */
     .approval-card {
       display: none;
-      border: 1px solid var(--amber-dim);
-      background: var(--bg);
-      padding: var(--sp-8) var(--sp-10);
+      border-color: var(--amber-dim);
       margin-top: var(--sp-8);
     }
     .approval-card.show { display: block; }
@@ -558,7 +556,7 @@
     </div>
 
     <!-- Approval gate: the agent wants to write; the designer decides -->
-    <div class="approval-card" id="approvalCard">
+    <div class="panel approval-card" id="approvalCard">
       <div class="approval-title" data-i18n="approval_title">AGENT REQUESTS</div>
       <div class="approval-cmd"><code id="approvalCmd"></code></div>
       <div class="approval-actions">
