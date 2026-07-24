@@ -7,3 +7,7 @@ CLAUDE.md
 .cursor
 .claude/
 .mcp.json
+
+# prepack copies (never committed)
+packages/mcp-server/README.md
+packages/mcp-server/LICENSE
