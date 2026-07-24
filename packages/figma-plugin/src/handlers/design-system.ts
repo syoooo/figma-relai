@@ -251,7 +251,11 @@ registerHandler("scan_token_drift", async (params) => {
   // Candidate pool: local variables, resolved to concrete values
   const colorCandidates: ColorCandidate[] = [];
   const numberCandidates: Array<{ id: string; name: string; value: number }> = [];
-  for (const collection of await figma.variables.getLocalVariableCollectionsAsync()) {
+  // NOTE: never `for (… of await …)` — the awaited iterable must be assigned
+  // first, or Figma's sandbox VM fails to compile the whole plugin with
+  // "InternalError: stack underflow" (see pitfalls.ts + sandbox-vm.test.ts)
+  const localCollections = await figma.variables.getLocalVariableCollectionsAsync();
+  for (const collection of localCollections) {
     const modeId = collection.modes[0]?.modeId;
     for (const varId of collection.variableIds) {
       const variable = await figma.variables.getVariableByIdAsync(varId);
