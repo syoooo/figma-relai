@@ -51,9 +51,9 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
 
   server.tool(
     "analyze_design",
-    "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), or overall (runs all four and returns a weighted 0-100 health score with per-category breakdown — good for audits and reports). Defaults to the current selection.",
+    "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), or overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports). Defaults to the current selection; tokens defaults to the current page.",
     {
-      aspect: z.enum(["color", "layout", "components", "accessibility", "overall"]),
+      aspect: z.enum(["color", "layout", "components", "accessibility", "tokens", "overall"]),
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
     },
     { readOnlyHint: true },
@@ -61,11 +61,54 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       if (aspect === "overall") {
         return runOverallAudit(aspectHandlers, nodeId);
       }
+      if (aspect === "tokens") {
+        return runTokenDrift(sendCommand, nodeId);
+      }
       const handler = aspectHandlers.get(ASPECT_TOOL[aspect]);
       if (!handler) throw new Error(`Unknown aspect: ${aspect}`);
       return handler({ nodeId });
     }
   );
+}
+
+// Token drift is a report-only pass over scan_token_drift; the write path
+// lives in manage_variables (action: tokenize) so this tool stays read-only.
+async function runTokenDrift(
+  sendCommand: SendCommandFn,
+  nodeId?: string
+): Promise<CallToolResult> {
+  const data = (await sendCommand("scan_token_drift", { nodeId, fix: false }, 120000)) as {
+    findings?: Array<{ variableName?: string }>;
+    stats?: { nodesScanned?: number; matched?: number };
+    note?: string;
+  };
+  const matched = data.stats?.matched ?? 0;
+  return standardResult({
+    summary:
+      data.note ??
+      (matched === 0
+        ? `No token drift: nothing hardcoded matches an existing variable (${data.stats?.nodesScanned ?? 0} nodes scanned).`
+        : `${matched} hardcoded value(s) match an existing variable and could be bound.`),
+    data,
+    warnings:
+      matched > 0
+        ? [
+            {
+              category: "general" as const,
+              message: `${matched} value(s) drift from tokens they visually match`,
+            },
+          ]
+        : [],
+    recommended_next:
+      matched > 0
+        ? [
+            {
+              tool: "manage_variables",
+              reason: 'Bind them in one pass: action "tokenize" with fix: true',
+            },
+          ]
+        : [],
+  });
 }
 
 // Runs all four aspect analyses and folds them into one weighted score.

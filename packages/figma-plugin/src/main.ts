@@ -10,6 +10,7 @@ import "./handlers/text.js";
 import "./handlers/layout.js";
 import "./handlers/components.js";
 import "./handlers/variables.js";
+import "./handlers/design-system.js";
 import "./handlers/styles.js";
 import "./handlers/export.js";
 import "./handlers/page.js";

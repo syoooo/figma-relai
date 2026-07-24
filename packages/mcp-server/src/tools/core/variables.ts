@@ -25,12 +25,13 @@ const ACTIONS: Record<string, [string, string[]]> = {
   unbind: ["unbind_variable", ["nodeId", "property"]],
   set_node_mode: ["set_node_variable_mode", ["nodeId", "collectionId", "modeId"]],
   get_node_modes: ["get_resolved_variable_modes", ["nodeId"]],
+  tokenize: ["scan_token_drift", ["nodeId", "fix", "tolerance"]],
 };
 
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_variables",
-    "Design-token variables: list_collections / list (variables in a collection) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes. Pass only the fields the action needs.",
+    "Design-token variables: list_collections / list (variables in a collection) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
     {
       action: z.enum(Object.keys(ACTIONS) as [string, ...string[]]),
       collectionId: z.string().optional(),
@@ -47,6 +48,11 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       scopes: z.array(z.string()).optional(),
       platform: z.enum(["WEB", "ANDROID", "iOS"]).optional(),
       hiddenFromPublishing: z.boolean().optional(),
+      fix: z.boolean().optional().describe("tokenize: apply the bindings (false = report only)"),
+      tolerance: z
+        .number()
+        .optional()
+        .describe("tokenize: OKLab ΔE for color matches (default 0.02 ≈ visually identical)"),
     },
     async (args) => {
       try {
@@ -56,7 +62,12 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
             .map((f) => [f, (args as Record<string, unknown>)[f]])
             .filter(([, v]) => v !== undefined)
         );
-        const result = await sendCommand(command as FigmaCommand, params);
+        // Drift scans walk whole subtrees; give them scan-scale time
+        const result = await sendCommand(
+          command as FigmaCommand,
+          params,
+          args.action === "tokenize" ? 120000 : undefined
+        );
         return jsonResult(result);
       } catch (error) {
         return errorResult(error);

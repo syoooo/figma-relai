@@ -70,6 +70,9 @@ export type FigmaCommand =
   | "set_axis_align"
   | "set_layout_sizing"
   | "set_item_spacing"
+  // Design system
+  | "get_design_system"
+  | "scan_token_drift"
   // Components
   | "get_local_components"
   | "get_instance_overrides"
