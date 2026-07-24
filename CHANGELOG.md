@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- npm publishing is now mistake-proof: bare `npm publish` fails with the correct command in the error (`npm run release -- --otp=…`); the release script places the root README/LICENSE before npm captures metadata, and a restored `prepack` keeps the tarball covered either way. (0.2.2–0.2.4 each missed the npm-page README a different way; this closes the case.)
+- New pitfall: a freshly-converted Figma slot can still report `type: "FRAME"` to the Plugin API — match slot frames by name, never gate automation on the SLOT type.
+
 ## 0.2.4
 
 - Plugin: redial immediately when the Figma window regains attention — backgrounded windows suspend the plugin iframe, freezing the 2s retry loop until now (the relay's staleness sweep would kick the silent socket; the full causal chain is recorded as a pitfall).

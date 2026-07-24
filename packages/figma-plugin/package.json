@@ -1,6 +1,6 @@
 {
   "name": "@figma-relai/figma-plugin",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "type": "module",
   "scripts": {
     "build": "bun run scripts/inject-tools.ts && bun run esbuild.config.ts",
