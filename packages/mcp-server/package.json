@@ -10,7 +10,9 @@
     "build": "bun run scripts/inject-pitfalls.ts && tsup && node dist/index.js manifest > ../../docs/manifest.json",
     "dev": "tsup --watch",
     "release": "node -e \"const f=require('fs');f.copyFileSync('../../README.md','README.md');f.copyFileSync('../../LICENSE','LICENSE')\" && npm publish",
-    "postpack": "node -e \"const f=require('fs');f.rmSync('README.md',{force:true});f.rmSync('LICENSE',{force:true})\""
+    "prepack": "node -e \"const f=require('fs');f.copyFileSync('../../README.md','README.md');f.copyFileSync('../../LICENSE','LICENSE')\"",
+    "postpack": "node -e \"const f=require('fs');f.rmSync('README.md',{force:true});f.rmSync('LICENSE',{force:true})\"",
+    "prepublishOnly": "node -e \"const f=require('fs');if(!f.existsSync('README.md')){console.error('\\n[figma-relai] Use: npm run release -- --otp=...  (bare npm publish misses the README metadata)\\n');process.exit(1)}\""
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.13.1",
