@@ -72,6 +72,7 @@ loadSettings().then((settings) => {
     settings,
     fileName: figma.root.name,
     hasConventions: figma.root.getSharedPluginData("relai", "conventions").length > 0,
+    conventionsContent: figma.root.getSharedPluginData("relai", "conventions"),
   });
 });
 

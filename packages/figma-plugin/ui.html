@@ -131,6 +131,33 @@
     .leader-row .val.warn { color: var(--amber); }
     .leader-row .val.err { color: var(--err); }
     .leader-row .val.muted { color: var(--faint); }
+    .conv-row { cursor: pointer; }
+    .conv-row:hover .view-link { color: var(--amber); }
+    .conv-row .view-link { text-decoration: underline dotted; text-underline-offset: 2px; }
+
+    /* ── Conventions modal (read-only) ───────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 50;
+      background: rgba(15, 14, 12, 0.72);
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      width: calc(100% - 32px); max-height: 78%;
+      display: flex; flex-direction: column; margin: 0;
+    }
+    .modal-head { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+    .modal-head .key { letter-spacing: 0.14em; text-transform: uppercase; font-size: 9px; color: var(--muted); }
+    .modal-head .dots { flex: 1; border-bottom: 1px dotted var(--line); height: 0.9em; }
+    .modal-close {
+      background: none; border: 1px solid var(--line); color: var(--muted);
+      font: inherit; font-size: 10px; line-height: 1; padding: 2px 6px; cursor: pointer;
+    }
+    .modal-close:hover { color: var(--amber); border-color: var(--amber-dim); }
+    .conv-text {
+      overflow: auto; white-space: pre-wrap; user-select: text;
+      font-size: 10px; line-height: 1.6; color: var(--text);
+    }
 
     /* ── Panels ─────────────────────────────────────────── */
     .panel {
@@ -542,10 +569,22 @@
         <span class="room-value" id="connectedRoom"></span>
         <span class="copy-label" data-i18n="copy">copy</span>
       </div>
-      <div class="leader-row" id="convRow" style="display:none">
+      <div class="leader-row conv-row" id="convRow" style="display:none" onclick="openConvModal()">
         <span class="key">RULES</span>
         <span class="dots"></span>
-        <span class="val muted"><span data-i18n="conventions_on">saved on file</span></span>
+        <span class="val muted"><span data-i18n="conventions_on">saved on file</span>&nbsp;&middot;&nbsp;<span class="view-link" data-i18n="conventions_view">view</span></span>
+      </div>
+    </div>
+
+    <!-- Conventions modal: read-only view of the file's rules -->
+    <div class="modal-overlay" id="convModal" onclick="if (event.target === this) closeConvModal()">
+      <div class="panel modal-box">
+        <div class="modal-head">
+          <span class="key">RULES</span>
+          <span class="dots"></span>
+          <button class="modal-close" onclick="closeConvModal()" aria-label="close">&#10005;</button>
+        </div>
+        <div class="conv-text" id="convText"></div>
       </div>
     </div>
 
@@ -668,6 +707,7 @@
         lock_empty: 'select something first, then toggle',
         lock_on_prefix: 'locked to: ',
         conventions_on: 'saved on file',
+        conventions_view: 'view',
         tools_title: 'Toolset',
         disconnect: 'Disconnect'
       },
@@ -713,6 +753,7 @@
         lock_empty: '先に何かを選択してから有効化',
         lock_on_prefix: 'ロック中: ',
         conventions_on: 'ファイルに保存済み',
+        conventions_view: '表示',
         tools_title: 'ツール一覧',
         disconnect: '切断'
       },
@@ -758,6 +799,7 @@
         lock_empty: '请先选中内容再开启',
         lock_on_prefix: '已锁定: ',
         conventions_on: '已存于文件',
+        conventions_view: '查看',
         tools_title: '工具列表',
         disconnect: '断开'
       }
@@ -905,6 +947,22 @@
       }
       showNextApproval();
     }
+
+    var conventionsContent = '';
+
+    function openConvModal() {
+      if (!conventionsContent) return;
+      document.getElementById('convText').textContent = conventionsContent;
+      document.getElementById('convModal').classList.add('open');
+    }
+
+    function closeConvModal() {
+      document.getElementById('convModal').classList.remove('open');
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeConvModal();
+    });
 
     function onScopeLockToggle() {
       parent.postMessage(
@@ -1236,12 +1294,15 @@
         }
         renderApprovalSeg();
         document.getElementById('convRow').style.display = msg.hasConventions ? '' : 'none';
+        conventionsContent = msg.conventionsContent || '';
         if (s.autoConnect !== false) connect();
         return;
       }
 
       if (msg.type === 'conventions-state') {
         document.getElementById('convRow').style.display = msg.present ? '' : 'none';
+        conventionsContent = msg.content || '';
+        if (!msg.present) closeConvModal();
         return;
       }
 

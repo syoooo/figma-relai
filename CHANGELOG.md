@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Plugin panel: the RULES row is now clickable — a read-only modal shows the file's conventions in full (monospace, selectable text; close via ✕ / backdrop / Esc). Conventions were previously visible only to connected AI clients.
+
 ## 0.2.1
 
 Fixes and additions driven by a real design-system audit session (the tools were used in anger; these are the gaps that surfaced).

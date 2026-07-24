@@ -36,6 +36,6 @@ registerHandler("set_conventions", async (params) => {
     );
   }
   figma.root.setSharedPluginData(CONVENTIONS_NS, CONVENTIONS_KEY, content);
-  figma.ui.postMessage({ type: "conventions-state", present: content.length > 0 });
+  figma.ui.postMessage({ type: "conventions-state", present: content.length > 0, content });
   return { saved: content.length > 0, chars: content.length };
 });
