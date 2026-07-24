@@ -35,3 +35,14 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 20. `verify_visual` on an edited node with `expected` values → returns a screenshot the AI can see plus field-by-field pass/fail.
 21. A command returning a falsy result → resolves normally, no timeout.
 22. Activity feed: every command above appears with duration and status; clicking an entry with a node target selects it on canvas.
+
+## 0.2.0 checks
+
+23. `get_design_system` → local components with usage counts, remote-used items, library variable collections; second call says `cached`, `refresh:true` rescans.
+24. `analyze_design {aspect:"tokens"}` on a node with a hardcoded near-token color and an unbound radius → both findings name scope-appropriate variables; `manage_variables {action:"tokenize", fix:true}` binds them and a re-scan is clean.
+25. A shape fill must never tokenize to a TEXT_FILL-scoped variable (scope discipline negative).
+26. `batch_execute` / `set_properties` with `dryRun:true` → plan returned, canvas untouched.
+27. `manage_conventions` set → get roundtrip (unicode/markdown intact); `get_document_overview` includes the conventions; clearing removes them; panel shows the RULES row.
+28. Approvals BULK: a 10+ command batch shows the approval card; Approve executes fully; Deny returns "Denied by designer" with nothing applied; the MCP side does not time out while the card waits.
+29. Scope lock: parentless creates and out-of-scope targets get a "Scope lock" error (including batch sub-commands); `execute_figma` outside the lock reports SCOPE VIOLATION in warnings.
+30. `npx figma-relai doctor` with Figma open → relay ok + plugin online with the file name; with nothing running → actionable warns.
