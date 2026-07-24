@@ -1163,6 +1163,17 @@
     // ---------- Connection ----------
     function currentPort() { return PORTS[portIndex % PORTS.length]; }
 
+    // Figma throttles/suspends plugin iframe timers while the window is
+    // backgrounded — the 2s retry loop can freeze for hours. Any return of
+    // attention kicks an immediate redial.
+    function kickReconnect() {
+      if (!wantConnection || ws) return;
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      connect();
+    }
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) kickReconnect(); });
+    window.addEventListener('focus', kickReconnect);
+
     function connect() {
       if (!roomName) refreshRoom();
       wantConnection = true;
