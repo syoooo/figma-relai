@@ -1,0 +1,2064 @@
+{
+  "name": "figma-relai",
+  "version": "0.2.0",
+  "tools": [
+    {
+      "name": "batch_execute",
+      "category": "advanced",
+      "description": "Execute multiple commands in a single round-trip. Use when performing 3+ similar operations (e.g., styling multiple nodes, creating many elements). Commands run sequentially. Pass dryRun:true to preview the exact command list without touching the canvas — useful for showing the designer a plan before a large batch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "description": "Command name"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": {},
+                  "description": "Command parameters"
+                }
+              },
+              "required": [
+                "command"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Array of commands to execute sequentially"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Preview only — return the plan, execute nothing"
+          }
+        },
+        "required": [
+          "commands"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "execute_figma",
+      "category": "advanced",
+      "description": "Run JavaScript against the Figma Plugin API inside the plugin sandbox — the escape hatch for anything the other tools don't cover. The code runs in an async function with `figma` AND `relai` in scope. relai helpers avoid the classic pitfalls: relai.text(parent, chars, {font,size,color}) loads fonts first; relai.autoLayout(direction, props) makes a hugging auto-layout frame; relai.set(node, props) applies layoutMode first and routes width/height through resize; relai.hug(node); relai.focusRing(node); await relai.page(p => ...) finds pages by content, not name; relai.query('FRAME[name^=Card] > TEXT') is a CSS-like search (types, name matchers, descendant/child, comma); relai.placeholder(node) shows a construction veil — remove with (node, false) when done. Errors carry a Hint with the fix; scripts are NOT atomic — on error, partial changes persist, so keep scripts small and idempotent. Nodes created via relai plus any node ids you RETURN are linted for silent mistakes (e.g. spread shadows without clipsContent) and come back as `warnings`. Return ALL created/mutated node ids. Work incrementally; verify with screenshot. When BUILDING UI: call get_design_system first and instantiate the file's own components / bind its variables instead of drawing raw shapes — hand-drawn near-copies of existing components read as drift to the design team. The designer can disable this tool via the plugin's 'Allow code execution' toggle.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "JavaScript source. May use await. Return a JSON-serializable value."
+          },
+          "description": {
+            "type": "string",
+            "description": "One line shown in the plugin's activity feed describing what this does"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 300000,
+            "description": "Execution timeout in ms (default 60000) — raise for scripts creating hundreds of nodes"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "join_room",
+      "category": "advanced",
+      "description": "Connect to a specific Figma plugin instance by room name. Usually unnecessary — pairing is automatic when one plugin is connected. Use only when an error reports multiple plugins/rooms; the room name is shown in each plugin's UI.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "room": {
+            "type": "string",
+            "description": "Room name shown in the Figma plugin"
+          }
+        },
+        "required": [
+          "room"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "analyze_design",
+      "category": "analysis",
+      "description": "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), or overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports). Defaults to the current selection; tokens defaults to the current page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "color",
+              "layout",
+              "components",
+              "accessibility",
+              "tokens",
+              "overall"
+            ]
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "Root node to analyze (default: current selection)"
+          }
+        },
+        "required": [
+          "aspect"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "diff_nodes",
+      "category": "analysis",
+      "description": "Compare two nodes and list their differences (fills, strokes, size, layout, etc.), or audit changes over time with checkpoints: checkpoint:\"save\" snapshots nodeIdA's key properties; checkpoint:\"compare\" later diffs the current state against that snapshot — useful before/after an editing session to show the designer exactly what changed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeIdA": {
+            "type": "string",
+            "description": "First node ID (or the checkpoint target)"
+          },
+          "nodeIdB": {
+            "type": "string",
+            "description": "Second node ID (omit when using checkpoint)"
+          },
+          "checkpoint": {
+            "type": "string",
+            "enum": [
+              "save",
+              "compare"
+            ],
+            "description": "save: snapshot nodeIdA now; compare: diff current vs saved snapshot"
+          }
+        },
+        "required": [
+          "nodeIdA"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "annotate",
+      "category": "annotations",
+      "description": "Read or write Dev Mode annotations. get: read annotations on a node. set: add/update one annotation (labelMarkdown). set_multiple: batch annotations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "get",
+              "set",
+              "set_multiple"
+            ]
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "Target node (get/set)"
+          },
+          "labelMarkdown": {
+            "type": "string",
+            "description": "Annotation text (set)"
+          },
+          "categoryId": {
+            "type": "string"
+          },
+          "annotations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nodeId": {
+                  "type": "string"
+                },
+                "labelMarkdown": {
+                  "type": "string"
+                },
+                "categoryId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "nodeId",
+                "labelMarkdown"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Batch annotations (set_multiple)"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "add_image",
+      "category": "assets",
+      "description": "Place an image: from a URL (creates a new image node) or as a fill on an existing node (base64 imageData). scaleMode controls how the image fits.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Image URL — creates a new node"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "Existing node — sets its fill from imageData"
+          },
+          "imageData": {
+            "type": "string",
+            "description": "Base64 image data (with nodeId)"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "height": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "name": {
+            "type": "string"
+          },
+          "scaleMode": {
+            "type": "string",
+            "enum": [
+              "FILL",
+              "FIT",
+              "CROP",
+              "TILE"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "export_asset",
+      "category": "assets",
+      "description": "Export a node as PNG/JPG/SVG/PDF. Returns base64 data for saving to disk. For a quick visual check of your work, prefer the screenshot tool (returns a viewable image).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "Node to export"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "PNG",
+              "JPG",
+              "SVG",
+              "PDF"
+            ],
+            "description": "Default PNG"
+          },
+          "scale": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Export scale (default 1)"
+          }
+        },
+        "required": [
+          "nodeId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "manage_comments",
+      "category": "comments",
+      "description": "Read and write comments on the Figma file: list (with node anchors — great for 'apply the feedback in the comments' or polling for designer requests; filter with unresolved:true and since:<ISO date>), add (optionally pinned to a node), reply, delete. Comment-driven workflow: designers leave asks as comments in Figma; poll list (unresolved + since last check), do the work, then reply on the thread with what was done. Requires a FIGMA_TOKEN env var (personal access token with comment scopes, generated at figma.com Settings → Security); the canvas tools work without it. The file is auto-detected from the open plugin when possible — otherwise pass fileUrl.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "add",
+              "reply",
+              "delete"
+            ]
+          },
+          "fileUrl": {
+            "type": "string",
+            "description": "Figma file URL or key (auto-detected when omitted)"
+          },
+          "message": {
+            "type": "string",
+            "description": "Comment text (add/reply)"
+          },
+          "commentId": {
+            "type": "string",
+            "description": "Target comment (reply/delete)"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "add: pin the comment to this node"
+          },
+          "x": {
+            "type": "number",
+            "description": "add: canvas position (with y, when not pinning to a node)"
+          },
+          "y": {
+            "type": "number"
+          },
+          "since": {
+            "type": "string",
+            "description": "list: only comments created after this ISO 8601 timestamp"
+          },
+          "unresolved": {
+            "type": "boolean",
+            "description": "list: only unresolved threads"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "manage_components",
+      "category": "components",
+      "description": "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey — imports from the team library if needed), get_props / set_props (component properties on an instance), get_overrides / set_overrides (copy overrides from a source instance to targets), detach.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "create",
+              "create_set",
+              "instantiate",
+              "get_props",
+              "set_props",
+              "get_overrides",
+              "set_overrides",
+              "detach"
+            ]
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "Target node (create/get_props/set_props/detach)"
+          },
+          "componentIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "create_set: components to combine"
+          },
+          "componentKey": {
+            "type": "string",
+            "description": "instantiate: component key (or node id)"
+          },
+          "x": {
+            "type": "number",
+            "description": "instantiate: position"
+          },
+          "y": {
+            "type": "number"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": [
+                "string",
+                "boolean"
+              ]
+            },
+            "description": "set_props: property name → value (variant/text/boolean/swap)"
+          },
+          "sourceInstanceId": {
+            "type": "string",
+            "description": "set_overrides: copy from this instance"
+          },
+          "targetNodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "set_overrides: apply to these"
+          },
+          "instanceNodeId": {
+            "type": "string",
+            "description": "get_overrides: instance to inspect"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_design_tokens",
+      "category": "context",
+      "description": "Get an overview of the design token system: variable collections, modes, variable counts, and style counts. Use to understand the design system before binding tokens or creating new variables. Follow with manage_variables or bind_tokens.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_document_overview",
+      "category": "context",
+      "description": "Get the full document structure: pages, component/style/variable counts. Always call this first to understand the file. Follow with get_selection_context or search_nodes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_events",
+      "category": "context",
+      "description": "Activity since the last check. scope 'designer' (default): the designer's selection/node/page changes (also piggybacked as designer_events on command results). scope 'agent': this session's own command log — every plugin command sent, with success/duration — useful for summarizing what was changed. 'all': both.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "designer",
+              "agent",
+              "all"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_node_details",
+      "category": "context",
+      "description": "Get a single node's full properties, CSS, token bindings, and children. Use after search_nodes or get_selection_context to inspect a specific node. Follow with update_node or analyze_* tools.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "The node ID to inspect"
+          }
+        },
+        "required": [
+          "nodeId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_selection_context",
+      "category": "context",
+      "description": "Get full context for the current Figma selection: node properties, fills, layout, token bindings, and children summary. Use as the starting point for any inspection or modification workflow. Follow with analyze_* tools or update_node.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "screenshot",
+      "category": "context",
+      "description": "Take a PNG screenshot of a node or the current view. Returns an image visible to the AI. Use to visually verify changes or inspect design details. Works for both context inspection and verification after modifications.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "Node ID to screenshot (default: current view)"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "search_nodes",
+      "category": "context",
+      "description": "Search for nodes by name and/or type within a scope. Returns matching node IDs, names, and types. Use to find specific elements before inspecting or modifying them. Follow with get_node_details or update_node.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Name substring to search for"
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Node types to filter: FRAME, TEXT, COMPONENT, INSTANCE, RECTANGLE, etc."
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Scope search to children of this node (default: current page)"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "create_node",
+      "category": "create",
+      "description": "Create a node in Figma: rectangle, frame, text, ellipse, polygon, star, line, section, slice, svg (from markup), image (from URL), or FigJam connector/table/sticky/code_block. Returns the new node's id — style it further with set_properties. For component instances use manage_components.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "rectangle",
+              "frame",
+              "text",
+              "ellipse",
+              "polygon",
+              "star",
+              "line",
+              "section",
+              "slice",
+              "svg",
+              "image",
+              "connector",
+              "table",
+              "sticky",
+              "code_block"
+            ],
+            "description": "What to create"
+          },
+          "x": {
+            "type": "number",
+            "description": "X position (default 0)"
+          },
+          "y": {
+            "type": "number",
+            "description": "Y position (default 0)"
+          },
+          "width": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "height": {
+            "$ref": "#/properties/width"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "Parent node id (default: current page)"
+          },
+          "text": {
+            "type": "string",
+            "description": "Text content (text/sticky)"
+          },
+          "fontSize": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "text only"
+          },
+          "fontWeight": {
+            "type": "number",
+            "description": "text only (e.g. 400, 700)"
+          },
+          "fontColor": {
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Red channel (0-1)"
+              },
+              "g": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Green channel (0-1)"
+              },
+              "b": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Blue channel (0-1)"
+              },
+              "a": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Alpha channel (0-1)"
+              }
+            },
+            "required": [
+              "r",
+              "g",
+              "b"
+            ],
+            "additionalProperties": false,
+            "description": "text only"
+          },
+          "fillColor": {
+            "$ref": "#/properties/fontColor",
+            "description": "frame/rectangle fill"
+          },
+          "pointCount": {
+            "type": "integer",
+            "minimum": 3,
+            "description": "polygon/star points"
+          },
+          "innerRadius": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "star inner radius ratio"
+          },
+          "length": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "line length"
+          },
+          "rotation": {
+            "type": "number",
+            "description": "line rotation in degrees"
+          },
+          "strokeWeight": {
+            "type": "number",
+            "minimum": 0,
+            "description": "line stroke weight"
+          },
+          "svg": {
+            "type": "string",
+            "description": "SVG markup (type=svg)"
+          },
+          "url": {
+            "type": "string",
+            "description": "Image URL (type=image)"
+          },
+          "scaleMode": {
+            "type": "string",
+            "enum": [
+              "FILL",
+              "FIT",
+              "CROP",
+              "TILE"
+            ],
+            "description": "image only"
+          },
+          "rows": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "table only"
+          },
+          "cols": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "table only"
+          },
+          "startNodeId": {
+            "type": "string",
+            "description": "connector only"
+          },
+          "endNodeId": {
+            "type": "string",
+            "description": "connector only"
+          },
+          "lineType": {
+            "type": "string",
+            "enum": [
+              "ELBOWED",
+              "STRAIGHT"
+            ],
+            "description": "connector only"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_design_system",
+      "category": "design-system",
+      "description": "Inventory the design system available to this file — call this BEFORE building UI, then prefer instantiating existing components (manage_components action:instantiate takes local and library keys) and binding existing variables over drawing raw shapes. Reports: local components/styles/variable collections with usage counts, remote components/styles the file already uses, and enabled libraries' variable collections. To list a library's full component catalog, pass libraryFileUrl (requires FIGMA_TOKEN). Results are cached per session — pass refresh:true after big library changes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "refresh": {
+            "type": "boolean",
+            "description": "Rescan instead of using the session cache"
+          },
+          "libraryFileUrl": {
+            "type": "string",
+            "description": "figma.com URL or key of a LIBRARY file to catalog via REST (needs FIGMA_TOKEN)"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "import_from_library",
+      "category": "design-system",
+      "description": "Import a component, style, or variable from an enabled team library by its key. Component keys come from the design system or get_local_components; imported components can then be instantiated with manage_components.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "component",
+              "style",
+              "variable"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "description": "Library key"
+          }
+        },
+        "required": [
+          "kind",
+          "key"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "manage_conventions",
+      "category": "design-system",
+      "description": "File-level design conventions — a CLAUDE.md that lives INSIDE this Figma file (shared plugin data, travels with the file). action:get reads it, action:set overwrites it with markdown. get_document_overview auto-includes it, and whatever it says (naming rules, spacing habits, do-not-touch areas, library preferences) should be FOLLOWED like user instructions. When the designer states a durable preference ('always use our green', 'never touch the Archive page'), offer to record it here so every future session — from any AI client — inherits it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "get",
+              "set"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "description": "set: the full markdown doc (overwrites; max 20k chars)"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "manage_styles",
+      "category": "design-system",
+      "description": "Shared styles: list all local styles; create_paint / create_text / create_effect / create_grid; update (name/properties); delete; apply (style to a node); reorder. To bind variables instead of styles, use manage_variables.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "create_paint",
+              "create_text",
+              "create_effect",
+              "create_grid",
+              "update",
+              "delete",
+              "apply",
+              "reorder"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Style name (create_*/update)"
+          },
+          "styleId": {
+            "type": "string",
+            "description": "Target style (update/delete/apply/reorder)"
+          },
+          "styleType": {
+            "type": "string",
+            "enum": [
+              "PAINT",
+              "TEXT",
+              "EFFECT",
+              "GRID"
+            ],
+            "description": "apply/reorder"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "apply: target node"
+          },
+          "color": {
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Red channel (0-1)"
+              },
+              "g": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Green channel (0-1)"
+              },
+              "b": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Blue channel (0-1)"
+              },
+              "a": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Alpha channel (0-1)"
+              }
+            },
+            "required": [
+              "r",
+              "g",
+              "b"
+            ],
+            "additionalProperties": false,
+            "description": "create_paint/create_effect"
+          },
+          "gradientType": {
+            "type": "string",
+            "enum": [
+              "GRADIENT_LINEAR",
+              "GRADIENT_RADIAL",
+              "GRADIENT_ANGULAR",
+              "GRADIENT_DIAMOND"
+            ]
+          },
+          "gradientStops": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "position": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Stop position (0-1)"
+                },
+                "color": {
+                  "$ref": "#/properties/color"
+                }
+              },
+              "required": [
+                "position",
+                "color"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "fontFamily": {
+            "type": "string",
+            "description": "create_text"
+          },
+          "fontSize": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "fontWeight": {
+            "type": "number"
+          },
+          "lineHeight": {
+            "type": "number"
+          },
+          "letterSpacing": {
+            "type": "number"
+          },
+          "effectType": {
+            "type": "string",
+            "enum": [
+              "DROP_SHADOW",
+              "INNER_SHADOW",
+              "LAYER_BLUR",
+              "BACKGROUND_BLUR"
+            ],
+            "description": "create_effect"
+          },
+          "offsetX": {
+            "type": "number"
+          },
+          "offsetY": {
+            "type": "number"
+          },
+          "radius": {
+            "type": "number",
+            "minimum": 0
+          },
+          "spread": {
+            "type": "number"
+          },
+          "grids": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            "description": "create_grid: layout grid objects"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "update: properties to change"
+          },
+          "afterStyleId": {
+            "type": "string",
+            "description": "reorder: place after this style"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "manage_variables",
+      "category": "design-system",
+      "description": "Design-token variables: list_collections / list (variables in a collection) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list_collections",
+              "list",
+              "create_collection",
+              "update_collection",
+              "delete_collection",
+              "create",
+              "update",
+              "delete",
+              "add_mode",
+              "remove_mode",
+              "rename_mode",
+              "set_scopes",
+              "set_code_syntax",
+              "remove_code_syntax",
+              "create_alias",
+              "bind",
+              "unbind",
+              "set_node_mode",
+              "get_node_modes",
+              "tokenize"
+            ]
+          },
+          "collectionId": {
+            "type": "string"
+          },
+          "variableId": {
+            "type": "string"
+          },
+          "targetVariableId": {
+            "type": "string",
+            "description": "create_alias: variable to alias to"
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "bind/unbind/set_node_mode/get_node_modes"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "modes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "create_collection: mode names"
+          },
+          "modeId": {
+            "type": "string"
+          },
+          "resolvedType": {
+            "type": "string",
+            "enum": [
+              "COLOR",
+              "FLOAT",
+              "STRING",
+              "BOOLEAN"
+            ]
+          },
+          "value": {
+            "description": "Variable value (color object, number, string, bool)"
+          },
+          "property": {
+            "type": "string",
+            "description": "bind/unbind: node property (e.g. \"fills\", \"width\")"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "WEB",
+              "ANDROID",
+              "iOS"
+            ]
+          },
+          "hiddenFromPublishing": {
+            "type": "boolean"
+          },
+          "fix": {
+            "type": "boolean",
+            "description": "tokenize: apply the bindings (false = report only)"
+          },
+          "tolerance": {
+            "type": "number",
+            "description": "tokenize: OKLab ΔE for color matches (default 0.02 ≈ visually identical)"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "manage_pages",
+      "category": "document",
+      "description": "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "create",
+              "rename",
+              "delete",
+              "set_background"
+            ]
+          },
+          "pageId": {
+            "type": "string",
+            "description": "Target page (rename/delete/set_background)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Page name (create/rename)"
+          },
+          "color": {
+            "type": "object",
+            "properties": {
+              "r": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Red channel (0-1)"
+              },
+              "g": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Green channel (0-1)"
+              },
+              "b": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Blue channel (0-1)"
+              },
+              "a": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "Alpha channel (0-1)"
+              }
+            },
+            "required": [
+              "r",
+              "g",
+              "b"
+            ],
+            "additionalProperties": false,
+            "description": "Background color (set_background)"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "navigate",
+      "category": "document",
+      "description": "Control the designer's view: focus (scroll+zoom to a node), select (set the selection), get_viewport / set_viewport (x/y/zoom), or switch_page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "focus",
+              "select",
+              "get_viewport",
+              "set_viewport",
+              "switch_page"
+            ]
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "focus target"
+          },
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "select targets"
+          },
+          "x": {
+            "type": "number",
+            "description": "set_viewport center x"
+          },
+          "y": {
+            "type": "number"
+          },
+          "zoom": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "pageId": {
+            "type": "string",
+            "description": "switch_page target"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "edit_structure",
+      "category": "edit",
+      "description": "Structural operations on nodes: group/ungroup, reparent (move into another parent), reorder (z-order), clone, flatten to vector, boolean operations (union/subtract/intersect/exclude), delete. group/boolean/delete take nodeIds; the rest take nodeId.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": [
+              "group",
+              "ungroup",
+              "reparent",
+              "reorder",
+              "clone",
+              "flatten",
+              "boolean",
+              "delete"
+            ]
+          },
+          "nodeId": {
+            "type": "string",
+            "description": "Target node (ungroup/reparent/reorder/clone/flatten)"
+          },
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Target nodes (group/boolean/delete)"
+          },
+          "parentId": {
+            "type": "string",
+            "description": "reparent: new parent"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "reparent: insertion index"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "FRONT",
+              "BACK",
+              "FORWARD",
+              "BACKWARD"
+            ],
+            "description": "reorder direction"
+          },
+          "booleanOperation": {
+            "type": "string",
+            "enum": [
+              "UNION",
+              "SUBTRACT",
+              "INTERSECT",
+              "EXCLUDE"
+            ],
+            "description": "boolean: which operation"
+          },
+          "x": {
+            "type": "number",
+            "description": "clone: position of the copy"
+          },
+          "y": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "operation"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "set_properties",
+      "category": "edit",
+      "description": "Set any visual/layout/text properties on one or more nodes in a single call: geometry (x/y/width/height/rotation), fills/strokes/gradients/cornerRadius/opacity/effects, text content, auto-layout (layoutMode, padding, alignment, spacing, layoutSizing — FILL requires the parent to have auto-layout), constraints, style application, and variable bindings. Groups map to focused operations with per-operation success/error reporting. dryRun:true previews the mapped command list without touching the canvas.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Node IDs to update"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number"
+              },
+              "y": {
+                "type": "number"
+              },
+              "width": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "height": {
+                "$ref": "#/properties/properties/properties/width"
+              },
+              "rotation": {
+                "type": "number",
+                "description": "Degrees"
+              },
+              "name": {
+                "type": "string"
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "locked": {
+                "type": "boolean"
+              },
+              "opacity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "blendMode": {
+                "type": "string",
+                "enum": [
+                  "PASS_THROUGH",
+                  "NORMAL",
+                  "DARKEN",
+                  "MULTIPLY",
+                  "LINEAR_BURN",
+                  "COLOR_BURN",
+                  "LIGHTEN",
+                  "SCREEN",
+                  "LINEAR_DODGE",
+                  "COLOR_DODGE",
+                  "OVERLAY",
+                  "SOFT_LIGHT",
+                  "HARD_LIGHT",
+                  "DIFFERENCE",
+                  "EXCLUSION",
+                  "HUE",
+                  "SATURATION",
+                  "COLOR",
+                  "LUMINOSITY"
+                ]
+              },
+              "fillColor": {
+                "type": "object",
+                "properties": {
+                  "r": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Red channel (0-1)"
+                  },
+                  "g": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Green channel (0-1)"
+                  },
+                  "b": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Blue channel (0-1)"
+                  },
+                  "a": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Alpha channel (0-1)"
+                  }
+                },
+                "required": [
+                  "r",
+                  "g",
+                  "b"
+                ],
+                "additionalProperties": false
+              },
+              "strokeColor": {
+                "$ref": "#/properties/properties/properties/fillColor"
+              },
+              "strokeWeight": {
+                "type": "number",
+                "minimum": 0
+              },
+              "cornerRadius": {
+                "type": "number",
+                "minimum": 0
+              },
+              "corners": {
+                "type": "array",
+                "items": {
+                  "type": "boolean"
+                },
+                "minItems": 4,
+                "maxItems": 4,
+                "description": "With cornerRadius: apply per corner [TL, TR, BR, BL]"
+              },
+              "gradient": {
+                "type": "object",
+                "properties": {
+                  "gradientType": {
+                    "type": "string",
+                    "enum": [
+                      "GRADIENT_LINEAR",
+                      "GRADIENT_RADIAL",
+                      "GRADIENT_ANGULAR",
+                      "GRADIENT_DIAMOND"
+                    ]
+                  },
+                  "stops": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "position": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1,
+                          "description": "Stop position (0-1)"
+                        },
+                        "color": {
+                          "$ref": "#/properties/properties/properties/fillColor"
+                        }
+                      },
+                      "required": [
+                        "position",
+                        "color"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 2
+                  }
+                },
+                "required": [
+                  "gradientType",
+                  "stops"
+                ],
+                "additionalProperties": false
+              },
+              "effects": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "DROP_SHADOW",
+                        "INNER_SHADOW",
+                        "LAYER_BLUR",
+                        "BACKGROUND_BLUR"
+                      ]
+                    },
+                    "color": {
+                      "$ref": "#/properties/properties/properties/fillColor",
+                      "description": "Shadow color (shadows only)"
+                    },
+                    "offsetX": {
+                      "type": "number"
+                    },
+                    "offsetY": {
+                      "type": "number"
+                    },
+                    "radius": {
+                      "type": "number",
+                      "minimum": 0,
+                      "description": "Blur radius"
+                    },
+                    "spread": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "removeEffects": {
+                "type": "boolean"
+              },
+              "text": {
+                "type": "string",
+                "description": "Text content (TEXT nodes)"
+              },
+              "layoutMode": {
+                "type": "string",
+                "enum": [
+                  "NONE",
+                  "HORIZONTAL",
+                  "VERTICAL"
+                ]
+              },
+              "layoutWrap": {
+                "type": "string",
+                "enum": [
+                  "NO_WRAP",
+                  "WRAP"
+                ],
+                "description": "WRAP requires layoutMode HORIZONTAL"
+              },
+              "paddingTop": {
+                "type": "number",
+                "minimum": 0
+              },
+              "paddingRight": {
+                "type": "number",
+                "minimum": 0
+              },
+              "paddingBottom": {
+                "type": "number",
+                "minimum": 0
+              },
+              "paddingLeft": {
+                "type": "number",
+                "minimum": 0
+              },
+              "primaryAxisAlignItems": {
+                "type": "string",
+                "enum": [
+                  "MIN",
+                  "MAX",
+                  "CENTER",
+                  "SPACE_BETWEEN"
+                ]
+              },
+              "counterAxisAlignItems": {
+                "type": "string",
+                "enum": [
+                  "MIN",
+                  "MAX",
+                  "CENTER",
+                  "BASELINE"
+                ]
+              },
+              "itemSpacing": {
+                "type": "number"
+              },
+              "counterAxisSpacing": {
+                "type": "number"
+              },
+              "layoutSizingHorizontal": {
+                "type": "string",
+                "enum": [
+                  "FIXED",
+                  "HUG",
+                  "FILL"
+                ]
+              },
+              "layoutSizingVertical": {
+                "$ref": "#/properties/properties/properties/layoutSizingHorizontal"
+              },
+              "constraintsHorizontal": {
+                "type": "string",
+                "enum": [
+                  "MIN",
+                  "CENTER",
+                  "MAX",
+                  "STRETCH",
+                  "SCALE"
+                ]
+              },
+              "constraintsVertical": {
+                "$ref": "#/properties/properties/properties/constraintsHorizontal"
+              },
+              "minWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "maxWidth": {
+                "type": "number",
+                "minimum": 0
+              },
+              "minHeight": {
+                "type": "number",
+                "minimum": 0
+              },
+              "maxHeight": {
+                "type": "number",
+                "minimum": 0
+              },
+              "aspectRatioLocked": {
+                "type": "boolean"
+              },
+              "clipsContent": {
+                "type": "boolean"
+              },
+              "styleId": {
+                "type": "string",
+                "description": "Apply a paint/text/effect/grid style by id"
+              },
+              "styleType": {
+                "type": "string",
+                "enum": [
+                  "PAINT",
+                  "TEXT",
+                  "EFFECT",
+                  "GRID"
+                ]
+              },
+              "boundVariables": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Bind variables: {\"fills\": \"VariableID:...\", \"width\": \"...\"}"
+              }
+            },
+            "additionalProperties": false,
+            "description": "Properties to apply to every listed node"
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Preview only — return the plan, execute nothing"
+          }
+        },
+        "required": [
+          "nodeIds",
+          "properties"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "set_text",
+      "category": "edit",
+      "description": "Edit text nodes. Modes: single (nodeId + text), bulk (items — efficient for many nodes, e.g. translations), or character-range styling (nodeId + range with fontSize/fontWeight/letterSpacing/lineHeight). Fonts load automatically with fallbacks. To find text nodes first, use search_nodes or get_selection_context.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "Target text node (single / range mode)"
+          },
+          "text": {
+            "type": "string",
+            "description": "New content (single mode)"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "nodeId": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "nodeId",
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Bulk replacements"
+          },
+          "range": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "fontSize": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "fontWeight": {
+                "type": "number"
+              },
+              "letterSpacing": {
+                "type": "number"
+              },
+              "lineHeight": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ],
+            "additionalProperties": false,
+            "description": "Style a character range [start, end)"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "get_node_data",
+      "category": "read",
+      "description": "Raw node data at a chosen detail level: summary (shallow), tree (sparse structure for orientation), full (deeper serialization), css (CSS representation), variables (bound variable ids). For human-oriented summaries prefer get_node_details / get_selection_context.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "One or more node ids"
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "tree",
+              "full",
+              "css",
+              "variables"
+            ],
+            "description": "Default summary"
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Override serialization depth"
+          },
+          "maxNodes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "description": "Override node budget"
+          }
+        },
+        "required": [
+          "nodeIds"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "validate_design_rules",
+      "category": "verification",
+      "description": "Run design quality rules on a node: token coverage, auto-layout usage, naming conventions, and accessibility basics. Use after modifications or during design audits. Returns pass/fail for each rule with fix suggestions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "Root node to validate (default: current selection)"
+          }
+        },
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "verify_changes",
+      "category": "verification",
+      "description": "Verify that a node's current properties match expected values. Use after update_node, set_auto_layout, or batch_execute to confirm changes applied correctly. Returns match/mismatch for each checked field.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "Node ID to verify"
+          },
+          "expected": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Expected property values, e.g. { fill: '#3B82F6', cornerRadius: 8 }"
+          }
+        },
+        "required": [
+          "nodeId",
+          "expected"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "verify_visual",
+      "category": "verification",
+      "description": "The write→see→assert loop in one call: screenshots a node AND (optionally) checks expected property values. Returns the image plus structured pass/fail. Use after visual edits instead of separate screenshot + verify_changes calls.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "Node to verify"
+          },
+          "expected": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Expected property values, e.g. { cornerRadius: 8, width: 320 }"
+          }
+        },
+        "required": [
+          "nodeId"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    }
+  ],
+  "prompts": [
+    {
+      "name": "figma-plugin-api",
+      "description": "Cheat sheet for writing execute_figma code: dynamic-page rules, font loading, auto-layout pitfalls, common patterns. Load before non-trivial execute_figma work."
+    },
+    {
+      "name": "design-tokens-strategy",
+      "description": "4-tier design-token architecture: naming, mode design, tier reference rules. Load before creating or restructuring variables."
+    },
+    {
+      "name": "component-architecture-strategy",
+      "description": "Component conventions: token-first properties, state handling, size variants, variant naming. Load before building components."
+    },
+    {
+      "name": "design-audit-strategy",
+      "description": "End-to-end design audit workflow: overview → tokens → per-aspect analysis → report."
+    },
+    {
+      "name": "token-audit",
+      "description": "Token-compliance check: find raw values, tier violations, scope issues, unbound properties."
+    },
+    {
+      "name": "component-spec",
+      "description": "Generate a structured component specification: properties, variants, token bindings, state matrix."
+    },
+    {
+      "name": "comment-driven-tasks",
+      "description": "Async collaboration via Figma comments: poll unresolved threads, claim, execute, report back on-thread. Load when asked to 'handle the comments' or work comment-driven."
+    },
+    {
+      "name": "design-system-first",
+      "description": "Build UI from the file's own system: inventory → conventions → instantiate components → bind variables → verify. Load before building screens in any file that has a design system."
+    },
+    {
+      "name": "janitorial-cleanup",
+      "description": "Bulk cleanup recipes: content-based layer renaming, tokenizing hardcoded values, spacing normalization, detached-instance sweeps — with preview-first discipline."
+    }
+  ],
+  "pluginCommands": [
+    "get_document_info",
+    "get_file_info",
+    "get_selection",
+    "read_my_design",
+    "get_node_info",
+    "get_node_tree",
+    "get_nodes_info",
+    "scan_nodes_by_types",
+    "get_css",
+    "find_nodes",
+    "get_bound_variables",
+    "create_rectangle",
+    "create_frame",
+    "create_text",
+    "create_ellipse",
+    "create_polygon",
+    "create_star",
+    "create_line",
+    "create_component_instance",
+    "create_section",
+    "create_node_from_svg",
+    "create_connector",
+    "create_table",
+    "create_sticky",
+    "create_code_block",
+    "create_slice",
+    "move_node",
+    "resize_node",
+    "clone_node",
+    "delete_node",
+    "delete_multiple_nodes",
+    "rename_node",
+    "set_opacity",
+    "reorder_node",
+    "set_visible",
+    "set_locked",
+    "reparent_node",
+    "set_rotation",
+    "set_relaunch_data",
+    "get_relaunch_data",
+    "set_fill_color",
+    "set_stroke_color",
+    "set_corner_radius",
+    "set_blend_mode",
+    "set_gradient_fill",
+    "set_clips_content",
+    "set_layout_grids",
+    "set_aspect_ratio",
+    "add_drop_shadow",
+    "add_inner_shadow",
+    "add_blur",
+    "add_background_blur",
+    "remove_effects",
+    "scan_text_nodes",
+    "set_text_content",
+    "set_multiple_text_contents",
+    "set_text_style_range",
+    "set_layout_mode",
+    "set_padding",
+    "set_axis_align",
+    "set_layout_sizing",
+    "set_item_spacing",
+    "get_design_system",
+    "scan_token_drift",
+    "get_conventions",
+    "set_conventions",
+    "get_local_components",
+    "get_instance_overrides",
+    "set_instance_overrides",
+    "create_component",
+    "create_component_set",
+    "get_component_properties",
+    "set_component_properties",
+    "detach_instance",
+    "get_variable_collections",
+    "get_variables",
+    "create_variable_collection",
+    "create_variable",
+    "update_variable",
+    "delete_variable",
+    "delete_variable_collection",
+    "update_variable_collection",
+    "add_mode",
+    "remove_mode",
+    "rename_mode",
+    "set_variable_scopes",
+    "set_variable_code_syntax",
+    "remove_variable_code_syntax",
+    "create_variable_alias",
+    "bind_variable",
+    "unbind_variable",
+    "set_node_variable_mode",
+    "get_resolved_variable_modes",
+    "get_styles",
+    "create_paint_style",
+    "create_text_style",
+    "create_effect_style",
+    "create_grid_style",
+    "update_style",
+    "delete_style",
+    "apply_style",
+    "reorder_style",
+    "export_node_as_image",
+    "get_screenshot",
+    "create_image_from_url",
+    "get_pages",
+    "create_page",
+    "rename_page",
+    "delete_page",
+    "switch_page",
+    "set_page_background",
+    "get_flow_starting_points",
+    "group_nodes",
+    "ungroup_nodes",
+    "flatten_node",
+    "boolean_operation",
+    "create_component_from_node",
+    "import_component_by_key",
+    "import_style_by_key",
+    "import_variable_by_key",
+    "get_selection_colors",
+    "set_file_thumbnail",
+    "figma_notify",
+    "set_constraints",
+    "set_min_max_size",
+    "get_annotations",
+    "set_annotation",
+    "set_multiple_annotations",
+    "get_reactions",
+    "set_default_connector",
+    "create_connections",
+    "set_focus",
+    "set_selections",
+    "get_viewport",
+    "set_viewport",
+    "set_plugin_data",
+    "get_plugin_data",
+    "set_image_fill",
+    "batch_execute",
+    "execute_code",
+    "join"
+  ],
+  "pitfalls": [
+    {
+      "pattern": "unloaded font",
+      "hint": "await figma.loadFontAsync(node.fontName) before editing text — new TextNodes default to Inter Regular; for mixed ranges load every font from getRangeAllFontNames().",
+      "doc": "**Editing text without loading its font throws** (`unloaded font`). `await figma.loadFontAsync(textNode.fontName)` first; new TextNodes default to Inter Regular; when `fontName === figma.mixed`, load every font from `getRangeAllFontNames()`."
+    },
+    {
+      "pattern": "getNodeById",
+      "hint": "This plugin runs in dynamic-page mode — use await figma.getNodeByIdAsync(id) instead of getNodeById.",
+      "doc": "**`getNodeById` throws in dynamic-page mode** — always `await figma.getNodeByIdAsync(id)`."
+    },
+    {
+      "pattern": "explicitly loaded",
+      "hint": "Non-current pages must be loaded before traversal: await page.loadAsync() before reading page.children or calling findAll.",
+      "doc": "**Traversing a non-current page throws until you `await page.loadAsync()`** — `figma.currentPage` is always loaded, other pages are not."
+    },
+    {
+      "pattern": "layoutSizing",
+      "hint": "layoutSizing FILL/HUG needs auto-layout — on the parent for FILL, on the node itself for HUG. Set layoutMode on the frame first.",
+      "doc": "**`layoutSizingHorizontal/Vertical` throw without auto-layout** — FILL requires the parent to have a `layoutMode`, HUG requires it on the node itself."
+    },
+    {
+      "pattern": "Starter plan",
+      "hint": "This file hit the free-plan page limit — reuse an existing page (find it via figma.root.children) instead of figma.createPage().",
+      "doc": "**`createPage()` throws on the free plan once a file has 3 pages** — reuse an existing page instead."
+    },
+    {
+      "pattern": "read.?only property '(width|height)'",
+      "hint": "width/height are read-only — use node.resize(w, h) (and note resize on an auto-layout frame pins that axis to FIXED).",
+      "doc": "**`width`/`height` are read-only** — use `node.resize(w, h)`."
+    },
+    {
+      "pattern": "symbol",
+      "hint": "You probably hit figma.mixed (a Symbol) — properties like fontSize/cornerRadius/fills return it when values differ across ranges or children. Compare with === figma.mixed before using the value.",
+      "doc": "**`figma.mixed` is a Symbol** returned by `fontSize`, `cornerRadius`, `fills` etc. when values differ across ranges/children — check `=== figma.mixed` before use; never JSON-serialize it."
+    },
+    {
+      "pattern": "of undefined",
+      "hint": "A lookup returned undefined — if you searched pages or nodes by exact name, names may have been changed by the designer. Locate by type/content (e.g. c.type === \"COMPONENT_SET\") instead.",
+      "doc": "**Exact-name lookups are fragile** — designers rename pages and layers freely; locate nodes by type/content instead of `name ===`."
+    },
+    {
+      "pattern": "does not exist",
+      "hint": "The node id is stale — the node was likely deleted or lives on another page. Re-read the document to get current ids.",
+      "doc": "**Stale node ids throw `does not exist`** — nodes get deleted while you work; re-read before editing and check `node.removed`."
+    },
+    {
+      "pattern": "not extensible",
+      "hint": "Figma nodes can't hold custom properties (they're non-extensible). Stash data with node.setPluginData(key, value), or return it from the script.",
+      "doc": "**Nodes are non-extensible** — `node.myCustomProp = x` throws `object is not extensible`; use `setPluginData` or return the data instead."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**Shadow `spread` renders only on shapes or frames with `clipsContent: true`** — a focus ring built from spread shadows is invisible on a non-clipping frame/component."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**`resize()` on an auto-layout frame silently pins that axis to FIXED**, overriding `primaryAxisSizingMode: \"AUTO\"`. Append children first, then set `layoutSizingHorizontal = \"HUG\"`; use `resize` only for the fixed cross-axis."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**Per-corner radius** (`topLeftRadius` …) only exists on RectangleCornerMixin nodes (rectangles, frames, components) — polygons, stars and lines throw."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**Instance children can't be added or removed** — detach first, or edit the main component."
+    }
+  ]
+}

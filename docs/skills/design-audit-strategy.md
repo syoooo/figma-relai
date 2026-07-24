@@ -35,3 +35,7 @@
 - `screenshot` before and after fixes
 - `annotate` (set) / `annotate` (set_multiple) to flag issues directly in the design
 - Summarize findings by severity (critical → warning → info)
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*

@@ -20,3 +20,7 @@ Requires `FIGMA_TOKEN` (personal access token with comment scopes). A free-plan 
 ## One-shot phrasing for users
 
 Users can drive the whole loop with a single ask: *"Check the file's comments and handle anything addressed to you, then report back on each thread."* For a standing loop, they re-issue that ask periodically (or wire it to their client's scheduler if it has one).
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*

@@ -56,3 +56,7 @@ Component-specific tokens. Reference Tier 2 or dynamic Tier 1.
 - `analyze_design` (aspect: color) → find unbound colors (token coverage)
 - `validate_design_rules` → check token_coverage rule
 - `get_node_data` (detail: variables) on key nodes → confirm bindings are correct
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*

@@ -51,3 +51,7 @@ Use sm / md / lg consistently. Define as Tier 3 FLOAT tokens when brand-differen
 - `analyze_design` (aspect: components) → find detached instances, unused components
 - `verify_changes` → confirm properties match expected values
 - `get_node_data` (detail: variables) → ensure all fills/strokes are token-bound
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*

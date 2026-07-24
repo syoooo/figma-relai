@@ -29,3 +29,7 @@ In auto-layout scopes, collect `itemSpacing`/padding values; flag off-scale valu
 ## Report format
 
 End with counts and jump-points: what changed, what was skipped and why, node ids for spot-checking (the designer can click entries in the plugin feed).
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*

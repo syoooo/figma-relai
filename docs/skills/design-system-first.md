@@ -19,3 +19,7 @@ Don't invent variables for a one-off request. But if the work IS system-shaped (
 - You drew a rectangle that looks like an existing Button/Card/Badge → replace it with an instance.
 - A hex value appears in your code that `get_design_system` lists as a variable → bind instead.
 - You renamed or restructured library instances the designer didn't ask about → undo; instances belong to their component.
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*

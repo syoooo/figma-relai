@@ -31,6 +31,33 @@ if (args.includes("--list-tools")) {
   process.exit(0);
 }
 
+// CLI subcommands (Astryx-style: the contract is executable, not prose).
+// `manifest` prints the machine-readable contract, `docs` renders it for
+// humans, `doctor` triages the local environment. All exit before stdio.
+const subcommand = args.find((a) => !a.startsWith("--"));
+if (subcommand === "manifest" || subcommand === "docs" || subcommand === "doctor") {
+  const { buildManifest } = await import("./cli/manifest.js");
+  if (subcommand === "doctor") {
+    const { runDoctor, renderDoctor } = await import("./cli/doctor.js");
+    const results = await runDoctor();
+    console.log(args.includes("--json") ? JSON.stringify(results, null, 2) : renderDoctor(results));
+    process.exit(results.some((r) => r.status === "warn") ? 1 : 0);
+  }
+  const manifest = await buildManifest(VERSION);
+  if (subcommand === "manifest") {
+    console.log(JSON.stringify(manifest, null, 2));
+  } else {
+    const { renderToolDoc, renderToolIndex } = await import("./cli/docs.js");
+    const toolName = args[args.indexOf("docs") + 1];
+    console.log(
+      toolName && !toolName.startsWith("--")
+        ? renderToolDoc(manifest, toolName)
+        : renderToolIndex(manifest)
+    );
+  }
+  process.exit(0);
+}
+
 async function main() {
   // Create MCP server
   const server = createServer();

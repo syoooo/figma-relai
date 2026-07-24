@@ -7,7 +7,7 @@
     "figma-relai": "dist/index.js"
   },
   "scripts": {
-    "build": "bun run scripts/inject-pitfalls.ts && tsup",
+    "build": "bun run scripts/inject-pitfalls.ts && tsup && node dist/index.js manifest > ../../docs/manifest.json",
     "dev": "tsup --watch"
   },
   "dependencies": {

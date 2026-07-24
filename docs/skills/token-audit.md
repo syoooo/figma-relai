@@ -42,3 +42,7 @@ Report findings as:
 - **Tier violations**: list of nodes referencing wrong tier
 - **Raw values**: list of unbound colors/sizes with suggested token mappings
 - **Scope issues**: variables with missing or incorrect scopes
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*

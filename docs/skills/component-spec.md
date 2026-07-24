@@ -49,3 +49,7 @@ Output format:
 - For components from a library (remote: true), some properties may be read-only
 - Use `manage_components` (get_overrides) to see what's been customized on instances
 - Include codeSyntax values for developer handoff
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*

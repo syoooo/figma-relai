@@ -97,3 +97,7 @@ Also: `resize(w, h)` throws on `w <= 0 || h <= 0`; `layoutWrap = "WRAP"` is HORI
 ## Return values
 
 Return JSON-serializable data (the bridge summarizes nodes automatically and truncates >50k chars). Prefer returning `{ id, name, type }` summaries over whole nodes. `console.log` is captured and returned in `logs`.
+
+---
+
+*Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*
