@@ -90,6 +90,11 @@ export const PITFALLS: Pitfall[] = [
     hint: "",
     doc: "**Instance children can't be added or removed** — detach first, or edit the main component.",
   },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**Figma's slot feature (Convert to slot, ⇧⌘S) has no Plugin API** — no createSlot/convertToSlot exists (verified against typings 1.123 and at runtime, 2026-07). Scaffold a frame named \"Slot\", select it for the designer (navigate select), and let them press the shortcut.",
+  },
 ];
 
 // First matching pitfall's hint, or null. Doc-only entries never match.
