@@ -4,7 +4,7 @@
 
 **Your AI, on the canvas.** Relai は Claude Code・Cursor・Codex など任意の MCP クライアントを Figma につなぎ、普段使っているモデルに話しかけるだけでデザインの読み取り・編集・監査・デザインシステム構築ができるようにします。書き込みは Figma プラグイン経由なので、有料 REST API に依存せず、どの Figma プランでも動きます。
 
-<img src="assets/plugin-ui.png" alt="Relai プラグイン:実行フィード、接続ステータス、停止ボタン" width="380" />
+<img src="assets/plugin-ui.ja.png" alt="Relai プラグイン:実行フィード、接続ステータス、停止ボタン" width="380" />
 
 ## セッションはこんな感じ
 
