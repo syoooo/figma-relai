@@ -2100,6 +2100,11 @@
       "pattern": null,
       "hint": "",
       "doc": "**A backgrounded Figma window suspends the plugin iframe** — timers freeze and the socket can't pong, so the relay's staleness sweep kicks the plugin and the frozen 2s redial never fires until the window regains attention. The panel redials on visibilitychange/focus (ui.html ≥0.2.4); when a paired plugin goes missing mid-session, ask the designer to click the Figma window before assuming anything is broken."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**A freshly-converted slot can still report `type: \"FRAME\"` to the Plugin API** — the layer panel shows the slot badge while getNodeByIdAsync returns FRAME (a reload boundary was observed to fix it). Never gate automation on `type === \"SLOT\"`; match the frame by name and trust the designer's visual confirmation."
     }
   ]
 }
