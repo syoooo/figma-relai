@@ -12,6 +12,31 @@ import type {
   DesignTokensData,
 } from "@figma-relai/shared";
 
+// The plugin's get_styles returns {paintStyles, textStyles, effectStyles,
+// gridStyles}; a flat array is tolerated for robustness. Exported for tests.
+export function styleCountsFrom(styles: unknown): {
+  paint: number;
+  text: number;
+  effect: number;
+  grid: number;
+  total: number;
+} {
+  const counts = { paint: 0, text: 0, effect: 0, grid: 0 };
+  if (Array.isArray(styles)) {
+    for (const s of styles as Array<{ type?: string }>) {
+      const t = (s.type || "").toLowerCase() as keyof typeof counts;
+      if (t in counts) counts[t]++;
+    }
+  } else if (styles && typeof styles === "object") {
+    const o = styles as Record<string, unknown>;
+    counts.paint = Array.isArray(o.paintStyles) ? o.paintStyles.length : 0;
+    counts.text = Array.isArray(o.textStyles) ? o.textStyles.length : 0;
+    counts.effect = Array.isArray(o.effectStyles) ? o.effectStyles.length : 0;
+    counts.grid = Array.isArray(o.gridStyles) ? o.gridStyles.length : 0;
+  }
+  return { ...counts, total: counts.paint + counts.text + counts.effect + counts.grid };
+}
+
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   // ─── get_document_overview ───────────────────────────────────────
   server.tool(
@@ -29,19 +54,11 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           sendCommand("get_conventions", {}).catch(() => null) as Promise<any>,
         ]);
 
-        // get_local_components can be slow, just count from doc info
-        const componentCount = docInfo.componentCount ?? 0;
+        // Counting components needs a full document walk — the plugin doesn't
+        // do that here, so report "unknown" instead of a misleading 0.
+        const componentCount = docInfo.componentCount ?? null;
 
-        const stylesByType = { paint: 0, text: 0, effect: 0, grid: 0 };
-        if (Array.isArray(styles)) {
-          for (const s of styles) {
-            const t = (s.type || "").toLowerCase();
-            if (t === "paint") stylesByType.paint++;
-            else if (t === "text") stylesByType.text++;
-            else if (t === "effect") stylesByType.effect++;
-            else if (t === "grid") stylesByType.grid++;
-          }
-        }
+        const stylesByType = styleCountsFrom(styles);
 
         const data: DocumentOverviewData = {
           name: docInfo.name,
@@ -49,7 +66,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           pages: docInfo.pages || [],
           counts: {
             components: componentCount,
-            styles: Array.isArray(styles) ? styles.length : 0,
+            styles: stylesByType.total,
             variableCollections: Array.isArray(collections) ? collections.length : 0,
           },
         };
@@ -60,7 +77,10 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
 
         return standardResult({
           summary:
-            `"${data.name}" — ${data.pages.length} pages, ${data.counts.components} components, ${data.counts.styles} styles, ${data.counts.variableCollections} variable collections` +
+            `"${data.name}" — ${data.pages.length} pages, ` +
+            (data.counts.components != null ? `${data.counts.components} components, ` : "") +
+            `${data.counts.styles} styles, ${data.counts.variableCollections} variable collections` +
+            (data.counts.components == null ? " (component inventory via get_design_system)" : "") +
             (conventionsText ? ". This file has conventions — follow them (see data.conventions)." : ""),
           data: { ...data, ...(conventionsText ? { conventions: conventionsText } : {}) },
           recommended_next: [
@@ -293,13 +313,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           variableCount: Array.isArray(c.variableIds) ? c.variableIds.length : 0,
         }));
 
-        const stylesByType = { paint: 0, text: 0, effect: 0, grid: 0 };
-        if (Array.isArray(styles)) {
-          for (const s of styles) {
-            const t = (s.type || "").toLowerCase();
-            if (t in stylesByType) (stylesByType as any)[t]++;
-          }
-        }
+        const { total: _ignored, ...stylesByType } = styleCountsFrom(styles);
 
         const totalVars = collectionSummaries.reduce((sum, c) => sum + c.variableCount, 0);
 

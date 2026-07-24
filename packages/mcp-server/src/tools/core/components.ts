@@ -6,7 +6,7 @@ import { jsonResult, errorResult } from "./helpers.js";
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_components",
-    "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey — imports from the team library if needed), get_props / set_props (component properties on an instance), get_overrides / set_overrides (copy overrides from a source instance to targets), detach.",
+    "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey — imports from the team library if needed), get_props / set_props (component properties on an instance), get_overrides / set_overrides (copy overrides from a source instance to targets), reset_instance (clear ALL overrides so the instance re-inherits its main component — returns property snapshots before/after so you can re-apply what mattered), detach.",
     {
       action: z.enum([
         "list",
@@ -17,9 +17,10 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
         "set_props",
         "get_overrides",
         "set_overrides",
+        "reset_instance",
         "detach",
       ]),
-      nodeId: z.string().optional().describe("Target node (create/get_props/set_props/detach)"),
+      nodeId: z.string().optional().describe("Target node (create/get_props/set_props/reset_instance/detach)"),
       componentIds: z.array(z.string()).optional().describe("create_set: components to combine"),
       componentKey: z.string().optional().describe("instantiate: component key (or node id)"),
       x: z.number().optional().describe("instantiate: position"),
@@ -71,6 +72,9 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
               sourceInstanceId: args.sourceInstanceId,
               targetNodeIds: args.targetNodeIds,
             });
+            break;
+          case "reset_instance":
+            result = await sendCommand("reset_instance", { nodeId: args.nodeId });
             break;
           case "detach":
             result = await sendCommand("detach_instance", { nodeId: args.nodeId });

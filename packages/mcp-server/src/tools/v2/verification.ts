@@ -172,6 +172,29 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           });
         }
 
+        // Rule 5: Orphaned instances (main component deleted — the instance
+        // survives on a detached internal copy and silently stops updating)
+        try {
+          const orph = await sendCommand("find_orphan_instances", { nodeId: targetId }, 60000) as any;
+          if (orph && typeof orph.scanned === "number") {
+            const found: any[] = orph.orphans ?? [];
+            results.push({
+              rule: "orphaned_instances",
+              passed: found.length === 0,
+              severity: "warning",
+              message: found.length
+                ? `${found.length} instance(s) reference deleted components (of ${orph.scanned} scanned): ${found.slice(0, 3).map((o: any) => o.name).join(", ")}${found.length > 3 ? "…" : ""}`
+                : `No orphaned instances (${orph.scanned} scanned)`,
+              nodeId: targetId,
+              fix: found.length
+                ? { tool: "manage_components", reason: "Re-instantiate from a living component, or detach deliberately", args: { action: "list" } }
+                : undefined,
+            });
+          }
+        } catch {
+          // plugin build without the handler — rule silently absent
+        }
+
         const passed = results.filter(r => r.passed).length;
         const failed = results.filter(r => !r.passed).length;
 

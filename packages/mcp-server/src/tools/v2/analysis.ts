@@ -217,8 +217,30 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
 
         const unboundColors: ColorUsageIssue[] = [];
         const counters = { totalProps: 0, boundCount: 0 };
+        let hiddenCount = 0;
+        let scanned = 0;
+        let capped = false;
 
         for (const id of targetIds) {
+          // Fast path: one plugin-side recursive walk. Deep (all levels) and
+          // reports hidden (visible:false) unbound paints, which the legacy
+          // two-level path silently skipped.
+          let audit: any = null;
+          try {
+            audit = await sendCommand("audit_colors", { nodeId: id }, 60000);
+          } catch {
+            audit = null; // plugin build without the handler — legacy path below
+          }
+          if (audit && typeof audit.totalProperties === "number") {
+            counters.totalProps += audit.totalProperties;
+            counters.boundCount += audit.boundCount ?? 0;
+            hiddenCount += audit.hiddenCount ?? 0;
+            scanned += audit.scanned ?? 0;
+            capped = capped || !!audit.capped;
+            for (const issue of audit.issues ?? []) unboundColors.push(issue);
+            continue;
+          }
+
           const [nodeInfo, boundVars] = await Promise.all([
             sendCommand("get_node_info", { nodeId: id, depth: 2, maxNodes: 200 }) as Promise<any>,
             sendCommand("get_bound_variables", { nodeId: id }).catch(() => null) as Promise<any>,
@@ -249,14 +271,22 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
           unboundCount: unboundColors.length,
           tokenCoverage,
           unboundColors,
+          ...(hiddenCount ? { hiddenCount } : {}),
+          ...(scanned ? { scanned } : {}),
+          ...(capped ? { capped } : {}),
         };
 
+        const visibleIssues = unboundColors.length - hiddenCount;
         const warnings = unboundColors.length > 0
-          ? [{ category: "tokens" as const, message: `${unboundColors.length} color(s) not bound to design tokens` }]
+          ? [{ category: "tokens" as const, message: `${unboundColors.length} color(s) not bound to design tokens${hiddenCount ? ` (${hiddenCount} on hidden paints)` : ""}` }]
           : [];
 
         return standardResult({
-          summary: `Color audit: ${unboundColors.length} unbound color(s) found. Token coverage: ${Math.round(data.tokenCoverage * 100)}%`,
+          summary:
+            `Color audit: ${visibleIssues} unbound color(s)` +
+            (hiddenCount ? ` + ${hiddenCount} on hidden paints` : "") +
+            `. Token coverage: ${Math.round(data.tokenCoverage * 100)}%` +
+            (capped ? " (scan capped — large subtree)" : ""),
           data,
           warnings,
           recommended_next: unboundColors.length > 0

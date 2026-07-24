@@ -5,7 +5,7 @@
 
 // Non-mutating (or harmless-navigation) commands. Everything else is a write.
 const READ_PREFIXES = ["get_", "read_", "find_", "export_", "scan_nodes", "scan_text"];
-const READ_EXACT = new Set(["figma_notify", "set_focus", "set_selections", "set_viewport", "join"]);
+const READ_EXACT = new Set(["figma_notify", "set_focus", "set_selections", "set_viewport", "join", "audit_colors"]);
 
 export function isWriteCommand(command: string, params: Record<string, unknown>): boolean {
   if (READ_EXACT.has(command)) return false;

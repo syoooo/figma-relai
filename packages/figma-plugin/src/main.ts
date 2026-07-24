@@ -22,6 +22,7 @@ import "./handlers/viewport.js";
 import "./handlers/plugin-data.js";
 import "./handlers/image-fill.js";
 import "./handlers/library.js";
+import "./handlers/audit.js";
 import "./handlers/batch.js";
 import "./handlers/execute-code.js";
 

@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "tools": [
     {
       "name": "batch_execute",
@@ -351,7 +351,7 @@
     {
       "name": "manage_components",
       "category": "components",
-      "description": "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey — imports from the team library if needed), get_props / set_props (component properties on an instance), get_overrides / set_overrides (copy overrides from a source instance to targets), detach.",
+      "description": "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey — imports from the team library if needed), get_props / set_props (component properties on an instance), get_overrides / set_overrides (copy overrides from a source instance to targets), reset_instance (clear ALL overrides so the instance re-inherits its main component — returns property snapshots before/after so you can re-apply what mattered), detach.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -366,12 +366,13 @@
               "set_props",
               "get_overrides",
               "set_overrides",
+              "reset_instance",
               "detach"
             ]
           },
           "nodeId": {
             "type": "string",
-            "description": "Target node (create/get_props/set_props/detach)"
+            "description": "Target node (create/get_props/set_props/reset_instance/detach)"
           },
           "componentIds": {
             "type": "array",
@@ -1379,6 +1380,22 @@
                 ],
                 "additionalProperties": false
               },
+              "fills": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "description": "Raw Paint[] — replaces the whole fill list; [] clears all fills"
+              },
+              "strokes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "description": "Raw Paint[] — replaces the whole stroke list; [] clears all strokes"
+              },
               "strokeColor": {
                 "$ref": "#/properties/properties/properties/fillColor"
               },
@@ -1888,6 +1905,7 @@
     "set_relaunch_data",
     "get_relaunch_data",
     "set_fill_color",
+    "set_fills",
     "set_stroke_color",
     "set_corner_radius",
     "set_blend_mode",
@@ -1921,6 +1939,9 @@
     "get_component_properties",
     "set_component_properties",
     "detach_instance",
+    "reset_instance",
+    "audit_colors",
+    "find_orphan_instances",
     "get_variable_collections",
     "get_variables",
     "create_variable_collection",

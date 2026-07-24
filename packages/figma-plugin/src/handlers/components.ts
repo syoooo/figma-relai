@@ -136,3 +136,28 @@ registerHandler("detach_instance", async (params) => {
   const detached = (node as InstanceNode).detachInstance();
   return { id: detached.id, name: detached.name };
 });
+
+registerHandler("reset_instance", async (params) => {
+  const node = await resolveNode(params.nodeId as string, { types: ["INSTANCE"] });
+  const inst = node as InstanceNode;
+  const snapshot = () => {
+    const p: Record<string, unknown> = {};
+    try {
+      for (const [k, v] of Object.entries(inst.componentProperties ?? {})) p[k] = v.value;
+    } catch {
+      // componentProperties throws on some exotic instances — snapshot stays partial
+    }
+    return p;
+  };
+  const before = snapshot();
+  inst.resetOverrides();
+  const after = snapshot();
+  const main = await inst.getMainComponentAsync();
+  return {
+    id: inst.id,
+    name: inst.name,
+    main: main ? (main.parent?.type === "COMPONENT_SET" ? `${main.parent.name} / ${main.name}` : main.name) : null,
+    propertiesBefore: before,
+    propertiesAfter: after,
+  };
+});

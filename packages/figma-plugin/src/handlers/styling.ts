@@ -10,6 +10,25 @@ registerHandler("set_fill_color", async (params) => {
   return { id: node.id, name: node.name };
 });
 
+registerHandler("set_fills", async (params) => {
+  const node = await resolveNode(params.nodeId as string);
+  if (params.fills !== undefined) {
+    assertSupports(node, "fills");
+    (node as GeometryMixin).fills = params.fills as Paint[];
+  }
+  if (params.strokes !== undefined) {
+    assertSupports(node, "strokes");
+    (node as GeometryMixin).strokes = params.strokes as Paint[];
+  }
+  const g = node as GeometryMixin;
+  return {
+    id: node.id,
+    name: node.name,
+    fillCount: g.fills === figma.mixed ? "mixed" : (g.fills as Paint[]).length,
+    strokeCount: (g.strokes as Paint[]).length,
+  };
+});
+
 registerHandler("set_stroke_color", async (params) => {
   const node = await resolveNode(params.nodeId as string);
   assertSupports(node, "strokes");

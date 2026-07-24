@@ -20,13 +20,15 @@ describe("isWriteCommand", () => {
       "set_selections",
       "set_viewport",
       "figma_notify",
+      "audit_colors",
+      "find_orphan_instances",
     ]) {
       expect(isWriteCommand(cmd, {})).toBe(false);
     }
   });
 
   test("mutations are writes", () => {
-    for (const cmd of ["create_frame", "set_fill_color", "delete_node", "execute_code", "batch_execute"]) {
+    for (const cmd of ["create_frame", "set_fill_color", "set_fills", "reset_instance", "delete_node", "execute_code", "batch_execute"]) {
       expect(isWriteCommand(cmd, {})).toBe(true);
     }
   });

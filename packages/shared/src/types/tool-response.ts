@@ -63,7 +63,8 @@ export interface DocumentOverviewData {
   currentPage: { id: string; name: string };
   pages: Array<{ id: string; name: string }>;
   counts: {
-    components: number;
+    /** null when the connected plugin build cannot count components cheaply */
+    components: number | null;
     styles: number;
     variableCollections: number;
   };
@@ -108,6 +109,8 @@ export interface ColorUsageIssue {
   nodeName: string;
   property: "fill" | "stroke" | "effect";
   color: string;
+  /** paint exists but is visible:false — themes/dark mode ignore it, yet it can leak if toggled on */
+  hidden?: boolean;
   suggestion?: string;
 }
 
@@ -117,6 +120,9 @@ export interface ColorUsageData {
   unboundCount: number;
   tokenCoverage: number;
   unboundColors: ColorUsageIssue[];
+  hiddenCount?: number;
+  scanned?: number;
+  capped?: boolean;
 }
 
 export interface LayoutIssue {

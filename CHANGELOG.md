@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1
+
+Fixes and additions driven by a real design-system audit session (the tools were used in anger; these are the gaps that surfaced).
+
+- **Fixed: style counts were always 0** in `get_document_overview` and `get_design_tokens` — the server expected a flat array from the plugin's `get_styles` but receives `{paintStyles, textStyles, …}`. Both shapes are now understood. The overview also stops reporting a misleading "0 components": component counts are marked unknown and deferred to `get_design_system`.
+- **Fixed: shallow color audit.** `analyze_design aspect:color` walked only two levels and skipped `visible:false` paints entirely — hidden hardcoded fills on component variants passed as "100% bound". A new plugin-side `audit_colors` command walks the whole subtree in one round-trip and reports hidden unbound paints separately (`hidden: true`, counted in `hiddenCount`). Falls back to the legacy path against older plugin builds.
+- **`set_properties` gains `fills` / `strokes`** — raw `Paint[]` passthrough, including `[]` to clear. Clearing a decorative fill no longer requires `execute_figma` (and an approval) for a one-liner.
+- **`manage_components action:"reset_instance"`** — clear all overrides on an instance so it re-inherits its main component; returns property snapshots before/after so the caller can re-apply intended content. The manual recipe this replaces took three approvals.
+- **`validate_design_rules` gains `orphaned_instances`** — flags instances whose main component was deleted (they survive on a detached internal copy and silently stop updating). Old plugin builds simply omit the rule.
+
 ## 0.2.0
 
 Design-system intelligence and designer-side trust controls. All additive — no breaking changes. Tool count: 30 → 32.

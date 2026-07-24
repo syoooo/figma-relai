@@ -19,6 +19,17 @@ describe("mapPropertiesToCommands", () => {
     expect(order.indexOf("set_layout_mode")).toBeLessThan(order.indexOf("set_layout_sizing"));
   });
 
+  test("fills/strokes pass through raw, including [] to clear", () => {
+    expect(mapPropertiesToCommands("1:1", { fills: [] })).toEqual([
+      { command: "set_fills", params: { nodeId: "1:1", fills: [] } },
+    ]);
+    const paint = [{ type: "SOLID", color: { r: 1, g: 0, b: 0 } }];
+    expect(mapPropertiesToCommands("1:1", { fills: paint, strokes: [] })).toEqual([
+      { command: "set_fills", params: { nodeId: "1:1", fills: paint, strokes: [] } },
+    ]);
+    expect(propertiesSchema.safeParse({ fills: [] }).success).toBe(true);
+  });
+
   test("groups related fields into one command", () => {
     const calls = mapPropertiesToCommands("1:1", {
       x: 10,

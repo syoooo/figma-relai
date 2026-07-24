@@ -46,6 +46,14 @@ export const propertiesSchema = z
     blendMode: blendModeSchema.optional(),
     // Paint
     fillColor: colorSchema.optional(),
+    fills: z
+      .array(z.record(z.unknown()))
+      .optional()
+      .describe("Raw Paint[] — replaces the whole fill list; [] clears all fills"),
+    strokes: z
+      .array(z.record(z.unknown()))
+      .optional()
+      .describe("Raw Paint[] — replaces the whole stroke list; [] clears all strokes"),
     strokeColor: colorSchema.optional(),
     strokeWeight: z.number().min(0).optional(),
     cornerRadius: z.number().min(0).optional(),
@@ -152,6 +160,11 @@ export function mapPropertiesToCommands(nodeId: string, p: NodeProperties): Plug
       layoutSizingVertical: p.layoutSizingVertical,
     });
 
+  if (p.fills !== undefined || p.strokes !== undefined)
+    add("set_fills", {
+      ...(p.fills !== undefined ? { fills: p.fills } : {}),
+      ...(p.strokes !== undefined ? { strokes: p.strokes } : {}),
+    });
   if (p.fillColor !== undefined) add("set_fill_color", { color: p.fillColor });
   if (p.strokeColor !== undefined || p.strokeWeight !== undefined)
     add("set_stroke_color", {

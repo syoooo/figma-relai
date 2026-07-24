@@ -46,6 +46,7 @@ export const FIGMA_COMMANDS = [
   "get_relaunch_data",
   // Styling
   "set_fill_color",
+  "set_fills",
   "set_stroke_color",
   "set_corner_radius",
   "set_blend_mode",
@@ -84,6 +85,9 @@ export const FIGMA_COMMANDS = [
   "get_component_properties",
   "set_component_properties",
   "detach_instance",
+  "reset_instance",
+  "audit_colors",
+  "find_orphan_instances",
   // Variables
   "get_variable_collections",
   "get_variables",
