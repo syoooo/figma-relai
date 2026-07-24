@@ -42,7 +42,7 @@ function compactComment(c: RawComment) {
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_comments",
-    "Read and write comments on the Figma file: list (with node anchors — great for 'apply the feedback in the comments'), add (optionally pinned to a node), reply, delete. Requires a FIGMA_TOKEN env var (personal access token with comment scopes, generated at figma.com Settings → Security); the canvas tools work without it. The file is auto-detected from the open plugin when possible — otherwise pass fileUrl.",
+    "Read and write comments on the Figma file: list (with node anchors — great for 'apply the feedback in the comments' or polling for designer requests; filter with unresolved:true and since:<ISO date>), add (optionally pinned to a node), reply, delete. Comment-driven workflow: designers leave asks as comments in Figma; poll list (unresolved + since last check), do the work, then reply on the thread with what was done. Requires a FIGMA_TOKEN env var (personal access token with comment scopes, generated at figma.com Settings → Security); the canvas tools work without it. The file is auto-detected from the open plugin when possible — otherwise pass fileUrl.",
     {
       action: z.enum(["list", "add", "reply", "delete"]),
       fileUrl: z.string().optional().describe("Figma file URL or key (auto-detected when omitted)"),
@@ -51,8 +51,13 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       nodeId: z.string().optional().describe("add: pin the comment to this node"),
       x: z.number().optional().describe("add: canvas position (with y, when not pinning to a node)"),
       y: z.number().optional(),
+      since: z
+        .string()
+        .optional()
+        .describe("list: only comments created after this ISO 8601 timestamp"),
+      unresolved: z.boolean().optional().describe("list: only unresolved threads"),
     },
-    async ({ action, fileUrl, message, commentId, nodeId, x, y }) => {
+    async ({ action, fileUrl, message, commentId, nodeId, x, y, since, unresolved }) => {
       const token = process.env.FIGMA_TOKEN;
       if (!token) {
         return textResult(
@@ -98,8 +103,17 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
         switch (action) {
           case "list": {
             const data = await request("GET", `/files/${fileKey}/comments`);
-            const comments = ((data.comments as RawComment[]) ?? []).slice(0, 100).map(compactComment);
-            return jsonResult({ count: comments.length, comments });
+            let raw = (data.comments as RawComment[]) ?? [];
+            if (unresolved) raw = raw.filter((c) => !c.resolved_at);
+            if (since) {
+              const cutoff = Date.parse(since);
+              if (Number.isNaN(cutoff)) {
+                return textResult(`since "${since}" is not a parseable ISO 8601 timestamp.`);
+              }
+              raw = raw.filter((c) => c.created_at && Date.parse(c.created_at) > cutoff);
+            }
+            const comments = raw.slice(0, 100).map(compactComment);
+            return jsonResult({ count: comments.length, comments, checkedAt: new Date().toISOString() });
           }
           case "add": {
             if (!message) return textResult("add requires message.");

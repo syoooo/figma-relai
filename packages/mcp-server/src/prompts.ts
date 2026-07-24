@@ -8,6 +8,7 @@ import componentArchitecture from "../../../docs/skills/component-architecture-s
 import designAuditStrategy from "../../../docs/skills/design-audit-strategy.md";
 import tokenAudit from "../../../docs/skills/token-audit.md";
 import componentSpec from "../../../docs/skills/component-spec.md";
+import commentDrivenTasks from "../../../docs/skills/comment-driven-tasks.md";
 
 const SKILLS: Array<[name: string, description: string, text: string]> = [
   [
@@ -39,6 +40,11 @@ const SKILLS: Array<[name: string, description: string, text: string]> = [
     "component-spec",
     "Generate a structured component specification: properties, variants, token bindings, state matrix.",
     componentSpec,
+  ],
+  [
+    "comment-driven-tasks",
+    "Async collaboration via Figma comments: poll unresolved threads, claim, execute, report back on-thread. Load when asked to 'handle the comments' or work comment-driven.",
+    commentDrivenTasks,
   ],
 ];
 
