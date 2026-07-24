@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3
 
 Fixes from an adversarial smoke pass against live Figma:
 
