@@ -9,6 +9,7 @@
   "scripts": {
     "build": "bun run scripts/inject-pitfalls.ts && tsup && node dist/index.js manifest > ../../docs/manifest.json",
     "dev": "tsup --watch",
+    "prepublishOnly": "node -e \"const f=require('fs');f.copyFileSync('../../README.md','README.md');f.copyFileSync('../../LICENSE','LICENSE')\"",
     "prepack": "node -e \"const f=require('fs');f.copyFileSync('../../README.md','README.md');f.copyFileSync('../../LICENSE','LICENSE')\"",
     "postpack": "node -e \"const f=require('fs');f.rmSync('README.md',{force:true});f.rmSync('LICENSE',{force:true})\""
   },
