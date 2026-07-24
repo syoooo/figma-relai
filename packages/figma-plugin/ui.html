@@ -564,15 +564,15 @@
         <span class="dots"></span>
         <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText" data-i18n="ai_waiting">WAITING</span></span>
       </div>
+      <div class="leader-row conv-row" id="convRow" style="display:none" onclick="openConvModal()">
+        <span class="key">RULES</span>
+        <span class="dots"></span>
+        <span class="val muted"><span class="view-link" data-i18n="conventions_view">view</span></span>
+      </div>
       <div class="room-line" id="roomLine" onclick="copyConnectedRoom()">
         <span class="room-key" data-i18n="room_label">Room</span>
         <span class="room-value" id="connectedRoom"></span>
         <span class="copy-label" data-i18n="copy">copy</span>
-      </div>
-      <div class="leader-row conv-row" id="convRow" style="display:none" onclick="openConvModal()">
-        <span class="key">RULES</span>
-        <span class="dots"></span>
-        <span class="val muted"><span data-i18n="conventions_on">saved on file</span>&nbsp;&middot;&nbsp;<span class="view-link" data-i18n="conventions_view">view</span></span>
       </div>
     </div>
 
@@ -706,7 +706,6 @@
         lock_hint: 'reject edits outside the current selection',
         lock_empty: 'select something first, then toggle',
         lock_on_prefix: 'locked to: ',
-        conventions_on: 'saved on file',
         conventions_view: 'view',
         tools_title: 'Toolset',
         disconnect: 'Disconnect'
@@ -752,7 +751,6 @@
         lock_hint: '選択範囲の外への編集を拒否',
         lock_empty: '先に何かを選択してから有効化',
         lock_on_prefix: 'ロック中: ',
-        conventions_on: 'ファイルに保存済み',
         conventions_view: '表示',
         tools_title: 'ツール一覧',
         disconnect: '切断'
@@ -798,7 +796,6 @@
         lock_hint: '拒绝选区之外的改动',
         lock_empty: '请先选中内容再开启',
         lock_on_prefix: '已锁定: ',
-        conventions_on: '已存于文件',
         conventions_view: '查看',
         tools_title: '工具列表',
         disconnect: '断开'
