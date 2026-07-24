@@ -544,6 +544,11 @@
         <span class="room-value" id="connectedRoom"></span>
         <span class="copy-label" data-i18n="copy">copy</span>
       </div>
+      <div class="leader-row" id="convRow" style="display:none">
+        <span class="key">RULES</span>
+        <span class="dots"></span>
+        <span class="val muted"><span data-i18n="conventions_on">saved on file</span></span>
+      </div>
     </div>
 
     <!-- Progress -->
@@ -605,7 +610,7 @@
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> create (1)</summary><div class="cat-tools"><span class="tool-tag">create_node</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> edit (3)</summary><div class="cat-tools"><span class="tool-tag">set_properties</span><span class="tool-tag">edit_structure</span><span class="tool-tag">set_text</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> components (1)</summary><div class="cat-tools"><span class="tool-tag">manage_components</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> design-system (4)</summary><div class="cat-tools"><span class="tool-tag">manage_variables</span><span class="tool-tag">manage_styles</span><span class="tool-tag">import_from_library</span><span class="tool-tag">get_design_system</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> design-system (5)</summary><div class="cat-tools"><span class="tool-tag">manage_variables</span><span class="tool-tag">manage_styles</span><span class="tool-tag">import_from_library</span><span class="tool-tag">get_design_system</span><span class="tool-tag">manage_conventions</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> document (2)</summary><div class="cat-tools"><span class="tool-tag">manage_pages</span><span class="tool-tag">navigate</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> assets (2)</summary><div class="cat-tools"><span class="tool-tag">export_asset</span><span class="tool-tag">add_image</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> annotations (1)</summary><div class="cat-tools"><span class="tool-tag">annotate</span></div></details>
@@ -664,6 +669,7 @@
         lock_hint: 'reject edits outside the current selection',
         lock_empty: 'select something first, then toggle',
         lock_on_prefix: 'locked to: ',
+        conventions_on: 'saved on file',
         tools_title: 'Toolset',
         disconnect: 'Disconnect'
       },
@@ -708,6 +714,7 @@
         lock_hint: '選択範囲の外への編集を拒否',
         lock_empty: '先に何かを選択してから有効化',
         lock_on_prefix: 'ロック中: ',
+        conventions_on: 'ファイルに保存済み',
         tools_title: 'ツール一覧',
         disconnect: '切断'
       },
@@ -752,6 +759,7 @@
         lock_hint: '拒绝选区之外的改动',
         lock_empty: '请先选中内容再开启',
         lock_on_prefix: '已锁定: ',
+        conventions_on: '已存于文件',
         tools_title: '工具列表',
         disconnect: '断开'
       }
@@ -1229,7 +1237,13 @@
           approvalMode = s.requireApproval;
         }
         renderApprovalSeg();
+        document.getElementById('convRow').style.display = msg.hasConventions ? '' : 'none';
         if (s.autoConnect !== false) connect();
+        return;
+      }
+
+      if (msg.type === 'conventions-state') {
+        document.getElementById('convRow').style.display = msg.present ? '' : 'none';
         return;
       }
 

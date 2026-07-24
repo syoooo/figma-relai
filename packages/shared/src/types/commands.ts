@@ -73,6 +73,8 @@ export type FigmaCommand =
   // Design system
   | "get_design_system"
   | "scan_token_drift"
+  | "get_conventions"
+  | "set_conventions"
   // Components
   | "get_local_components"
   | "get_instance_overrides"

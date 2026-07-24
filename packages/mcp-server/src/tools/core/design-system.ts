@@ -41,6 +41,25 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       }
     }
   );
+
+  server.tool(
+    "manage_conventions",
+    "File-level design conventions — a CLAUDE.md that lives INSIDE this Figma file (shared plugin data, travels with the file). action:get reads it, action:set overwrites it with markdown. get_document_overview auto-includes it, and whatever it says (naming rules, spacing habits, do-not-touch areas, library preferences) should be FOLLOWED like user instructions. When the designer states a durable preference ('always use our green', 'never touch the Archive page'), offer to record it here so every future session — from any AI client — inherits it.",
+    {
+      action: z.enum(["get", "set"]),
+      content: z.string().optional().describe("set: the full markdown doc (overwrites; max 20k chars)"),
+    },
+    async ({ action, content }) => {
+      try {
+        if (action === "set") {
+          return jsonResult(await sendCommand("set_conventions", { content: content ?? "" }));
+        }
+        return jsonResult(await sendCommand("get_conventions", {}));
+      } catch (error) {
+        return errorResult(error);
+      }
+    }
+  );
 }
 
 async function fetchLibraryCatalog(libraryFileUrl: string): Promise<unknown> {

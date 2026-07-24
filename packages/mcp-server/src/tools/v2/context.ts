@@ -21,10 +21,12 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
     { readOnlyHint: true },
     async () => {
       try {
-        const [docInfo, collections, styles] = await Promise.all([
+        const [docInfo, collections, styles, conventions] = await Promise.all([
           sendCommand("get_document_info") as Promise<any>,
           sendCommand("get_variable_collections") as Promise<any[]>,
           sendCommand("get_styles") as Promise<any[]>,
+          // Older plugin builds don't have the handler — degrade quietly
+          sendCommand("get_conventions", {}).catch(() => null) as Promise<any>,
         ]);
 
         // get_local_components can be slow, just count from doc info
@@ -52,9 +54,15 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           },
         };
 
+        // File conventions are standing designer instructions — surface them
+        // where every session starts so they cannot be missed
+        const conventionsText: string | null = conventions?.content ?? null;
+
         return standardResult({
-          summary: `"${data.name}" — ${data.pages.length} pages, ${data.counts.components} components, ${data.counts.styles} styles, ${data.counts.variableCollections} variable collections`,
-          data,
+          summary:
+            `"${data.name}" — ${data.pages.length} pages, ${data.counts.components} components, ${data.counts.styles} styles, ${data.counts.variableCollections} variable collections` +
+            (conventionsText ? ". This file has conventions — follow them (see data.conventions)." : ""),
+          data: { ...data, ...(conventionsText ? { conventions: conventionsText } : {}) },
           recommended_next: [
             { tool: "get_selection_context", reason: "Inspect currently selected nodes" },
             { tool: "search_nodes", reason: "Find specific nodes by name or type" },
