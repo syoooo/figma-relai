@@ -12,6 +12,8 @@ Design-system intelligence and designer-side trust controls. All additive — no
 - **File conventions** (`manage_conventions`) — a CLAUDE.md that lives inside the Figma file (shared plugin data): naming rules, spacing habits, do-not-touch areas. `get_document_overview` auto-includes it; the panel shows a RULES row when present.
 - **Comment-driven tasks**: `manage_comments` list gains `since` / `unresolved` filters and a `checkedAt` cursor; a new skill documents the scan → claim → execute → report-back loop (polling, honestly labeled).
 - Three new skill prompts: `design-system-first`, `janitorial-cleanup`, `comment-driven-tasks` (nine total).
+- **CLI**: `figma-relai manifest` prints the machine-readable contract (tool JSON schemas captured from a real in-process MCP handshake, plugin commands, pitfalls; emitted to `docs/manifest.json` each build — drift-proof by construction and pinned by tests); `figma-relai docs [tool]` renders the same data for humans; `figma-relai doctor` triages the environment (node, relay ports, plugin presence, saved room, token).
+- Plugin build target raised to es2017 after root-causing a launch-bricking sandbox crash: Figma's plugin VM cannot compile es2015's generator-lowered `await` inside a `for…of` head. A new test compiles every build in the same VM family so the class is caught in CI.
 
 ## 0.1.4
 

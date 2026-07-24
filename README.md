@@ -89,7 +89,7 @@ Ports are fixed by Figma's plugin sandbox: the manifest allowlists `ws://localho
 | Comments | `manage_comments` (needs a token — see below) |
 | Advanced | `batch_execute` · `execute_figma` · `join_room` |
 
-Each tool is self-describing, so the AI sees full parameter docs. Nine skill documents ship alongside as MCP prompts: token strategy, component conventions, audit workflows, a Plugin API cheat sheet for `execute_figma`, and recipes for design-system-first building, bulk cleanup, and comment-driven collaboration.
+Each tool is self-describing, so the AI sees full parameter docs. The same contract also exists as a file: `npx figma-relai manifest` prints a machine-readable JSON of every tool schema, plugin command, and known pitfall — generated from the running code on every build (committed as `docs/manifest.json`), so it cannot drift — and `npx figma-relai docs <tool>` renders it for humans. Nine skill documents ship alongside as MCP prompts: token strategy, component conventions, audit workflows, a Plugin API cheat sheet for `execute_figma`, and recipes for design-system-first building, bulk cleanup, and comment-driven collaboration.
 
 ## Relai and Figma's official MCP
 
@@ -107,6 +107,8 @@ Comments live behind Figma's REST API, which needs a personal access token. Gene
 The token stays in your config file and is sent only to `api.figma.com`. Every other tool works without it. With it, "apply the feedback in the comments" becomes a thing the AI can actually do: read the threads, make the edits, reply. It also unlocks a quiet workflow: leave an @-comment on the canvas as a task, then tell your AI to "check the comments" — it claims the thread, does the work, and reports back on it.
 
 ## Troubleshooting
+
+Start with `npx figma-relai doctor` — one command that checks Node, the relay ports (and whether something foreign is squatting on them), plugin presence, the saved room, and the comments token, each with its fix.
 
 **The plugin shows NO SERVER.** No MCP server is listening on ports 9055–9057, which usually means your AI client isn't running or Relai isn't registered in it. The panel shows the exact registration command; the plugin keeps dialing and connects the moment a server appears.
 
