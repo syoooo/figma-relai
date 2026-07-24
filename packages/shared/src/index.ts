@@ -9,3 +9,4 @@ export * from "./types/tool-error.js";
 export * from "./utils/color.js";
 export * from "./utils/schemas.js";
 export * from "./relay-core.js";
+export * from "./pitfalls.js";

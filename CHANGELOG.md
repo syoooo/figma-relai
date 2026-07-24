@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Pitfall registry**: Plugin API arcana now lives in one place (`shared/src/pitfalls.ts`) and is delivered through two channels that can't drift — `execute_figma` errors carry the remedy as a `Hint:` (unloaded fonts, dynamic-page lookups, free-plan page limits, fragile name lookups, stale ids, …), and the same registry renders the Pitfalls section of the `figma-plugin-api` cheat sheet at build time.
 - `execute_figma` accepts an optional `timeoutMs` (up to 300000) for scripts that create hundreds of nodes — the 60s default remains.
 
 ## 0.1.1

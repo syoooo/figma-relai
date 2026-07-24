@@ -1,3 +1,4 @@
+import { pitfallHint } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
 import { serializeNode } from "../utils/node-helpers.js";
 
@@ -62,7 +63,16 @@ registerHandler("execute_code", async (params) => {
     "console",
     `"use strict"; return (async () => { ${code}\n })();`
   );
-  const value = await fn(figma, capturedConsole);
+  let value: unknown;
+  try {
+    value = await fn(figma, capturedConsole);
+  } catch (error) {
+    // Known Plugin API pitfalls get their remedy appended so the AI can
+    // self-correct in one round-trip (registry: shared/src/pitfalls.ts)
+    const message = error instanceof Error ? error.message : String(error);
+    const hint = pitfallHint(message);
+    throw new Error(hint ? `${message} — Hint: ${hint}` : message);
+  }
 
   let result = serializeResult(value);
   let truncated = false;

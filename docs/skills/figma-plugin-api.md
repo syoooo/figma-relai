@@ -48,15 +48,25 @@ const bytes = await node.exportAsync({ format: "PNG", constraint: { type: "SCALE
 
 ## Pitfalls that throw (or silently do the wrong thing)
 
+When one of these throws inside `execute_figma`, the error already carries the remedy as a `Hint:` — this list is generated from the same registry (`packages/shared/src/pitfalls.ts`).
+
+<!-- PITFALLS:START -->
+- **Editing text without loading its font throws** (`unloaded font`). `await figma.loadFontAsync(textNode.fontName)` first; new TextNodes default to Inter Regular; when `fontName === figma.mixed`, load every font from `getRangeAllFontNames()`.
+- **`getNodeById` throws in dynamic-page mode** — always `await figma.getNodeByIdAsync(id)`.
+- **Traversing a non-current page throws until you `await page.loadAsync()`** — `figma.currentPage` is always loaded, other pages are not.
+- **`layoutSizingHorizontal/Vertical` throw without auto-layout** — FILL requires the parent to have a `layoutMode`, HUG requires it on the node itself.
+- **`createPage()` throws on the free plan once a file has 3 pages** — reuse an existing page instead.
+- **`width`/`height` are read-only** — use `node.resize(w, h)`.
+- **`figma.mixed` is a Symbol** returned by `fontSize`, `cornerRadius`, `fills` etc. when values differ across ranges/children — check `=== figma.mixed` before use; never JSON-serialize it.
+- **Exact-name lookups are fragile** — designers rename pages and layers freely; locate nodes by type/content instead of `name ===`.
+- **Stale node ids throw `does not exist`** — nodes get deleted while you work; re-read before editing and check `node.removed`.
 - **Shadow `spread` renders only on shapes or frames with `clipsContent: true`** — a focus ring built from spread shadows is invisible on a non-clipping frame/component.
-- **`resize()` on an auto-layout frame pins that axis to FIXED**, silently overriding `primaryAxisSizingMode: "AUTO"`. To hug content, append children first, then set `layoutSizingHorizontal = "HUG"` (and use `resize` only for the fixed cross-axis).
-- `resize(w, h)` with `w <= 0 || h <= 0`; resizing nodes without `resize` (e.g. some text auto-resize modes — set `textAutoResize` first).
-- Setting layout-child props (`layoutSizing*`, `layoutAlign`) when the **parent** has `layoutMode: "NONE"`.
-- `layoutWrap = "WRAP"` on VERTICAL; `counterAxisAlignItems = "BASELINE"` on VERTICAL.
-- Editing `characters` without loading fonts → "unloaded font".
-- Per-corner radius (`topLeftRadius` …) on nodes without RectangleCornerMixin (polygons, stars, lines).
-- Touching `node.removed === true` nodes; writing to `locked` nodes is allowed by API but surprises designers — check first.
-- `instance.children` mutations — detach first or edit the main component.
+- **`resize()` on an auto-layout frame silently pins that axis to FIXED**, overriding `primaryAxisSizingMode: "AUTO"`. Append children first, then set `layoutSizingHorizontal = "HUG"`; use `resize` only for the fixed cross-axis.
+- **Per-corner radius** (`topLeftRadius` …) only exists on RectangleCornerMixin nodes (rectangles, frames, components) — polygons, stars and lines throw.
+- **Instance children can't be added or removed** — detach first, or edit the main component.
+<!-- PITFALLS:END -->
+
+Also: `resize(w, h)` throws on `w <= 0 || h <= 0`; `layoutWrap = "WRAP"` is HORIZONTAL-only, `counterAxisAlignItems = "BASELINE"` too; writing to `locked` nodes is allowed by the API but surprises designers — check first.
 
 ## Return values
 
