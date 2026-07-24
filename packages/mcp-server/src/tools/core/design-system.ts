@@ -35,6 +35,23 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           data.libraryCatalog = await fetchLibraryCatalog(libraryFileUrl);
         }
 
+        // Truncation must be impossible to miss: lists are usage-sorted, so a
+        // cap silently hides exactly the newest zero-usage components.
+        const truncNotes: string[] = [];
+        const components = data.components as
+          | Record<string, { items?: unknown[]; truncated?: number }>
+          | undefined;
+        for (const [group, entry] of Object.entries(components ?? {})) {
+          if (entry?.truncated) {
+            truncNotes.push(
+              `components.${group}: showing ${entry.items?.length ?? 0}, ${entry.truncated} more hidden (usage-sorted — new/unused components are the ones cut)`
+            );
+          }
+        }
+        if (truncNotes.length) {
+          data.TRUNCATED = `${truncNotes.join("; ")}. Full component list: manage_components action:"list".`;
+        }
+
         return jsonResult(data);
       } catch (error) {
         return errorResult(error);

@@ -105,13 +105,25 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
         const bv = boundVars?.boundVariables || {};
         const results: DesignRuleResult[] = [];
 
-        // Rule 1: Token coverage
-        const coverage = calculateTokenCoverage(nodeInfo, bv);
+        // Rule 1: Token coverage — deep plugin-side walk when available; the
+        // legacy shallow calculation reported 100% on component sets whose
+        // variants were unbound (their own root has no paints to inspect).
+        let coverage: number;
+        let coverageDetail = "";
+        try {
+          const audit = await sendCommand("audit_colors", { nodeId: targetId }, 60000) as any;
+          if (typeof audit?.totalProperties !== "number") throw new Error("no audit");
+          coverage = audit.totalProperties > 0 ? audit.boundCount / audit.totalProperties : 1;
+          coverageDetail = ` (${audit.boundCount}/${audit.totalProperties} paint props across ${audit.scanned} nodes${audit.hiddenCount ? `, ${audit.hiddenCount} hidden unbound` : ""})`;
+        } catch {
+          coverage = calculateTokenCoverage(nodeInfo, bv);
+          coverageDetail = " (shallow — old plugin build)";
+        }
         results.push({
           rule: "token_coverage",
           passed: coverage >= 0.8,
           severity: coverage >= 0.5 ? "warning" : "error",
-          message: `Token coverage: ${Math.round(coverage * 100)}% (target: 80%+)`,
+          message: `Token coverage: ${Math.round(coverage * 100)}%${coverageDetail} (target: 80%+)`,
           nodeId: targetId,
           fix: coverage < 0.8
             ? { tool: "bind_tokens", reason: "Bind unbound properties to design tokens", args: { nodeId: targetId } }
