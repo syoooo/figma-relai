@@ -45,3 +45,4 @@ export function drainEvents(): DesignerEvent[] {
   events = [];
   return drained;
 }
+

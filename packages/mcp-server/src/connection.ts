@@ -60,8 +60,9 @@ export class FigmaConnection {
   private commandHandler: ((command: string, params: unknown) => void) | null = null;
   private options: FigmaConnectionOptions;
   private relayVerified = false;
-  // null = unknown (no presence message yet); false = room has no plugin
-  private pluginPresent: boolean | null = null;
+  // Presence recorded per room: join-time broadcasts can arrive before
+  // currentRoom is updated, so keying by room avoids the ordering race
+  private presenceByRoom = new Map<string, boolean>();
   // Designer activity piggybacked on plugin responses (selection changes etc.)
   private eventQueue: unknown[] = [];
 
@@ -146,11 +147,12 @@ export class FigmaConnection {
             return;
           }
 
-          // Peer presence for the current room (is the plugin there?)
+          // Peer presence per room (is the plugin there?)
           if (json.type === "presence") {
-            if (json.room === this.currentRoom && Array.isArray(json.peers)) {
-              this.pluginPresent = json.peers.some(
-                (p: { role?: string }) => p.role === "plugin"
+            if (typeof json.room === "string" && Array.isArray(json.peers)) {
+              this.presenceByRoom.set(
+                json.room,
+                json.peers.some((p: { role?: string }) => p.role === "plugin")
               );
             }
             return;
@@ -247,7 +249,6 @@ export class FigmaConnection {
   async joinRoom(roomName: string): Promise<void> {
     await this.sendCommand("join", { room: roomName });
     this.currentRoom = roomName;
-    this.pluginPresent = null;
     this.options.onRoomChanged?.(roomName);
     logger.info(`Joined room: ${roomName}`);
   }
@@ -319,8 +320,8 @@ export class FigmaConnection {
 
     if (command !== "join") {
       await this.ensureRoom();
-      // Presence said the plugin left — fail fast instead of a 30s timeout
-      if (this.pluginPresent === false) {
+      // Presence said the room has no plugin — fail fast, not a 30s timeout
+      if (this.currentRoom && this.presenceByRoom.get(this.currentRoom) === false) {
         throw new Error(
           "The Figma plugin is not open. Open the Relai plugin in Figma — it will reconnect to the same room automatically."
         );

@@ -69,7 +69,7 @@ relai.placeholder(section);               // construction veil so the designer s
 relai.placeholder(section, false);        // ALWAYS remove when the section is done
 ```
 
-Two more safety nets: **failed scripts roll back atomically** (no partial changes), and results may carry a `warnings` array for silent mistakes the lint catches (e.g. spread shadows on a non-clipping frame). Convention: **return every created/mutated node id** (`return { createdNodeIds: [...] }`) so follow-up calls can reference them.
+Two important facts: **scripts are NOT atomic** — on error, changes made before the throw persist, so keep scripts small and clean up after failures; and results may carry a `warnings` array for silent mistakes the lint catches on relai-created nodes and any node ids you return (e.g. spread shadows on a non-clipping frame). Convention: **return every created/mutated node id** (`return { createdNodeIds: [...] }`) — it powers both follow-up calls and the lint.
 
 ## Pitfalls that throw (or silently do the wrong thing)
 
@@ -85,6 +85,7 @@ When one of these throws inside `execute_figma`, the error already carries the r
 - **`figma.mixed` is a Symbol** returned by `fontSize`, `cornerRadius`, `fills` etc. when values differ across ranges/children — check `=== figma.mixed` before use; never JSON-serialize it.
 - **Exact-name lookups are fragile** — designers rename pages and layers freely; locate nodes by type/content instead of `name ===`.
 - **Stale node ids throw `does not exist`** — nodes get deleted while you work; re-read before editing and check `node.removed`.
+- **Nodes are non-extensible** — `node.myCustomProp = x` throws `object is not extensible`; use `setPluginData` or return the data instead.
 - **Shadow `spread` renders only on shapes or frames with `clipsContent: true`** — a focus ring built from spread shadows is invisible on a non-clipping frame/component.
 - **`resize()` on an auto-layout frame silently pins that axis to FIXED**, overriding `primaryAxisSizingMode: "AUTO"`. Append children first, then set `layoutSizingHorizontal = "HUG"`; use `resize` only for the fixed cross-axis.
 - **Per-corner radius** (`topLeftRadius` …) only exists on RectangleCornerMixin nodes (rectangles, frames, components) — polygons, stars and lines throw.

@@ -64,6 +64,11 @@ export const PITFALLS: Pitfall[] = [
     hint: "The node id is stale — the node was likely deleted or lives on another page. Re-read the document to get current ids.",
     doc: "**Stale node ids throw `does not exist`** — nodes get deleted while you work; re-read before editing and check `node.removed`.",
   },
+  {
+    pattern: "not extensible",
+    hint: "Figma nodes can't hold custom properties (they're non-extensible). Stash data with node.setPluginData(key, value), or return it from the script.",
+    doc: "**Nodes are non-extensible** — `node.myCustomProp = x` throws `object is not extensible`; use `setPluginData` or return the data instead.",
+  },
   // ── silent pitfalls: nothing throws, results are just wrong ──
   {
     pattern: null,

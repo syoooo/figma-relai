@@ -3,35 +3,11 @@
 // the most common Plugin API pitfalls), and a post-run lint for mistakes
 // that don't throw. Lint rules stay zero-ambiguity — no false positives.
 
-// Factory methods whose results we track for post-run linting
-export const CREATE_METHODS = new Set([
-  "createRectangle", "createFrame", "createComponent", "createComponentFromNode",
-  "createText", "createEllipse", "createPolygon", "createStar", "createLine",
-  "createVector", "createSection", "createNodeFromSvg", "createSticky",
-  "createTable", "createConnector", "createCodeBlock", "createSlice",
-  "combineAsVariants", "group",
-]);
-
-// Wrap the figma global so nodes created by the script (directly or through
-// relai.*) are recorded for linting
-export function makeFigmaProxy(figma: PluginAPI, onCreate: (node: unknown) => void): PluginAPI {
-  return new Proxy(figma, {
-    get(target, prop, receiver) {
-      const value = Reflect.get(target, prop, receiver);
-      if (typeof value === "function") {
-        if (CREATE_METHODS.has(String(prop))) {
-          return (...args: unknown[]) => {
-            const node = (value as (...a: unknown[]) => unknown).apply(target, args);
-            onCreate(node);
-            return node;
-          };
-        }
-        return (value as (...a: unknown[]) => unknown).bind(target);
-      }
-      return value;
-    },
-  }) as PluginAPI;
-}
+// NOTE: never wrap the `figma` global in a Proxy — its methods are
+// non-configurable data properties, so any get trap that returns a wrapper
+// violates the Proxy invariant and the sandbox throws
+// "proxy: inconsistent get". Created-node tracking uses nodechange events
+// instead (see event-buffer.ts).
 
 // ── relai.* helpers ──────────────────────────────────────────────────
 
@@ -64,13 +40,14 @@ export function setProps<T>(node: T, props: Record<string, unknown>): T {
   return node;
 }
 
-export function makeRelai(f: PluginAPI) {
+export function makeRelai(f: PluginAPI, onCreate: (node: SceneNode) => void = () => {}) {
   return {
     // Font-safe text creation: loads the font BEFORE writing characters
     async text(parent: BaseNode & ChildrenMixin | null, characters: string, opts: TextOpts = {}) {
       const font = opts.font ?? { family: "Inter", style: "Regular" };
       await f.loadFontAsync(font);
       const t = f.createText();
+      onCreate(t);
       t.fontName = font;
       t.characters = characters;
       if (opts.size !== undefined) t.fontSize = opts.size;
@@ -85,6 +62,7 @@ export function makeRelai(f: PluginAPI) {
     // Auto-layout frame with both axes hugging — the right default container
     autoLayout(direction: "HORIZONTAL" | "VERTICAL" = "HORIZONTAL", props: Record<string, unknown> = {}) {
       const frame = f.createFrame();
+      onCreate(frame);
       frame.layoutMode = direction;
       frame.primaryAxisSizingMode = "AUTO";
       frame.counterAxisSizingMode = "AUTO";
@@ -278,7 +256,9 @@ function matchesCompiled(node: QueryNode, sel: CompiledSelector, scope: QueryNod
 }
 
 export function queryNodes(scope: QueryNode, selector: string): QueryNode[] {
-  const compiled = parseSelector(selector);
+  // Alternatives with no parts (empty/garbage selectors) match nothing
+  const compiled = parseSelector(selector).filter((sel) => sel.parts.length > 0);
+  if (compiled.length === 0) return [];
   const out: QueryNode[] = [];
   const walk = (node: QueryNode) => {
     for (const child of node.children ?? []) {

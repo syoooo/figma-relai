@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Fixes from an adversarial smoke pass against live Figma:
+
+- **Fix (critical): `execute_figma` broke on any `figma.create*` call** — wrapping the `figma` global in a Proxy violated Proxy invariants (its methods are non-configurable), throwing `proxy: inconsistent get`. Created-node tracking now uses deterministic sources instead (relai-created nodes plus node ids present in the script's return value), which also isolates concurrent scripts from each other.
+- **Retracted: atomic rollback of failed scripts.** The undo-stack approach proved unreliable in practice; a false atomicity promise is worse than none. Errors no longer claim rollback; docs and the tool description now say plainly that partial changes persist — keep scripts small and idempotent.
+- **Fix: presence fast-fail never fired after joining a room** (the join-time presence broadcast raced `currentRoom`); presence is now recorded per room, so commands in a plugin-less room fail in milliseconds instead of a 30s timeout.
+- Fix: `relai.query` crashed on empty/garbage selectors — now matches nothing.
+- New pitfall entry: nodes are non-extensible (`object is not extensible`) — use `setPluginData` or return the data.
+
 ## 0.1.2
 
 - **`relai.*` sandbox helpers**: `execute_figma` scripts get a `relai` object alongside `figma` — `text()` (font-safe), `autoLayout()`, `set()` (ordering-safe), `hug()`, `focusRing()`, `page()` (content-based lookup), `query()` (CSS-like selector subset: types, name matchers, descendant/child combinators, comma), and `placeholder()` (construction veil for work-in-progress sections). The correct way is now the shortest way.

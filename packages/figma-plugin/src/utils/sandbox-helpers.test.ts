@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { lintCreatedNodes, setProps, CREATE_METHODS, queryNodes, type QueryNode } from "./sandbox-helpers.js";
+import { lintCreatedNodes, setProps, queryNodes, type QueryNode } from "./sandbox-helpers.js";
 
 describe("lintCreatedNodes", () => {
   const spread = { type: "DROP_SHADOW", spread: 4, visible: true };
@@ -49,12 +49,6 @@ describe("setProps ordering", () => {
   });
 });
 
-test("CREATE_METHODS covers the common factories", () => {
-  for (const m of ["createFrame", "createText", "createComponent", "combineAsVariants", "createNodeFromSvg"]) {
-    expect(CREATE_METHODS.has(m)).toBe(true);
-  }
-});
-
 describe("queryNodes (selector subset)", () => {
   // page > [Card A(FRAME) > [Title(TEXT), Body(TEXT)], Card B(FRAME) > [Group(GROUP) > [Title(TEXT)]], Hero(RECTANGLE)]
   function tree() {
@@ -93,6 +87,16 @@ describe("queryNodes (selector subset)", () => {
     const { page, titleA, titleB } = tree();
     expect(queryNodes(page, "FRAME TEXT[name=Title]")).toEqual([titleA, titleB]);
     expect(queryNodes(page, "FRAME > TEXT[name=Title]")).toEqual([titleA]); // titleB is under GROUP
+  });
+
+  test("empty and garbage selectors match nothing instead of crashing", () => {
+    const { page } = tree();
+    expect(queryNodes(page, "")).toEqual([]);
+    expect(queryNodes(page, "   ")).toEqual([]);
+    expect(queryNodes(page, ",")).toEqual([]);
+    expect(queryNodes(page, "[[[")).toEqual([]);
+    expect(queryNodes(page, "> >")).toEqual([]);
+    expect(queryNodes(page, "NOSUCHTYPE, ")).toEqual([]);
   });
 
   test("comma union and subtree scoping", () => {

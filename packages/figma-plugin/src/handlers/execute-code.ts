@@ -1,12 +1,7 @@
 import { pitfallHint } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
 import { serializeNode } from "../utils/node-helpers.js";
-import {
-  makeFigmaProxy,
-  makeRelai,
-  lintCreatedNodes,
-  type LintTarget,
-} from "../utils/sandbox-helpers.js";
+import { makeRelai, lintCreatedNodes, type LintTarget } from "../utils/sandbox-helpers.js";
 
 // The execute_figma escape hatch: runs AI-authored JavaScript against the
 // Plugin API. Gated by the designer's "Allow code execution" plugin setting.
@@ -63,12 +58,15 @@ registerHandler("execute_code", async (params) => {
     error: (...args: unknown[]) => capturedConsole.log("[error]", ...args),
   };
 
-  // Track nodes the script creates (directly or via relai.*) for post-run lint
-  const created: LintTarget[] = [];
-  const figmaProxy = makeFigmaProxy(figma, (node) => created.push(node as LintTarget));
-  const relai = makeRelai(figmaProxy);
+  // Per-invocation created-node tracking through relai (deterministic and
+  // concurrency-safe — each execute gets its own collector)
+  const relaiCreated: LintTarget[] = [];
+  const relai = makeRelai(figma, (node) => relaiCreated.push(node as unknown as LintTarget));
 
-  // Wrap in an async function so the code can use await and return values
+  // Wrap in an async function so the code can use await and return values.
+  // (Never wrap `figma` in a Proxy — its methods are non-configurable, so a
+  // get trap returning wrappers violates Proxy invariants and throws
+  // "proxy: inconsistent get".)
   const fn = new Function(
     "figma",
     "console",
@@ -76,30 +74,17 @@ registerHandler("execute_code", async (params) => {
     `"use strict"; return (async () => { ${code}\n })();`
   );
 
-  // Atomicity: close the previous undo step, run, and roll back the script's
-  // partial changes on error — a failed script leaves the file untouched
-  figma.commitUndo();
   let value: unknown;
   try {
-    value = await fn(figmaProxy, capturedConsole, relai);
+    value = await fn(figma, capturedConsole, relai);
   } catch (error) {
-    try {
-      figma.triggerUndo();
-    } catch {
-      // Rollback is best-effort; the error below is what matters
-    }
     // Known Plugin API pitfalls get their remedy appended so the AI can
-    // self-correct in one round-trip (registry: shared/src/pitfalls.ts)
+    // self-correct in one round-trip (registry: shared/src/pitfalls.ts).
+    // NOTE: scripts are NOT atomic — partial changes persist on error.
     const message = error instanceof Error ? error.message : String(error);
     const hint = pitfallHint(message);
-    throw new Error(
-      (hint ? `${message} — Hint: ${hint}` : message) +
-        " (the script's changes were rolled back)"
-    );
+    throw new Error(hint ? `${message} — Hint: ${hint}` : message);
   }
-
-  // Silent-mistake lint on everything the script created
-  const warnings = lintCreatedNodes(created);
 
   let result = serializeResult(value);
   let truncated = false;
@@ -108,6 +93,25 @@ registerHandler("execute_code", async (params) => {
     result = `${asText.slice(0, MAX_RESULT_CHARS)}… [truncated ${asText.length - MAX_RESULT_CHARS} chars — return a smaller value]`;
     truncated = true;
   }
+
+  // Silent-mistake lint over deterministic sources: nodes relai created plus
+  // any node ids the script returned (returning ids is the documented
+  // convention, so direct figma.create* flows get covered too)
+  const lintTargets = new Map<string, LintTarget>();
+  for (const node of relaiCreated) {
+    if (node?.id) lintTargets.set(node.id, node);
+  }
+  const returnedIds = [...new Set((asText ?? "").match(/\b\d+:\d+\b/g) ?? [])].slice(0, 20);
+  for (const nodeId of returnedIds) {
+    if (lintTargets.has(nodeId)) continue;
+    try {
+      const node = await figma.getNodeByIdAsync(nodeId);
+      if (node) lintTargets.set(nodeId, node as unknown as LintTarget);
+    } catch {
+      // Not a real node id — the regex casts a wide net on purpose
+    }
+  }
+  const warnings = lintCreatedNodes([...lintTargets.values()]);
 
   return {
     result,
