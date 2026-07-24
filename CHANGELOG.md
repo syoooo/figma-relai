@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **`relai.*` sandbox helpers**: `execute_figma` scripts get a `relai` object alongside `figma` — `text()` (font-safe), `autoLayout()`, `set()` (ordering-safe), `hug()`, `focusRing()`, `page()` (content-based lookup). The correct way is now the shortest way.
+- **Atomic scripts**: a failed `execute_figma` script rolls back its partial changes (undo-step based) — errors leave the file untouched.
+- **Silent-mistake lint**: nodes created by a script are checked after it runs; zero-ambiguity problems (spread shadows on a non-clipping frame) come back as `warnings` on the result.
 - **Pitfall registry**: Plugin API arcana now lives in one place (`shared/src/pitfalls.ts`) and is delivered through two channels that can't drift — `execute_figma` errors carry the remedy as a `Hint:` (unloaded fonts, dynamic-page lookups, free-plan page limits, fragile name lookups, stale ids, …), and the same registry renders the Pitfalls section of the `figma-plugin-api` cheat sheet at build time.
 - `execute_figma` accepts an optional `timeoutMs` (up to 300000) for scripts that create hundreds of nodes — the 60s default remains.
 

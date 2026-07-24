@@ -1,6 +1,12 @@
 import { pitfallHint } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
 import { serializeNode } from "../utils/node-helpers.js";
+import {
+  makeFigmaProxy,
+  makeRelai,
+  lintCreatedNodes,
+  type LintTarget,
+} from "../utils/sandbox-helpers.js";
 
 // The execute_figma escape hatch: runs AI-authored JavaScript against the
 // Plugin API. Gated by the designer's "Allow code execution" plugin setting.
@@ -57,22 +63,43 @@ registerHandler("execute_code", async (params) => {
     error: (...args: unknown[]) => capturedConsole.log("[error]", ...args),
   };
 
+  // Track nodes the script creates (directly or via relai.*) for post-run lint
+  const created: LintTarget[] = [];
+  const figmaProxy = makeFigmaProxy(figma, (node) => created.push(node as LintTarget));
+  const relai = makeRelai(figmaProxy);
+
   // Wrap in an async function so the code can use await and return values
   const fn = new Function(
     "figma",
     "console",
+    "relai",
     `"use strict"; return (async () => { ${code}\n })();`
   );
+
+  // Atomicity: close the previous undo step, run, and roll back the script's
+  // partial changes on error — a failed script leaves the file untouched
+  figma.commitUndo();
   let value: unknown;
   try {
-    value = await fn(figma, capturedConsole);
+    value = await fn(figmaProxy, capturedConsole, relai);
   } catch (error) {
+    try {
+      figma.triggerUndo();
+    } catch {
+      // Rollback is best-effort; the error below is what matters
+    }
     // Known Plugin API pitfalls get their remedy appended so the AI can
     // self-correct in one round-trip (registry: shared/src/pitfalls.ts)
     const message = error instanceof Error ? error.message : String(error);
     const hint = pitfallHint(message);
-    throw new Error(hint ? `${message} — Hint: ${hint}` : message);
+    throw new Error(
+      (hint ? `${message} — Hint: ${hint}` : message) +
+        " (the script's changes were rolled back)"
+    );
   }
+
+  // Silent-mistake lint on everything the script created
+  const warnings = lintCreatedNodes(created);
 
   let result = serializeResult(value);
   let truncated = false;
@@ -82,5 +109,10 @@ registerHandler("execute_code", async (params) => {
     truncated = true;
   }
 
-  return { result, logs, ...(truncated ? { truncated } : {}) };
+  return {
+    result,
+    logs,
+    ...(warnings.length > 0 ? { warnings } : {}),
+    ...(truncated ? { truncated } : {}),
+  };
 });

@@ -6,7 +6,7 @@ import { jsonResult, errorResult } from "./helpers.js";
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "execute_figma",
-    "Run JavaScript against the Figma Plugin API inside the plugin sandbox — the escape hatch for anything the other tools don't cover. The code runs in an async function with `figma` in scope; its return value is serialized back (node objects become summaries). console.log output is captured into `logs`. Work incrementally: small scripts, verify with screenshot between steps. Remember dynamic-page rules (use figma.getNodeByIdAsync, await figma.loadFontAsync before text edits). The designer can disable this tool via the plugin's 'Allow code execution' toggle.",
+    "Run JavaScript against the Figma Plugin API inside the plugin sandbox — the escape hatch for anything the other tools don't cover. The code runs in an async function with `figma` AND `relai` in scope. relai helpers avoid the classic pitfalls: relai.text(parent, chars, {font,size,color}) loads fonts first; relai.autoLayout(direction, props) makes a hugging auto-layout frame; relai.set(node, props) applies layoutMode first and routes width/height through resize; relai.hug(node); relai.focusRing(node); await relai.page(p => ...) finds pages by content, not name. Failed scripts ROLL BACK (atomic) and errors carry a Hint with the fix. Results may include `warnings` for silent mistakes (e.g. spread shadows without clipsContent). Return ALL created/mutated node ids. Work incrementally; verify with screenshot. The designer can disable this tool via the plugin's 'Allow code execution' toggle.",
     {
       code: z.string().describe("JavaScript source. May use await. Return a JSON-serializable value."),
       description: z

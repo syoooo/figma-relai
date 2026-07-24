@@ -46,6 +46,25 @@ node.setBoundVariable("fills", v);                 // binding paint needs figma.
 const bytes = await node.exportAsync({ format: "PNG", constraint: { type: "SCALE", value: 2 } });
 ```
 
+## `relai.*` helpers — the shortest path is the correct one
+
+Alongside `figma`, scripts get a `relai` object whose helpers are immune to the pitfalls below. Prefer them:
+
+```js
+await relai.text(parent, "Hello", { font: {family:"IBM Plex Mono", style:"Regular"}, size: 14, color: {r:0,g:0,b:0} });
+                                          // loads the font BEFORE writing characters
+const card = relai.autoLayout("VERTICAL", { name: "Card", itemSpacing: 8 });
+                                          // auto-layout frame, both axes hugging
+relai.set(node, { layoutMode: "HORIZONTAL", width: 320, opacity: 0.9 });
+                                          // layoutMode applied first; width/height via resize()
+relai.hug(node);                          // HUG that sticks — call after appending children
+relai.focusRing(button);                  // clipsContent + double spread shadows that render
+const page = await relai.page(p => p.children.some(c => c.name === "Button"));
+                                          // find pages by CONTENT — names get renamed
+```
+
+Two more safety nets: **failed scripts roll back atomically** (no partial changes), and results may carry a `warnings` array for silent mistakes the lint catches (e.g. spread shadows on a non-clipping frame). Convention: **return every created/mutated node id** (`return { createdNodeIds: [...] }`) so follow-up calls can reference them.
+
 ## Pitfalls that throw (or silently do the wrong thing)
 
 When one of these throws inside `execute_figma`, the error already carries the remedy as a `Hint:` — this list is generated from the same registry (`packages/shared/src/pitfalls.ts`).
