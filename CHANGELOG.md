@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+- `get_design_system` adds a top-level `TRUNCATED` note when a component list is capped, naming how many items are hidden and that usage-sorting cuts exactly the newest zero-usage components (the per-list field existed but proved missable in a real audit).
+- `validate_design_rules` token_coverage now uses the `audit_colors` deep walk with node/prop counts in the message; the legacy shallow calculation (which reported 100% on component sets with unbound variants) remains only as a fallback for old plugin builds.
+- npm package: README/LICENSE copy moved to `prepublishOnly` (earliest publish hook) — 0.2.2's tarball contained the README but the registry metadata was captured before `prepack` ran, so the npm page showed none.
+
 ## 0.2.2
 
 - Plugin panel: the RULES row is now clickable — a read-only modal shows the file's conventions in full (monospace, selectable text; close via ✕ / backdrop / Esc). Conventions were previously visible only to connected AI clients.
