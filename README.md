@@ -2,101 +2,80 @@
 
 English | [日本語](README.ja.md) | [中文](README.zh.md)
 
-An MCP bridge that lets any AI agent (Claude Code, Cursor, …) drive Figma directly — read, create, edit, and quality-check designs with **30 consolidated tools** plus a Plugin-API escape hatch.
+**Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. It works on every Figma plan, because writes go through a Figma plugin rather than the paid REST API.
 
-<img src="assets/plugin-ui.png" alt="Plugin UI" width="380" />
+<img src="assets/plugin-ui.png" alt="The Relai plugin: activity feed, connection status, and a Stop button" width="380" />
 
+## What a session looks like
 
-```
-AI (Claude Code / Cursor)
-  ↕ stdio
-MCP Server            … 30 tools, analysis, verification
-  (embedded relay)    … WebSocket room hub on port 9055
-  ↕ WebSocket
-Figma Plugin          … executes Figma API calls
-  ↕ Plugin API
-Figma                 … reads and writes design data
-```
+> **You:** Make the CTA pop and round it off.
+>
+> **AI:** `set_properties · 3 nodes · 0.4s ✓` → `verify_visual · match ✓`
+>
+> **You:** Now sweep the whole screen for dark mode.
+>
+> **AI:** `set_properties · 24 nodes · 1.2s ✓` → `analyze_design · overall → 92/100`
 
-The relay runs **inside the MCP server** — there is no separate process to keep alive. If several MCP clients run at once (e.g. Cursor and Claude Code), the first hosts the relay and the rest connect to it automatically.
+Every command shows up in the plugin as it runs, with timing and success or failure. Click an entry to jump to that layer on the canvas. Press **Stop** if you change your mind — the rest of the batch is cancelled.
 
----
+## Get started
 
-## What you can do
+You need [Figma Desktop](https://www.figma.com/downloads/), [Node.js](https://nodejs.org/) 18+, and an MCP client.
 
-### 🔍 Understand a design
-"Explain how this screen is put together" — the AI reads structure, colors, layout, and token usage of your selection in one pass, and can `screenshot` the canvas to actually see it.
+**1. Install the plugin.** Get it from [Figma Community](https://www.figma.com/community/plugin/1662131506342078142) and run it. It connects on its own and remembers its room across restarts.
 
-### 🎨 Quality checks
-`analyze_design` audits color-token coverage, auto-layout quality, component health, or accessibility (contrast, touch targets) and suggests fixes.
-
-### ✏️ Bulk edits
-"Translate all button labels", "recolor for dark mode" — `set_text` and `set_properties` apply changes across many nodes in one round-trip, and the plugin shows a live activity feed with a **Stop** button.
-
-### 🧱 Design systems
-Variable collections, modes, token binding, shared styles, team-library imports — `manage_variables` / `manage_styles` / `import_from_library`.
-
-### ⚡ Anything else
-`execute_figma` runs JavaScript against the Figma Plugin API inside the plugin sandbox — the same approach as Figma's official MCP. You can disable it anytime with the plugin's "Allow code execution" toggle.
-
----
-
-## Relai and Figma's official MCP server
-
-They approach the same canvas from opposite sides, and they compose well.
-
-The official MCP server is built for turning designs into code: its design context, Code Connect integration, and screenshot pipeline are the best way to hand a finished design to a developer's agent. Relai works the other direction — it helps a designer *make and maintain the design itself*: token architectures, component libraries with proper variants and bindings, audits, bulk edits, and freeform UI work — with whichever AI client and model you prefer, on any Figma plan (writes go through the Plugin API, so no particular seat type is required).
-
-The philosophies differ where you'd expect. For repetitive design-system work, Relai prefers declarative, precondition-checked tools over generating fresh code per operation — the same operation runs the same way every time, and failures come back as instructions ("call set_layout_mode first"), not stack traces. `execute_figma` still covers the long tail, in the same spirit as the official `use_figma`. And because the operator is a designer, the plugin keeps them in the loop: a live activity feed, presence, and a Stop button.
-
-If your team has the seats, run both — the official server to read designs out, Relai to build them in the first place.
-
-## Quickstart
-
-Requires [Node.js](https://nodejs.org/) 18+, [Figma Desktop](https://www.figma.com/downloads/), and an MCP client ([Claude Code](https://claude.com/claude-code), [Cursor](https://cursor.com/), …).
-
-### 1. Install the Figma plugin
-
-[Install from Figma Community](https://www.figma.com/community/plugin/1662131506342078142) and run it. It connects automatically and remembers its room across restarts.
-
-### 2. Register the MCP server
+**2. Register the server** with your AI client:
 
 ```bash
-# Claude Code
-claude mcp add Relai -- npx -y figma-relai
-
-# OpenAI Codex CLI
-codex mcp add Relai -- npx -y figma-relai
+claude mcp add Relai -- npx -y figma-relai      # Claude Code
+codex mcp add Relai -- npx -y figma-relai       # Codex CLI
 ```
 
-For Cursor, add to `.cursor/mcp.json`:
+For Cursor, add this to `.cursor/mcp.json`:
 
 ```json
 { "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"] } } }
 ```
 
-### 3. Talk to your AI
+**3. Ask for something.** Pairing is automatic; there is nothing to copy between windows. The `join_room` tool exists for one rare case only: two Figma files running the plugin at the same time.
 
-That's it. The MCP server hosts the relay itself, discovers the plugin's room, and pairs automatically — no commands to copy. `join_room` exists only for the rare case where several Figma files run the plugin at once.
+## What it's good at
 
-## From source (contributors)
+Understanding a design. "How is this screen put together?" gets you structure, colors, layout, and token usage in one pass, and the AI can take a screenshot to actually look at the canvas rather than guess.
 
-```bash
-git clone https://github.com/syoooo/figma-relai.git
-cd figma-relai
-bun setup
+Bulk edits. "Translate every button label to English" or "recolor this for dark mode" become one round-trip across dozens of nodes instead of an afternoon of clicking.
+
+Audits. `analyze_design` checks color-token coverage, auto-layout quality, component health, and accessibility (WCAG contrast, touch targets, text sizes) — or all four at once as a weighted 0–100 health score you can put in a review.
+
+Design systems. Variable collections with modes, token binding, shared styles, components with proper variants, team-library imports. These run as declarative operations with precondition checks, so the same request behaves the same way every time, and a failure tells the AI what to do next ("call set_layout_mode first") instead of dumping a stack trace.
+
+Everything else. `execute_figma` runs JavaScript against the Figma Plugin API directly — the same escape-hatch approach as Figma's official MCP — with a `relai.*` helper library that makes the correct pattern the shortest one, hints attached to known errors, and a lint that flags silent mistakes. If you'd rather the AI never ran code, turn it off with the plugin's "Allow code execution" toggle.
+
+## You stay in control
+
+The plugin is the designer's side of the deal: a live activity feed of everything the AI does, an "AI connected" indicator that means an agent is actually paired (not just that a server is running), and a Stop button that cancels pending work. Selection and page changes you make flow back to the AI as events, so "now do the same to this one" works without re-explaining. The UI speaks English, 日本語, and 中文.
+
+## How it works
+
+```
+AI (any MCP client)
+  ↕ stdio
+MCP server            30 tools · analysis · verification
+  (embedded relay)    WebSocket room hub on 127.0.0.1:9055
+  ↕ WebSocket
+Figma plugin          executes Plugin API calls
 ```
 
-Requires [Bun](https://bun.sh/) v1.0+ (bash script — on Windows, use WSL). Installs dependencies, builds all packages, and writes MCP configs (`.cursor/mcp.json`, `.mcp.json`) pointing at the local build by absolute path. For plugin development: **Plugins → Development → Import plugin from manifest…** → `packages/figma-plugin/manifest.json`.
+The relay lives inside the MCP server, so there is no extra process to keep alive. When several MCP clients run at once, the first one hosts the relay and the others connect to it; if the host exits, a survivor takes over. Both sides remember their room, rejoin after restarts or sleep, and find each other without any copy-pasting.
 
----
+Ports are fixed by Figma's plugin sandbox: the manifest allowlists `ws://localhost:9055–9057`, and other ports cannot work without editing `manifest.json`. That's why there is no port setting in the UI.
 
-## The 30 tools
+## The tools
 
 | Group | Tools |
 |-------|-------|
 | Context | `get_document_overview` · `get_selection_context` · `get_node_details` · `search_nodes` · `get_design_tokens` · `screenshot` · `get_events` |
-| Analysis | `analyze_design` (color / layout / components / accessibility / **overall** — weighted 0-100 health score) · `diff_nodes` (two nodes, or checkpoint save/compare) |
+| Analysis | `analyze_design` (color / layout / components / accessibility / overall) · `diff_nodes` (compare, or checkpoint save/compare) |
 | Verification | `verify_changes` · `validate_design_rules` · `verify_visual` |
 | Read | `get_node_data` (summary / tree / full / css / variables) |
 | Create & edit | `create_node` · `set_properties` · `set_text` · `edit_structure` |
@@ -105,47 +84,51 @@ Requires [Bun](https://bun.sh/) v1.0+ (bash script — on Windows, use WSL). Ins
 | Document | `manage_pages` · `navigate` |
 | Assets | `export_asset` · `add_image` |
 | Annotations | `annotate` |
-| Comments | `manage_comments` — list / add / reply / delete (requires `FIGMA_TOKEN`, see below) |
+| Comments | `manage_comments` (needs a token — see below) |
 | Advanced | `batch_execute` · `execute_figma` · `join_room` |
 
-Each tool is self-describing; the AI sees full parameter docs. The consolidated surface keeps the always-loaded tool context small — well inside the range where LLMs use tools reliably — while the plugin executes granular, precondition-checked commands underneath. Six skill documents (token strategy, component conventions, audit workflows, a Plugin API cheat sheet for `execute_figma`) ship as MCP prompts.
+Each tool is self-describing, so the AI sees full parameter docs. Six skill documents ship alongside as MCP prompts: token strategy, component conventions, audit workflows, and a Plugin API cheat sheet for `execute_figma`.
 
-## Designer experience
+## Relai and Figma's official MCP
 
-- **Auto-pairing** — the plugin remembers its room (`clientStorage`); the MCP server remembers it too (`~/.figma-relai/state.json`) and rejoins after restarts, sleep, or relay handover.
-- **Presence** — the plugin shows "AI connected ✓" when your agent is actually in the room, not just when the relay is up.
-- **Activity feed** — every command with status, duration, and error text; entries with a node target are click-to-focus on canvas.
-- **Stop button** — cancels queued work in batch operations (the in-flight atomic command finishes; that's a JavaScript single-thread limit).
-- **Designer events** — selection / node / page changes reach the AI as `designer_events` on the next response (or via `get_events`), so it knows what you did without polling.
-- **Audit trail** — `get_events` scope `agent` returns every command the AI ran this session (with outcomes and durations), and `diff_nodes` checkpoints show exactly what changed on a node across an editing session.
-- **English / Japanese / Chinese UI** — toggle persists.
+Figma's official MCP server is built for turning finished designs into code, and its design context and Code Connect integration are the right tool for that hand-off. Relai works the other direction: it helps a designer make and maintain the design itself, with any client and model, on any plan. If your team has the seats, run both.
 
-## Ports & security
+## Optional: comments
 
-- The relay binds **127.0.0.1:9055** only. Figma's plugin sandbox allowlists `ws://localhost:9055–9057` in the manifest — **other ports cannot work** without editing `manifest.json`; there is deliberately no port setting in the UI.
-- Room names include a crypto-random suffix. Anyone on your machine who knows a room name can join it — see [SECURITY.md](SECURITY.md) for the threat model.
-- `execute_figma` runs AI-authored code in the plugin sandbox. It is on by default (visible in the activity feed) and can be disabled with the plugin's "Allow code execution" toggle.
-- Comments use Figma's REST API, which needs a personal access token: generate one at figma.com → Settings → Security, then set `"env": { "FIGMA_TOKEN": "figd_..." }` in your MCP config. The token stays in your config and is sent only to `api.figma.com`; every other tool works without it.
+Comments live behind Figma's REST API, which needs a personal access token. Generate one at figma.com → Settings → Security (enable comment scopes), then add it to your MCP config:
 
-## Advanced: standalone relay
-
-```bash
-bun socket        # runs the relay alone on port 9055 (HOST/PORT env to override)
-node packages/mcp-server/dist/index.js --server=<host> --room=<room>
+```json
+{ "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"],
+  "env": { "FIGMA_TOKEN": "figd_..." } } } }
 ```
 
-Useful only when the relay must live on another machine. The embedded relay covers normal use.
+The token stays in your config file and is sent only to `api.figma.com`. Every other tool works without it. With it, "apply the feedback in the comments" becomes a thing the AI can actually do: read the threads, make the edits, reply.
 
-## Development
+## Troubleshooting
+
+**The plugin shows NO SERVER.** No MCP server is listening on ports 9055–9057, which usually means your AI client isn't running or Relai isn't registered in it. The panel shows the exact registration command; the plugin keeps dialing and connects the moment a server appears.
+
+**RELAY says LINK but AGENT says WAITING.** The plumbing is fine — the AI just hasn't called a Figma tool yet in this session. Ask it something about the file.
+
+**"Multiple Figma plugins are connected."** Two files are running the plugin. Tell the AI to `join_room` with the room name shown in the plugin you want to control.
+
+**The first `npx` run is slow.** It downloads the package once; later starts are fast.
+
+## Security
+
+The relay binds to `127.0.0.1` only and has no authentication beyond room names, which carry a crypto-random suffix. `execute_figma` runs AI-written code inside Figma's plugin sandbox; it is on by default, every run is visible in the activity feed, and the designer can disable it. Scripts are not atomic — a failed script's earlier changes persist. Full threat model: [SECURITY.md](SECURITY.md).
+
+## For contributors
 
 ```bash
-bun install
-bun run build     # shared → mcp-server → figma-plugin (injects the UI tool list)
-bun test          # unit tests (55)
+git clone https://github.com/syoooo/figma-relai.git
+cd figma-relai
+bun setup       # install, build, write local MCP configs
+bun test
 ```
 
-Manual QA: [docs/smoke-checklist.md](docs/smoke-checklist.md). Logs go to stderr only (stdio is reserved for MCP).
+Requires [Bun](https://bun.sh/) v1.0+ (the setup script is bash; on Windows use WSL). Load the plugin via **Plugins → Development → Import plugin from manifest…** → `packages/figma-plugin/manifest.json`. A standalone relay (`bun socket`) exists for the unusual case where the relay must run on another machine. More in [CONTRIBUTING.md](CONTRIBUTING.md); manual QA lives in [docs/smoke-checklist.md](docs/smoke-checklist.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Contributions welcome: [CONTRIBUTING.md](CONTRIBUTING.md).
+MIT — see [LICENSE](LICENSE).

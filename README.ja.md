@@ -2,150 +2,133 @@
 
 [English](README.md) | 日本語 | [中文](README.zh.md)
 
-Claude Code や Cursor などの AI エージェントから Figma を直接操作できる MCP ブリッジ。**30 の統合ツール** + Plugin API エスケープハッチで、読み取り・作成・編集・品質チェックまで対応します。
+**Your AI, on the canvas.** Relai は Claude Code・Cursor・Codex など任意の MCP クライアントを Figma につなぎ、普段使っているモデルに話しかけるだけでデザインの読み取り・編集・監査・デザインシステム構築ができるようにします。書き込みは Figma プラグイン経由なので、有料 REST API に依存せず、どの Figma プランでも動きます。
 
-<img src="assets/plugin-ui.png" alt="Plugin UI" width="380" />
+<img src="assets/plugin-ui.png" alt="Relai プラグイン:実行フィード、接続ステータス、停止ボタン" width="380" />
 
+## セッションはこんな感じ
 
-```
-AI (Claude Code / Cursor)
-  ↕ stdio
-MCP Server            … 30 ツール・分析・検証
-  (内蔵リレー)         … ポート 9055 の WebSocket ルームハブ
-  ↕ WebSocket
-Figma Plugin          … Figma API を実行
-  ↕ Plugin API
-Figma                 … デザインデータの読み書き
-```
+> **あなた:** CTA を目立たせて、角を丸くして。
+>
+> **AI:** `set_properties · 3 nodes · 0.4s ✓` → `verify_visual · match ✓`
+>
+> **あなた:** 画面全体をダークモードにして。
+>
+> **AI:** `set_properties · 24 nodes · 1.2s ✓` → `analyze_design · overall → 92/100`
 
-リレーは **MCP サーバーに内蔵**されています——常駐させる別プロセスはありません。複数の MCP クライアント（Cursor と Claude Code の併用など）が起動した場合は、最初の 1 つがリレーをホストし、残りは自動的にそこへ接続します。
+実行中のコマンドはすべて、タイミングと成否つきでプラグインに表示されます。項目をクリックすればキャンバス上のそのレイヤーへジャンプ。気が変わったら**停止**ボタンで残りのバッチをキャンセルできます。
 
----
+## はじめる
 
-## できること
+必要なもの:[Figma Desktop](https://www.figma.com/downloads/)、[Node.js](https://nodejs.org/) 18+、MCP クライアント。
 
-### 🔍 デザインの把握
-「この画面の構成を教えて」——選択ノードの構造・色・レイアウト・トークン適用状況を一括で読み取り、`screenshot` で実際の見た目も確認できます。
+**1. プラグインをインストール。** [Figma Community](https://www.figma.com/community/plugin/1662131506342078142) から入手して実行します。自動で接続し、ルームは再起動をまたいで記憶されます。
 
-### 🎨 品質チェック
-`analyze_design` がカラートークンのカバレッジ、オートレイアウト品質、コンポーネント健全性、アクセシビリティ（コントラスト・タッチターゲット）を監査し、修正案を提示します。
-
-### ✏️ 一括変更
-「ボタンの文言を全部英語に」「ダークモード用に色を変えて」——`set_text` と `set_properties` が多数のノードへの変更を一往復で適用。プラグインにはライブの実行フィードと**停止ボタン**があります。
-
-### 🧱 デザインシステム
-変数コレクション・モード・トークンバインド・共有スタイル・チームライブラリ取り込み——`manage_variables` / `manage_styles` / `import_from_library`。
-
-### ⚡ それ以外はすべて
-`execute_figma` はプラグインサンドボックス内で Figma Plugin API の JavaScript を実行します（Figma 公式 MCP と同じアプローチ）。プラグインの「コード実行を許可」トグルでいつでも無効化できます。
-
----
-
-## Relai と Figma 公式 MCP サーバー
-
-両者は同じキャンバスに反対側からアプローチしており、組み合わせて使えます。
-
-公式 MCP サーバーはデザインをコードに変換するために作られています。デザインコンテキスト、Code Connect 連携、スクリーンショットパイプラインは、完成したデザインを開発者のエージェントに渡す最良の方法です。Relai は逆方向——デザイナーが*デザインそのものを作り、育てる*ためのツールです：トークンアーキテクチャ、バリアントとバインディングを備えたコンポーネントライブラリ、監査、一括編集、自由な UI 制作を、好きな AI クライアント・好きなモデルで、どの Figma プランでも行えます（書き込みは Plugin API 経由のため、特定のシートタイプを必要としません）。
-
-思想の違いは設計に表れています。繰り返しの多いデザインシステム作業に対して、Relai は毎回コードを生成するのではなく、宣言的で事前条件チェック付きのツールを優先します——同じ操作は毎回同じように実行され、失敗はスタックトレースではなく「先に set_layout_mode を呼んでください」という指示として返ります。ロングテールは `execute_figma` がカバーします（公式の `use_figma` と同じ思想です）。そして操作の主体はデザイナーなので、プラグインは実行フィード・プレゼンス表示・停止ボタンでデザイナーをループの中に置き続けます。
-
-シートがあるチームは両方使うのがおすすめです——公式サーバーでデザインを読み出し、Relai でそもそものデザインを作る。
-
-## クイックスタート
-
-必要なもの：[Node.js](https://nodejs.org/) 18 以上、[Figma Desktop](https://www.figma.com/downloads/)、MCP クライアント（[Claude Code](https://claude.com/claude-code)、[Cursor](https://cursor.com/) など）。
-
-### 1. Figma プラグインをインストール
-
-[Figma Community からインストール](https://www.figma.com/community/plugin/1662131506342078142)して実行するだけ。自動的に接続し、ルームは再起動をまたいで記憶されます。
-
-### 2. MCP サーバーを登録
+**2. サーバーを AI クライアントに登録:**
 
 ```bash
-# Claude Code
-claude mcp add Relai -- npx -y figma-relai
-
-# OpenAI Codex CLI
-codex mcp add Relai -- npx -y figma-relai
+claude mcp add Relai -- npx -y figma-relai      # Claude Code
+codex mcp add Relai -- npx -y figma-relai       # Codex CLI
 ```
 
-Cursor の場合は `.cursor/mcp.json` に：
+Cursor の場合は `.cursor/mcp.json` に:
 
 ```json
 { "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"] } } }
 ```
 
-### 3. AI に話しかける
+**3. 何か頼んでみる。** ペアリングは自動です。ウィンドウ間でコピーするものは何もありません。`join_room` ツールが必要になるのは、複数の Figma ファイルで同時にプラグインが動いているという稀なケースだけです。
 
-以上です。MCP サーバーがリレーを自らホストし、プラグインのルームを自動発見してペアリングします——コピーするコマンドはありません。`join_room` は複数の Figma ファイルで同時にプラグインが動いている場合の消歧用にのみ存在します。
+## 得意なこと
 
-## ソースから（コントリビューター向け）
+デザインの把握。「この画面はどう組まれてる?」で構造・色・レイアウト・トークンの適用状況が一度に得られ、AI は推測ではなくスクリーンショットで実際のキャンバスを確認できます。
 
-```bash
-git clone https://github.com/syoooo/figma-relai.git
-cd figma-relai
-bun setup
+一括編集。「ボタンの文言を全部英語に」「ダークモード用に配色を変えて」が、クリック作業の午後まるごとではなく、数十ノードへの一往復になります。
+
+監査。`analyze_design` がカラートークンのカバレッジ、オートレイアウト品質、コンポーネント健全性、アクセシビリティ(WCAG コントラスト、タッチターゲット、文字サイズ)をチェック。4 つまとめて重み付き 0–100 のヘルススコアとして出せるので、レビューにそのまま貼れます。
+
+デザインシステム。モード付き変数コレクション、トークンバインド、共有スタイル、バリアントを備えたコンポーネント、チームライブラリ取り込み。これらは事前条件チェック付きの宣言的操作として実行されるため、同じ依頼はいつも同じように動き、失敗時はスタックトレースではなく「先に set_layout_mode を呼んで」と次の一手が返ります。
+
+それ以外のすべて。`execute_figma` は Figma Plugin API の JavaScript を直接実行します(Figma 公式 MCP と同じエスケープハッチ方式)。正しい書き方が最短の書き方になる `relai.*` ヘルパー群、既知のエラーに付くヒント、静かな間違いを検出するリントつき。AI にコードを実行させたくなければ、プラグインの「コード実行を許可」トグルでいつでも無効化できます。
+
+## 主導権はデザイナーに
+
+プラグインはデザイナー側の窓口です。AI の全行動を映すライブ実行フィード、サーバーが動いているだけでなくエージェントが本当にペアリングされたことを示す「AI 接続済み」インジケーター、待機中の作業を取り消す停止ボタン。あなたが行った選択やページの変更はイベントとして AI に流れるので、「今度はこっちに同じことして」が説明し直しなしで通じます。UI は English・日本語・中文に対応。
+
+## 仕組み
+
+```
+AI (任意の MCP クライアント)
+  ↕ stdio
+MCP サーバー           30 ツール · 分析 · 検証
+  (内蔵リレー)         127.0.0.1:9055 の WebSocket ルームハブ
+  ↕ WebSocket
+Figma プラグイン       Plugin API を実行
 ```
 
-[Bun](https://bun.sh/) v1.0 以上が必要です（bash スクリプトのため Windows では WSL を使用）。依存関係のインストール、全パッケージのビルド、ローカルビルドへの絶対パスを指定した MCP 設定の書き出しをまとめて行います。プラグイン開発は **Plugins → Development → Import plugin from manifest…** → `packages/figma-plugin/manifest.json`。
+リレーは MCP サーバーの中に住んでいるので、常駐させる別プロセスはありません。複数の MCP クライアントが同時に動く場合は最初の 1 つがリレーをホストし、残りはそこへ接続。ホストが終了すれば生存者が引き継ぎます。両端ともルームを記憶し、再起動やスリープ後も自動で再参加します。コピー&ペーストはどこにもありません。
 
----
+ポートは Figma のプラグインサンドボックスで固定されています。manifest は `ws://localhost:9055–9057` のみを許可しており、それ以外のポートは `manifest.json` を編集しない限り動きません。UI にポート設定がないのはそのためです。
 
-## 30 のツール
+## ツール一覧
 
 | グループ | ツール |
 |---------|--------|
 | コンテキスト | `get_document_overview` · `get_selection_context` · `get_node_details` · `search_nodes` · `get_design_tokens` · `screenshot` · `get_events` |
-| 分析 | `analyze_design`（color / layout / components / accessibility / **overall** — 重み付き 0-100 健全性スコア）· `diff_nodes`（2 ノード比較またはチェックポイント保存/比較） |
+| 分析 | `analyze_design`(color / layout / components / accessibility / overall)· `diff_nodes`(比較、またはチェックポイント保存/比較) |
 | 検証 | `verify_changes` · `validate_design_rules` · `verify_visual` |
-| 読み取り | `get_node_data`（summary / tree / full / css / variables） |
+| 読み取り | `get_node_data`(summary / tree / full / css / variables) |
 | 作成・編集 | `create_node` · `set_properties` · `set_text` · `edit_structure` |
 | コンポーネント | `manage_components` |
 | デザインシステム | `manage_variables` · `manage_styles` · `import_from_library` |
 | ドキュメント | `manage_pages` · `navigate` |
 | アセット | `export_asset` · `add_image` |
 | アノテーション | `annotate` |
-| コメント | `manage_comments` — 一覧 / 追加 / 返信 / 削除（`FIGMA_TOKEN` が必要、下記参照） |
+| コメント | `manage_comments`(トークンが必要 — 下記参照) |
 | 高度な操作 | `batch_execute` · `execute_figma` · `join_room` |
 
-各ツールは自己記述的で、AI にはパラメータの完全なドキュメントが見えます。統合されたツール面は常時ロードされるコンテキストを小さく保ち（LLM がツールを確実に使い分けられる範囲内）、プラグイン側では事前条件チェック付きの粒度コマンドが実行されます。6 つのスキルドキュメント（トークン戦略・コンポーネント規約・監査ワークフロー・`execute_figma` 用 Plugin API チートシート）が MCP prompts として同梱されます。
+各ツールは自己記述的で、AI にはパラメータの完全なドキュメントが見えます。トークン戦略、コンポーネント規約、監査ワークフロー、`execute_figma` 用 Plugin API チートシートの 6 つのスキルドキュメントが MCP prompts として同梱されます。
 
-## デザイナー体験
+## Relai と Figma 公式 MCP
 
-- **自動ペアリング** — プラグインはルームを記憶（`clientStorage`）。MCP サーバー側も記憶（`~/.figma-relai/state.json`）し、再起動・スリープ・リレー引き継ぎ後も自動で再参加します。
-- **プレゼンス表示** — リレー接続だけでなく、エージェントが実際にルームにいるときに「AI 接続済み ✓」を表示。
-- **実行フィード** — 全コマンドをステータス・所要時間・エラー付きで表示。ノード対象の項目はクリックでキャンバス上にフォーカス。
-- **停止ボタン** — バッチ処理の残り作業をキャンセル（実行中の単一コマンドは完了まで走ります。JavaScript のシングルスレッド制約です）。
-- **デザイナーイベント** — 選択・ノード・ページの変更が次のレスポンスの `designer_events`（または `get_events`）で AI に届くため、ポーリング不要。
-- **監査トレイル** — `get_events` の scope `agent` はこのセッションで AI が実行した全コマンド（結果・所要時間つき）を返し、`diff_nodes` のチェックポイントは編集セッションをまたいだノードの変更点を正確に示します。
-- **英語 / 日本語 / 中文 UI** — 切り替えは保存されます。
+Figma 公式 MCP サーバーは完成したデザインをコードに変換するために作られており、そのデザインコンテキストと Code Connect 連携はその受け渡しに最適な道具です。Relai は逆方向 — デザイナーがデザインそのものを作り育てるための道具で、任意のクライアント・モデル・プランで動きます。シートがあるチームは、両方使うのがおすすめです。
 
-## ポートとセキュリティ
+## オプション:コメント
 
-- リレーは **127.0.0.1:9055** のみにバインドします。Figma のプラグインサンドボックスは manifest で `ws://localhost:9055–9057` のみ許可しており、**それ以外のポートは manifest を編集しない限り動作しません**。そのため UI にポート設定は意図的にありません。
-- ルーム名には暗号学的乱数のサフィックスが付きます。脅威モデルは [SECURITY.md](SECURITY.md) を参照してください。
-- `execute_figma` は AI が書いたコードをプラグインサンドボックスで実行します。デフォルトで有効（実行フィードに表示）、プラグインの「コード実行を許可」トグルで無効化できます。
-- コメントは Figma の REST API を使うため個人アクセストークンが必要です。figma.com → Settings → Security で生成し、MCP 設定に `"env": { "FIGMA_TOKEN": "figd_..." }` を追加してください。トークンは設定ファイル内に留まり `api.figma.com` にのみ送信されます。他のツールはトークンなしで動作します。
+コメントは Figma の REST API の向こう側にあり、個人アクセストークンが必要です。figma.com → Settings → Security で生成し(コメントのスコープを有効に)、MCP 設定に追加してください:
 
-## 高度な使い方：スタンドアロンリレー
-
-```bash
-bun socket        # リレー単体をポート 9055 で起動（HOST/PORT 環境変数で変更可）
-node packages/mcp-server/dist/index.js --server=<host> --room=<room>
+```json
+{ "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"],
+  "env": { "FIGMA_TOKEN": "figd_..." } } } }
 ```
 
-リレーを別マシンに置く場合のみ必要です。通常は内蔵リレーで十分です。
+トークンは設定ファイルの中に留まり、`api.figma.com` にのみ送信されます。他のツールはトークンなしで動きます。トークンがあれば「コメントのフィードバックを反映して」が現実になります:スレッドを読み、編集し、返信するところまで。
 
-## 開発
+## トラブルシューティング
+
+**プラグインに NO SERVER と出る。** ポート 9055–9057 で MCP サーバーが待ち受けていません。AI クライアントが起動していないか、Relai が未登録です。パネルに登録コマンドがそのまま表示されます。プラグインはダイヤルを続け、サーバーが現れた瞬間につながります。
+
+**RELAY は LINK なのに AGENT が WAITING のまま。** 配管は正常です — このセッションで AI がまだ Figma ツールを呼んでいないだけ。ファイルについて何か聞いてみてください。
+
+**「Multiple Figma plugins are connected」。** 複数のファイルでプラグインが動いています。操作したいプラグインに表示されているルーム名で `join_room` するよう AI に伝えてください。
+
+**初回の `npx` が遅い。** パッケージを一度ダウンロードしているだけです。次回からは速くなります。
+
+## セキュリティ
+
+リレーは `127.0.0.1` のみにバインドし、認証はルーム名(暗号学的乱数サフィックス付き)だけです。`execute_figma` は AI の書いたコードを Figma のプラグインサンドボックス内で実行します。デフォルトで有効、全実行が実行フィードに表示され、デザイナーはいつでも無効化できます。スクリプトはアトミックではなく、失敗したスクリプトの途中までの変更は残ります。脅威モデルの全文:[SECURITY.md](SECURITY.md)。
+
+## コントリビューター向け
 
 ```bash
-bun install
-bun run build     # shared → mcp-server → figma-plugin（UI のツール一覧を自動注入）
-bun test          # ユニットテスト（55）
+git clone https://github.com/syoooo/figma-relai.git
+cd figma-relai
+bun setup       # インストール + ビルド + ローカルビルド用 MCP 設定の書き出し
+bun test
 ```
 
-手動 QA: [docs/smoke-checklist.md](docs/smoke-checklist.md)。ログは stderr のみに出力されます（stdio は MCP 用）。
+[Bun](https://bun.sh/) v1.0+ が必要です(セットアップスクリプトは bash。Windows は WSL で)。プラグインは **Plugins → Development → Import plugin from manifest…** → `packages/figma-plugin/manifest.json` で読み込みます。リレーを別マシンで動かす特殊なケースのためにスタンドアロン版(`bun socket`)もあります。詳細は [CONTRIBUTING.md](CONTRIBUTING.md)、手動 QA は [docs/smoke-checklist.md](docs/smoke-checklist.md)。
 
 ## ライセンス
 
-MIT — [LICENSE](LICENSE) を参照。コントリビューションは [CONTRIBUTING.md](CONTRIBUTING.md) へ。
+MIT — [LICENSE](LICENSE) を参照。

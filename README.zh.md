@@ -2,71 +2,33 @@
 
 [English](README.md) | [日本語](README.ja.md) | 中文
 
-让任意 AI 智能体（Claude Code、Cursor 等）直接操作 Figma 的 MCP 桥——**30 个整合工具** + Plugin API 逃生门，覆盖设计的读取、创建、编辑与质量检查。
+**Your AI, on the canvas.** Relai 把 Claude Code、Cursor、Codex——任何 MCP 客户端——接进 Figma：对你常用的那个模型说话，就能读取、编辑、审计设计，直至搭建整套设计系统。写入走 Figma 插件而非付费 REST API，所以任何 Figma 套餐都能用。
 
-<img src="assets/plugin-ui.png" alt="Plugin UI" width="380" />
+<img src="assets/plugin-ui.png" alt="Relai 插件：活动流、连接状态与停止按钮" width="380" />
 
+## 一次会话长什么样
 
-```
-AI (Claude Code / Cursor)
-  ↕ stdio
-MCP Server            … 30 个工具、分析、验证
-  (内嵌 relay)         … 端口 9055 的 WebSocket 房间中枢
-  ↕ WebSocket
-Figma Plugin          … 执行 Figma API 调用
-  ↕ Plugin API
-Figma                 … 读写设计数据
-```
+> **你：** 让 CTA 更醒目，圆角处理一下。
+>
+> **AI：** `set_properties · 3 nodes · 0.4s ✓` → `verify_visual · match ✓`
+>
+> **你：** 现在把整个页面扫一遍，换成暗色模式。
+>
+> **AI：** `set_properties · 24 nodes · 1.2s ✓` → `analyze_design · overall → 92/100`
 
-relay **内嵌在 MCP server 进程中**——没有需要常驻的独立进程。多个 MCP 客户端同时运行时（比如 Cursor 和 Claude Code 并开），第一个启动的托管 relay，其余自动连接过去。
+每条命令执行时都会出现在插件里，带耗时和成败。点击条目即可跳转到画布上的对应图层。改主意了就按**停止**——批量任务的剩余部分立刻取消。
 
----
+## 开始使用
 
-## 能做什么
+需要 [Figma Desktop](https://www.figma.com/downloads/)、[Node.js](https://nodejs.org/) 18+ 和一个 MCP 客户端。
 
-### 🔍 理解设计
-"讲讲这个页面的结构"——AI 一次读取选中节点的结构、颜色、布局和 token 使用情况，还能用 `screenshot` 亲眼看到画布。
+**1. 安装插件。** 从 [Figma Community](https://www.figma.com/community/plugin/1662131506342078142) 获取并运行。它会自动连接，并跨重启记住自己的房间。
 
-### 🎨 质量检查
-`analyze_design` 审计颜色 token 覆盖率、auto-layout 质量、组件健康度或可访问性（对比度、触摸目标），并给出修复建议。
-
-### ✏️ 批量编辑
-"把所有按钮文案翻译成英文""改成暗色模式配色"——`set_text` 和 `set_properties` 一次往返改动大量节点，插件里有实时活动流和**停止按钮**。
-
-### 🧱 设计系统
-变量集合、模式、token 绑定、共享样式、团队库导入——`manage_variables` / `manage_styles` / `import_from_library`。
-
-### ⚡ 其余一切
-`execute_figma` 在插件沙箱内直接运行 Figma Plugin API 的 JavaScript——与 Figma 官方 MCP 相同的思路。可随时用插件的"允许代码执行"开关关闭。
-
----
-
-## Relai 与 Figma 官方 MCP 服务器
-
-两者从相反的方向接近同一块画布，可以很好地配合使用。
-
-官方 MCP 服务器为"把设计变成代码"而生：它的设计上下文、Code Connect 集成和截图管线，是把完成稿交给开发者智能体的最佳方式。Relai 走的是另一个方向——帮设计师*制作和维护设计本身*：token 架构、带完整变体与绑定的组件库、审计、批量编辑、自由的 UI 创作，用你偏好的任何 AI 客户端与模型，在任何 Figma 方案上（写入走 Plugin API，不要求特定席位类型）。
-
-设计哲学的差异体现在该体现的地方。对于重复性强的设计系统工作，Relai 更倾向声明式、带前置条件校验的工具，而不是每次操作都现场生成代码——同样的操作每次以同样的方式执行，失败时返回的是指引（"请先调用 set_layout_mode"）而非堆栈信息。长尾需求仍由 `execute_figma` 兜底，与官方 `use_figma` 精神一致。而且因为操作主体是设计师，插件让人始终在环：实时活动流、在场指示、停止按钮。
-
-如果团队有席位，两个都用——官方服务器把设计读出去，Relai 把设计做出来。
-
-## 快速开始
-
-需要 [Node.js](https://nodejs.org/) 18+、[Figma Desktop](https://www.figma.com/downloads/)，以及一个 MCP 客户端（[Claude Code](https://claude.com/claude-code)、[Cursor](https://cursor.com/) 等）。
-
-### 1. 安装 Figma 插件
-
-[从 Figma Community 安装](https://www.figma.com/community/plugin/1662131506342078142)并运行。它会自动连接，并跨重启记住自己的房间。
-
-### 2. 注册 MCP 服务器
+**2. 在 AI 客户端里注册服务器：**
 
 ```bash
-# Claude Code
-claude mcp add Relai -- npx -y figma-relai
-
-# OpenAI Codex CLI
-codex mcp add Relai -- npx -y figma-relai
+claude mcp add Relai -- npx -y figma-relai      # Claude Code
+codex mcp add Relai -- npx -y figma-relai       # Codex CLI
 ```
 
 Cursor 用户在 `.cursor/mcp.json` 中添加：
@@ -75,28 +37,45 @@ Cursor 用户在 `.cursor/mcp.json` 中添加：
 { "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"] } } }
 ```
 
-### 3. 直接对 AI 说话
+**3. 开口提需求。** 配对全自动，窗口之间没有任何需要复制的东西。`join_room` 工具只服务一种罕见场景：两个 Figma 文件同时运行插件。
 
-就这样。MCP 服务器自行托管 relay、自动发现插件的房间并完成配对——没有需要复制的命令。`join_room` 仅用于多个 Figma 文件同时运行插件时的消歧。
+## 它擅长什么
 
-## 从源码运行（贡献者）
+理解设计。一句"这个页面是怎么搭的？"就能拿到结构、颜色、布局和 token 使用情况，AI 还会截图亲眼确认画布，而不是靠猜。
 
-```bash
-git clone https://github.com/syoooo/figma-relai.git
-cd figma-relai
-bun setup
+批量编辑。"把所有按钮文案翻译成英文""改成暗色配色"——原本一下午的点击，变成横跨几十个节点的一次往返。
+
+审计。`analyze_design` 检查颜色 token 覆盖率、auto-layout 质量、组件健康度和可访问性（WCAG 对比度、触摸目标、文字尺寸），也可以四项合一输出加权 0–100 健康分，直接贴进评审。
+
+设计系统。带模式的变量集合、token 绑定、共享样式、带完整变体的组件、团队库导入。这些以带前置条件校验的声明式操作执行——同样的请求每次行为一致，失败时返回的是下一步指引（"先调用 set_layout_mode"）而不是堆栈。
+
+其余一切。`execute_figma` 直接对 Figma Plugin API 执行 JavaScript（与官方 MCP 相同的逃生门思路），配有让正确写法成为最短写法的 `relai.*` 助手库、已知错误自带解药提示、以及捕捉静默错误的 lint。不想让 AI 跑代码？插件的"允许代码执行"开关随时关掉。
+
+## 主导权在设计师手里
+
+插件就是设计师这一侧的窗口：AI 一举一动尽收眼底的活动流；"AI 已连接"指示灯亮起意味着智能体真的配对上了，而不只是某个服务器在跑；停止按钮随时取消待执行的工作。你的选区和页面切换会作为事件流回 AI，"现在对这个做同样的事"不需要重新解释。界面支持 English、日本語、中文。
+
+## 工作原理
+
+```
+AI（任意 MCP 客户端）
+  ↕ stdio
+MCP 服务器            30 个工具 · 分析 · 验证
+  （内嵌 relay）       127.0.0.1:9055 的 WebSocket 房间中枢
+  ↕ WebSocket
+Figma 插件            执行 Plugin API 调用
 ```
 
-需要 [Bun](https://bun.sh/) v1.0+（bash 脚本，Windows 请使用 WSL）。一步完成依赖安装、全包构建、以及指向本地构建产物绝对路径的 MCP 配置写出。插件开发：**Plugins → Development → Import plugin from manifest…** → `packages/figma-plugin/manifest.json`。
+relay 住在 MCP 服务器体内，没有需要常驻的额外进程。多个 MCP 客户端并存时，先启动的托管 relay，其余接入；host 退出后由幸存者接管。两端都记住自己的房间，重启或休眠后自动重连——整条链路没有一次复制粘贴。
 
----
+端口由 Figma 插件沙箱写死：manifest 只允许 `ws://localhost:9055–9057`，其他端口不改 `manifest.json` 就无法工作。这就是界面里刻意不设端口选项的原因。
 
-## 30 个工具
+## 工具一览
 
 | 分组 | 工具 |
 |------|------|
 | 上下文 | `get_document_overview` · `get_selection_context` · `get_node_details` · `search_nodes` · `get_design_tokens` · `screenshot` · `get_events` |
-| 分析 | `analyze_design`（color / layout / components / accessibility / **overall** — 加权 0-100 健康评分）· `diff_nodes`（双节点比较或检查点保存/对比） |
+| 分析 | `analyze_design`（color / layout / components / accessibility / overall）· `diff_nodes`（双节点比较，或检查点保存/对比） |
 | 验证 | `verify_changes` · `validate_design_rules` · `verify_visual` |
 | 读取 | `get_node_data`（summary / tree / full / css / variables） |
 | 创建与编辑 | `create_node` · `set_properties` · `set_text` · `edit_structure` |
@@ -105,47 +84,51 @@ bun setup
 | 文档 | `manage_pages` · `navigate` |
 | 资产 | `export_asset` · `add_image` |
 | 标注 | `annotate` |
-| 评论 | `manage_comments` — 列出 / 添加 / 回复 / 删除（需 `FIGMA_TOKEN`，见下） |
+| 评论 | `manage_comments`（需令牌，见下文） |
 | 高级 | `batch_execute` · `execute_figma` · `join_room` |
 
-每个工具都是自描述的，AI 能看到完整的参数文档。整合后的工具面把常驻上下文控制在 LLM 能可靠使用工具的范围内，插件侧执行的仍是带前置条件校验的细粒度命令。随包附带 6 份 skill 文档（token 策略、组件规约、审计工作流、`execute_figma` 用 Plugin API 速查表），以 MCP prompts 形式提供。
+每个工具都是自描述的，AI 能看到完整参数文档。随包附带 6 份 skill 文档，以 MCP prompts 形式提供：token 策略、组件规约、审计工作流，以及 `execute_figma` 的 Plugin API 速查表。
 
-## 设计师体验
+## Relai 与 Figma 官方 MCP
 
-- **自动配对** — 插件用 `clientStorage` 记住房间；MCP 服务器也记住（`~/.figma-relai/state.json`），在重启、休眠或 relay 接管后自动重新加入。
-- **在场指示** — 只有当智能体真的在房间里时，插件才显示 "AI connected ✓"，而不是仅仅 relay 连通。
-- **活动流** — 每条命令的状态、耗时与错误文本；有节点目标的条目可点击定位到画布。
-- **停止按钮** — 取消批量操作中排队的工作（正在执行的单条原子命令会跑完，这是 JavaScript 单线程的限制）。
-- **设计师事件** — 选区/节点/页面变更通过下一次响应的 `designer_events`（或 `get_events`）送达 AI，无需轮询。
-- **审计轨迹** — `get_events` 的 scope `agent` 返回本会话 AI 执行过的全部命令（含结果与耗时）；`diff_nodes` 的检查点能精确展示一个节点在编辑会话前后的变化。
-- **中英日 UI** — 语言切换会被记住。
+Figma 官方 MCP 服务器为"把完成稿变成代码"而生，它的设计上下文与 Code Connect 集成正是那次交接的最佳工具。Relai 走反方向：帮设计师制作和维护设计本身，客户端、模型、套餐都随你选。团队有席位的话，两个都用。
 
-## 端口与安全
+## 可选：评论
 
-- relay 只绑定 **127.0.0.1:9055**。Figma 插件沙箱在 manifest 中只允许 `ws://localhost:9055–9057`——**其他端口不修改 `manifest.json` 就无法工作**，因此 UI 中有意不提供端口设置。
-- 房间名包含加密随机后缀。威胁模型见 [SECURITY.md](SECURITY.md)。
-- `execute_figma` 在插件沙箱中运行 AI 编写的代码。默认开启（活动流中可见），可用插件的"允许代码执行"开关关闭。
-- 评论走 Figma REST API，需要个人访问令牌：在 figma.com → Settings → Security 生成后，在 MCP 配置中加入 `"env": { "FIGMA_TOKEN": "figd_..." }`。令牌只保存在你的配置文件里、只发往 `api.figma.com`；其余所有工具无需令牌即可使用。
+评论在 Figma REST API 的那一侧，需要个人访问令牌。到 figma.com → Settings → Security 生成一个（勾选评论权限），加进 MCP 配置：
 
-## 高级用法：独立 relay
-
-```bash
-bun socket        # 单独在 9055 端口运行 relay（HOST/PORT 环境变量可覆盖）
-node packages/mcp-server/dist/index.js --server=<host> --room=<room>
+```json
+{ "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"],
+  "env": { "FIGMA_TOKEN": "figd_..." } } } }
 ```
 
-仅在 relay 需要部署到另一台机器时使用。日常场景内嵌 relay 已足够。
+令牌只待在你的配置文件里，只发往 `api.figma.com`。其余所有工具无需令牌。有了它，"把评论里的反馈都改了"就成为 AI 真正做得到的事：读完线程、动手修改、回复评论。
 
-## 开发
+## 疑难排解
+
+**插件显示 NO SERVER。** 端口 9055–9057 上没有 MCP 服务器在监听——通常是 AI 客户端没启动，或还没注册 Relai。面板上就写着注册命令；插件会持续拨号，服务器一出现立刻连上。
+
+**RELAY 是 LINK，AGENT 却一直 WAITING。** 管线没问题——只是 AI 在本会话还没调用过 Figma 工具。问它点关于这个文件的事。
+
+**"Multiple Figma plugins are connected"。** 有两个文件在跑插件。告诉 AI 用你想操控的那个插件里显示的房间名执行 `join_room`。
+
+**第一次 `npx` 很慢。** 它在下载包，仅此一次，之后启动很快。
+
+## 安全
+
+relay 只绑定 `127.0.0.1`，除房间名（带加密随机后缀）外没有其他鉴权。`execute_figma` 在 Figma 插件沙箱内运行 AI 编写的代码：默认开启、每次执行都出现在活动流里、设计师随时可关。脚本不具原子性——失败脚本此前的改动会保留。完整威胁模型见 [SECURITY.md](SECURITY.md)。
+
+## 贡献者
 
 ```bash
-bun install
-bun run build     # shared → mcp-server → figma-plugin（自动注入 UI 工具列表）
-bun test          # 单元测试（55 个）
+git clone https://github.com/syoooo/figma-relai.git
+cd figma-relai
+bun setup       # 安装 + 构建 + 写出指向本地构建的 MCP 配置
+bun test
 ```
 
-手动 QA：[docs/smoke-checklist.md](docs/smoke-checklist.md)。日志只输出到 stderr（stdio 保留给 MCP）。
+需要 [Bun](https://bun.sh/) v1.0+（安装脚本为 bash，Windows 请用 WSL）。插件通过 **Plugins → Development → Import plugin from manifest…** → `packages/figma-plugin/manifest.json` 载入。另有独立 relay（`bun socket`），仅用于 relay 需要跑在另一台机器的特殊场景。更多见 [CONTRIBUTING.md](CONTRIBUTING.md)，手动 QA 见 [docs/smoke-checklist.md](docs/smoke-checklist.md)。
 
 ## 许可证
 
-MIT — 见 [LICENSE](LICENSE)。欢迎贡献：[CONTRIBUTING.md](CONTRIBUTING.md)。
+MIT — 见 [LICENSE](LICENSE)。
