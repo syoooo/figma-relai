@@ -61,6 +61,12 @@ relai.hug(node);                          // HUG that sticks — call after appe
 relai.focusRing(button);                  // clipsContent + double spread shadows that render
 const page = await relai.page(p => p.children.some(c => c.name === "Button"));
                                           // find pages by CONTENT — names get renamed
+const titles = relai.query('FRAME[name^=Card] > TEXT');
+                                          // CSS-like search on the current page; relai.query(node, sel) scopes to a subtree.
+                                          // Supported: TYPE, *, [name=] [name*=] [name^=] [name$=], descendant, >, comma.
+                                          // NOT supported: pseudo-classes, dot-paths, sibling combinators — use findAll.
+relai.placeholder(section);               // construction veil so the designer sees work-in-progress
+relai.placeholder(section, false);        // ALWAYS remove when the section is done
 ```
 
 Two more safety nets: **failed scripts roll back atomically** (no partial changes), and results may carry a `warnings` array for silent mistakes the lint catches (e.g. spread shadows on a non-clipping frame). Convention: **return every created/mutated node id** (`return { createdNodeIds: [...] }`) so follow-up calls can reference them.

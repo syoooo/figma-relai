@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { lintCreatedNodes, setProps, CREATE_METHODS } from "./sandbox-helpers.js";
+import { lintCreatedNodes, setProps, CREATE_METHODS, queryNodes, type QueryNode } from "./sandbox-helpers.js";
 
 describe("lintCreatedNodes", () => {
   const spread = { type: "DROP_SHADOW", spread: 4, visible: true };
@@ -53,4 +53,52 @@ test("CREATE_METHODS covers the common factories", () => {
   for (const m of ["createFrame", "createText", "createComponent", "combineAsVariants", "createNodeFromSvg"]) {
     expect(CREATE_METHODS.has(m)).toBe(true);
   }
+});
+
+describe("queryNodes (selector subset)", () => {
+  // page > [Card A(FRAME) > [Title(TEXT), Body(TEXT)], Card B(FRAME) > [Group(GROUP) > [Title(TEXT)]], Hero(RECTANGLE)]
+  function tree() {
+    const mk = (type: string, name: string, children: QueryNode[] = []): QueryNode => {
+      const n: QueryNode = { type, name, children, parent: null };
+      for (const c of children) (c as { parent: QueryNode }).parent = n;
+      return n;
+    };
+    const titleA = mk("TEXT", "Title");
+    const body = mk("TEXT", "Body");
+    const cardA = mk("FRAME", "Card A", [titleA, body]);
+    const titleB = mk("TEXT", "Title");
+    const group = mk("GROUP", "Group", [titleB]);
+    const cardB = mk("FRAME", "Card B", [group]);
+    const hero = mk("RECTANGLE", "Hero");
+    const page = mk("PAGE", "Page 1", [cardA, cardB, hero]);
+    return { page, cardA, cardB, titleA, titleB, body, hero, group };
+  }
+
+  test("type and wildcard", () => {
+    const { page } = tree();
+    expect(queryNodes(page, "TEXT").length).toBe(3);
+    expect(queryNodes(page, "frame").length).toBe(2); // case-insensitive
+    expect(queryNodes(page, "*").length).toBe(7);
+  });
+
+  test("name attribute operators", () => {
+    const { page, cardA, hero } = tree();
+    expect(queryNodes(page, "[name=Card A]")).toEqual([cardA]);
+    expect(queryNodes(page, "FRAME[name^=Card]").length).toBe(2);
+    expect(queryNodes(page, "[name*=ero]")).toEqual([hero]);
+    expect(queryNodes(page, "[name$=B]").map((n) => n.name)).toEqual(["Card B"]);
+  });
+
+  test("descendant vs direct child", () => {
+    const { page, titleA, titleB } = tree();
+    expect(queryNodes(page, "FRAME TEXT[name=Title]")).toEqual([titleA, titleB]);
+    expect(queryNodes(page, "FRAME > TEXT[name=Title]")).toEqual([titleA]); // titleB is under GROUP
+  });
+
+  test("comma union and subtree scoping", () => {
+    const { page, cardB } = tree();
+    expect(queryNodes(page, "RECTANGLE, GROUP").length).toBe(2);
+    expect(queryNodes(cardB, "TEXT").length).toBe(1); // scoped to Card B
+    expect(queryNodes(cardB, "FRAME").length).toBe(0); // scope itself not matched
+  });
 });
