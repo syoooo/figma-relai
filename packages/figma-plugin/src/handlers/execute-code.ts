@@ -2,6 +2,7 @@ import { pitfallHint } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
 import { serializeNode } from "../utils/node-helpers.js";
 import { makeRelai, lintCreatedNodes, type LintTarget } from "../utils/sandbox-helpers.js";
+import { isScopeLocked, isInLockedScope, scopeLockState } from "../write-guard.js";
 
 // The execute_figma escape hatch: runs AI-authored JavaScript against the
 // Plugin API. Gated by the designer's "Allow code execution" plugin setting.
@@ -112,6 +113,21 @@ registerHandler("execute_code", async (params) => {
     }
   }
   const warnings = lintCreatedNodes([...lintTargets.values()]);
+
+  // Scope lock can't intercept arbitrary code up front, so it lints after the
+  // fact: touched nodes outside the locked selection get a loud warning.
+  if (isScopeLocked()) {
+    const outside: string[] = [];
+    for (const [nodeId] of lintTargets) {
+      if (!(await isInLockedScope(nodeId))) outside.push(nodeId);
+    }
+    if (outside.length > 0) {
+      const { names } = scopeLockState();
+      warnings.push(
+        `SCOPE VIOLATION: ${outside.length} node(s) (${outside.slice(0, 5).join(", ")}) are outside "${names.join('", "')}", which the designer restricted edits to. Undo those changes and stay within the locked selection.`
+      );
+    }
+  }
 
   return {
     result,

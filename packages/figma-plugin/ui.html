@@ -379,6 +379,29 @@
     .switch input:checked + .track::after { content: "ON"; left: 5px; right: auto; color: var(--amber); }
     .switch input:focus-visible + .track { outline: 1px dashed var(--amber); outline-offset: 2px; }
 
+    /* ── Approval gate card ─────────────────────────────── */
+    .approval-card {
+      display: none;
+      border: 1px solid var(--amber-dim);
+      background: var(--bg);
+      padding: var(--sp-8) var(--sp-10);
+      margin-top: var(--sp-8);
+    }
+    .approval-card.show { display: block; }
+    .approval-title {
+      font-size: 8px; font-weight: 700; letter-spacing: 0.18em;
+      color: var(--amber);
+      margin-bottom: var(--sp-4);
+    }
+    .approval-cmd {
+      font-size: 10px; color: var(--text);
+      word-break: break-all;
+      margin-bottom: var(--sp-8);
+    }
+    .approval-actions { display: flex; gap: var(--sp-8); }
+    .approval-actions .btn.deny { border-color: var(--line); color: var(--faint); }
+    .approval-actions .btn.deny:hover { background: var(--line); color: var(--text); }
+
     /* ── Tools list ─────────────────────────────────────── */
     .tools-list {
       max-height: 220px; overflow-y: auto;
@@ -529,6 +552,16 @@
       <div id="progressText" class="progress-text"></div>
     </div>
 
+    <!-- Approval gate: the agent wants to write; the designer decides -->
+    <div class="approval-card" id="approvalCard">
+      <div class="approval-title" data-i18n="approval_title">AGENT REQUESTS</div>
+      <div class="approval-cmd"><code id="approvalCmd"></code></div>
+      <div class="approval-actions">
+        <button class="btn" onclick="answerApproval(true)" data-i18n="approve">Approve</button>
+        <button class="btn deny" onclick="answerApproval(false)" data-i18n="deny">Deny</button>
+      </div>
+    </div>
+
     <!-- Activity feed -->
     <div class="rule"><span data-i18n="activity">Activity</span><span class="feed-head-extra" style="margin-left:auto"><button class="stop-btn" id="stopBtn" onclick="stopAll()">&#9632; <span data-i18n="stop">STOP</span></button></span></div>
     <div class="feed" id="feed">
@@ -545,6 +578,18 @@
       <div class="setting-row">
         <span class="label"><span data-i18n="auto_connect">Connect automatically</span><span class="sub" data-i18n="auto_connect_hint">rejoin this room when the plugin opens</span></span>
         <label class="switch"><input type="checkbox" id="autoConnect" checked onchange="onSettingChange()"><span class="track"></span></label>
+      </div>
+      <div class="setting-row">
+        <span class="label"><span data-i18n="approvals">Ask before big edits</span><span class="sub" data-i18n="approvals_hint">OFF · BULK (10+ nodes &amp; code) · ALL writes</span></span>
+        <div class="seg approval-seg" role="group" aria-label="Approvals">
+          <button id="apprOff" onclick="setApproval('off')">OFF</button>
+          <button id="apprBulk" onclick="setApproval('bulk')">BULK</button>
+          <button id="apprAll" onclick="setApproval('all')">ALL</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span class="label"><span data-i18n="lock_label">Lock to selection</span><span class="sub" id="lockSub" data-i18n="lock_hint">reject edits outside the current selection</span></span>
+        <label class="switch"><input type="checkbox" id="scopeLock" onchange="onScopeLockToggle()"><span class="track"></span></label>
       </div>
     </div>
 
@@ -610,6 +655,15 @@
         allow_exec_hint: 'execute_figma — AI-written Plugin API scripts',
         auto_connect: 'Connect automatically',
         auto_connect_hint: 'rejoin this room when the plugin opens',
+        approvals: 'Ask before big edits',
+        approvals_hint: 'OFF · BULK (10+ nodes & code) · ALL writes',
+        approval_title: 'AGENT REQUESTS',
+        approve: 'Approve',
+        deny: 'Deny',
+        lock_label: 'Lock to selection',
+        lock_hint: 'reject edits outside the current selection',
+        lock_empty: 'select something first, then toggle',
+        lock_on_prefix: 'locked to: ',
         tools_title: 'Toolset',
         disconnect: 'Disconnect'
       },
@@ -645,6 +699,15 @@
         allow_exec_hint: 'execute_figma — AI が書いた Plugin API スクリプト',
         auto_connect: '自動接続',
         auto_connect_hint: 'プラグイン起動時にこのルームへ再接続',
+        approvals: '大きな編集の前に確認',
+        approvals_hint: 'OFF · BULK（10+ノード・コード実行）· ALL 全書き込み',
+        approval_title: 'エージェントの申請',
+        approve: '承認',
+        deny: '拒否',
+        lock_label: '選択範囲にロック',
+        lock_hint: '選択範囲の外への編集を拒否',
+        lock_empty: '先に何かを選択してから有効化',
+        lock_on_prefix: 'ロック中: ',
         tools_title: 'ツール一覧',
         disconnect: '切断'
       },
@@ -680,6 +743,15 @@
         allow_exec_hint: 'execute_figma — AI 编写的 Plugin API 脚本',
         auto_connect: '自动连接',
         auto_connect_hint: '插件启动时自动重连到此房间',
+        approvals: '大改动前先确认',
+        approvals_hint: 'OFF · BULK(10+节点与代码执行) · ALL 全部写入',
+        approval_title: '代理请求',
+        approve: '批准',
+        deny: '拒绝',
+        lock_label: '锁定到选区',
+        lock_hint: '拒绝选区之外的改动',
+        lock_empty: '请先选中内容再开启',
+        lock_on_prefix: '已锁定: ',
         tools_title: '工具列表',
         disconnect: '断开'
       }
@@ -786,6 +858,53 @@
         allowCodeExec: document.getElementById('allowExec').checked,
         autoConnect: document.getElementById('autoConnect').checked
       });
+    }
+
+    // ---------- Approval gate + scope lock ----------
+    var approvalMode = 'off';
+    var approvalQueue = [];
+
+    function renderApprovalSeg() {
+      var ids = { off: 'apprOff', bulk: 'apprBulk', all: 'apprAll' };
+      for (var m in ids) {
+        document.getElementById(ids[m]).className = m === approvalMode ? 'active' : '';
+      }
+    }
+
+    function setApproval(mode) {
+      approvalMode = mode;
+      renderApprovalSeg();
+      saveSettings({ requireApproval: mode });
+    }
+
+    function showNextApproval() {
+      var card = document.getElementById('approvalCard');
+      if (approvalQueue.length === 0) {
+        card.classList.remove('show');
+        return;
+      }
+      var req = approvalQueue[0];
+      document.getElementById('approvalCmd').textContent =
+        req.command + (req.scale ? ' · ' + req.scale : '');
+      card.classList.add('show');
+    }
+
+    function answerApproval(approved) {
+      var req = approvalQueue.shift();
+      if (req) {
+        parent.postMessage(
+          { pluginMessage: { type: 'approval-response', id: req.id, approved: approved } },
+          '*'
+        );
+      }
+      showNextApproval();
+    }
+
+    function onScopeLockToggle() {
+      parent.postMessage(
+        { pluginMessage: { type: 'scope-lock', on: document.getElementById('scopeLock').checked } },
+        '*'
+      );
     }
 
     // ---------- Collapse toggles ----------
@@ -1106,7 +1225,36 @@
         if (!s.room) saveSettings({ room: roomName });
         document.getElementById('allowExec').checked = s.allowCodeExec !== false;
         document.getElementById('autoConnect').checked = s.autoConnect !== false;
+        if (s.requireApproval === 'bulk' || s.requireApproval === 'all') {
+          approvalMode = s.requireApproval;
+        }
+        renderApprovalSeg();
         if (s.autoConnect !== false) connect();
+        return;
+      }
+
+      if (msg.type === 'approval-request') {
+        approvalQueue.push({ id: msg.id, command: msg.command, scale: msg.scale });
+        showNextApproval();
+        return;
+      }
+
+      if (msg.type === 'approval-settled') {
+        approvalQueue = approvalQueue.filter(function (r) { return r.id !== msg.id; });
+        showNextApproval();
+        return;
+      }
+
+      if (msg.type === 'scope-lock-state') {
+        document.getElementById('scopeLock').checked = !!msg.on;
+        var lockSub = document.getElementById('lockSub');
+        if (msg.empty) {
+          lockSub.textContent = t('lock_empty');
+        } else if (msg.on) {
+          lockSub.textContent = t('lock_on_prefix') + (msg.names || []).join(', ');
+        } else {
+          lockSub.textContent = t('lock_hint');
+        }
         return;
       }
 

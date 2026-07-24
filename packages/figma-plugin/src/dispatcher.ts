@@ -1,5 +1,7 @@
 // Command dispatcher - routes commands to their handlers via a Map registry
 
+import { enforceScopeLock } from "./write-guard.js";
+
 type CommandHandler = (params: Record<string, unknown>) => Promise<unknown>;
 
 const handlers = new Map<string, CommandHandler>();
@@ -12,7 +14,8 @@ export function registerHandler(
   handlers.set(command, handler);
 }
 
-// Dispatch a command to its handler
+// Dispatch a command to its handler. The scope-lock check lives here (not in
+// main.ts) so batch_execute's nested dispatches are covered too.
 export async function dispatch(
   command: string,
   params: Record<string, unknown>
@@ -21,6 +24,7 @@ export async function dispatch(
   if (!handler) {
     throw new Error(`Unknown command: ${command}`);
   }
+  await enforceScopeLock(command, params);
   return handler(params);
 }
 

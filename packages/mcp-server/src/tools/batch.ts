@@ -9,7 +9,7 @@ function textResult(text: string) {
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "batch_execute",
-    "Execute multiple commands in a single round-trip. Use when performing 3+ similar operations (e.g., styling multiple nodes, creating many elements). Commands run sequentially.",
+    "Execute multiple commands in a single round-trip. Use when performing 3+ similar operations (e.g., styling multiple nodes, creating many elements). Commands run sequentially. Pass dryRun:true to preview the exact command list without touching the canvas — useful for showing the designer a plan before a large batch.",
     {
       commands: z
         .array(
@@ -19,9 +19,20 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           })
         )
         .describe("Array of commands to execute sequentially"),
+      dryRun: z.boolean().optional().describe("Preview only — return the plan, execute nothing"),
     },
-    async ({ commands }) => {
+    async ({ commands, dryRun }) => {
       try {
+        if (dryRun) {
+          return textResult(
+            JSON.stringify({
+              dryRun: true,
+              commandCount: commands.length,
+              commands,
+              note: "Nothing was executed. Re-run without dryRun to apply.",
+            })
+          );
+        }
         const result = await sendCommand(
           "batch_execute",
           { commands },

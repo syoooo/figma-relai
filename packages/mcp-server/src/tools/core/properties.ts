@@ -214,18 +214,27 @@ export function mapPropertiesToCommands(nodeId: string, p: NodeProperties): Plug
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "set_properties",
-    "Set any visual/layout/text properties on one or more nodes in a single call: geometry (x/y/width/height/rotation), fills/strokes/gradients/cornerRadius/opacity/effects, text content, auto-layout (layoutMode, padding, alignment, spacing, layoutSizing — FILL requires the parent to have auto-layout), constraints, style application, and variable bindings. Groups map to focused operations with per-operation success/error reporting.",
+    "Set any visual/layout/text properties on one or more nodes in a single call: geometry (x/y/width/height/rotation), fills/strokes/gradients/cornerRadius/opacity/effects, text content, auto-layout (layoutMode, padding, alignment, spacing, layoutSizing — FILL requires the parent to have auto-layout), constraints, style application, and variable bindings. Groups map to focused operations with per-operation success/error reporting. dryRun:true previews the mapped command list without touching the canvas.",
     {
       nodeIds: z.array(z.string()).min(1).describe("Node IDs to update"),
       properties: propertiesSchema.describe("Properties to apply to every listed node"),
+      dryRun: z.boolean().optional().describe("Preview only — return the plan, execute nothing"),
     },
     { idempotentHint: true },
-    async ({ nodeIds, properties }) => {
+    async ({ nodeIds, properties, dryRun }) => {
       try {
         const commands = nodeIds.flatMap((nodeId) =>
           mapPropertiesToCommands(nodeId, properties)
         );
         if (commands.length === 0) return textResult("No properties given — nothing to do.");
+        if (dryRun) {
+          return jsonResult({
+            dryRun: true,
+            commandCount: commands.length,
+            commands,
+            note: "Nothing was executed. Re-run without dryRun to apply.",
+          });
+        }
 
         if (commands.length === 1) {
           const result = await sendCommand(commands[0].command as FigmaCommand, commands[0].params);
