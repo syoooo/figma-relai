@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.2.2
 
 - Plugin panel: the RULES row is now clickable — a read-only modal shows the file's conventions in full (monospace, selectable text; close via ✕ / backdrop / Esc). Conventions were previously visible only to connected AI clients.
+- Panel layout: RULES joined the RELAY/AGENT status rows; the room line moved below as the quiet last line.
+- Three pitfalls learned building a real component: Figma's slot feature has no Plugin API (scaffold + let the designer press ⇧⌘S); a converted SLOT node stops hugging (re-assert layout sizing); variantizing can silently pin a hug axis to FIXED (verify sizing modes after combineAsVariants).
 
 ## 0.2.1
 

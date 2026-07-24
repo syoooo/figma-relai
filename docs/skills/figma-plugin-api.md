@@ -91,6 +91,8 @@ When one of these throws inside `execute_figma`, the error already carries the r
 - **Per-corner radius** (`topLeftRadius` …) only exists on RectangleCornerMixin nodes (rectangles, frames, components) — polygons, stars and lines throw.
 - **Instance children can't be added or removed** — detach first, or edit the main component.
 - **Figma's slot feature (Convert to slot, ⇧⌘S) has no Plugin API** — no createSlot/convertToSlot exists (verified against typings 1.123 and at runtime, 2026-07). Scaffold a frame named "Slot", select it for the designer (navigate select), and let them press the shortcut.
+- **A converted SLOT node stops hugging** — after the designer converts a frame to a slot it carries its own fixed size. Re-assert `layoutSizingVertical = "HUG"` (and the intended horizontal mode) on the SLOT node afterwards; the API can still edit its layout props.
+- **Variantizing can silently pin the hug axis to FIXED** — observed after clone → counterAxisSizingMode/width-variable changes → combineAsVariants: the variants' `primaryAxisSizingMode` ended up FIXED though the source hugged. Always verify sizing modes on every variant after combineAsVariants and re-assert `"AUTO"`.
 <!-- PITFALLS:END -->
 
 Also: `resize(w, h)` throws on `w <= 0 || h <= 0`; `layoutWrap = "WRAP"` is HORIZONTAL-only, `counterAxisAlignItems = "BASELINE"` too; writing to `locked` nodes is allowed by the API but surprises designers — check first.

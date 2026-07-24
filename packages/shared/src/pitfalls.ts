@@ -95,6 +95,16 @@ export const PITFALLS: Pitfall[] = [
     hint: "",
     doc: "**Figma's slot feature (Convert to slot, ⇧⌘S) has no Plugin API** — no createSlot/convertToSlot exists (verified against typings 1.123 and at runtime, 2026-07). Scaffold a frame named \"Slot\", select it for the designer (navigate select), and let them press the shortcut.",
   },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**A converted SLOT node stops hugging** — after the designer converts a frame to a slot it carries its own fixed size. Re-assert `layoutSizingVertical = \"HUG\"` (and the intended horizontal mode) on the SLOT node afterwards; the API can still edit its layout props.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**Variantizing can silently pin the hug axis to FIXED** — observed after clone → counterAxisSizingMode/width-variable changes → combineAsVariants: the variants' `primaryAxisSizingMode` ended up FIXED though the source hugged. Always verify sizing modes on every variant after combineAsVariants and re-assert `\"AUTO\"`.",
+  },
 ];
 
 // First matching pitfall's hint, or null. Doc-only entries never match.
