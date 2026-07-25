@@ -1,4 +1,5 @@
 
+import { Check } from '@phosphor-icons/react';
 import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
@@ -28,7 +29,8 @@ export function Changes() {
                   {item.ask}
                 </p>
                 <p className="mt-1.5 font-mono text-[12px] leading-relaxed text-muted-foreground md:text-[13px]" style={{ overflowWrap: 'anywhere' }}>
-                  {item.result} <span className="text-primary">✓</span>
+                  {item.result}
+                  <Check aria-hidden weight="bold" className="ml-1.5 inline h-[1em] w-[1em] align-[-0.125em] text-primary" />
                 </p>
               </div>
             </li>

@@ -9,7 +9,6 @@ import { Workflows } from './components/landing/Workflows';
 import { Changes } from './components/landing/Changes';
 import { Craft } from './components/landing/Craft';
 import { FieldNotes } from './components/landing/FieldNotes';
-import { Why } from './components/landing/Why';
 import { GetStarted } from './components/landing/GetStarted';
 import { Faq } from './components/landing/Faq';
 import { CtaFooter } from './components/landing/CtaFooter';
@@ -32,7 +31,6 @@ export function App() {
           <Changes />
           <Craft />
           <FieldNotes />
-          <Why />
           <GetStarted />
           <Faq />
         </main>

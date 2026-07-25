@@ -47,9 +47,9 @@ export default {content: [
         'destructive-foreground': 'var(--destructive-foreground)'
       },
       fontFamily: {
-        heading: ['IBM Plex Serif', 'Noto Serif JP', 'Noto Serif SC', 'Georgia', 'serif'],
-        serif: ['IBM Plex Serif', 'Noto Serif JP', 'Noto Serif SC', 'Georgia', 'serif'],
-        mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Hiragino Sans', 'PingFang SC', 'monospace']
+        heading: 'var(--font-serif)',
+        serif: 'var(--font-serif)',
+        mono: 'var(--font-mono)'
       }
     }
   }

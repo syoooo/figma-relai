@@ -16,10 +16,7 @@ export function Nav() {
   const { language, setLanguage } = useLanguage();
   const copy = getCopy(language);
   const links = [
-    { label: copy.nav.ledger, href: '#session' },
     { label: copy.nav.changes, href: '#changes' },
-    { label: copy.nav.craft, href: '#craft' },
-    { label: copy.nav.why, href: '#why' },
     { label: copy.nav.start, href: '#get-started' },
     { label: copy.nav.faq, href: '#faq' }
   ];
@@ -40,13 +37,13 @@ export function Nav() {
           ))}
         </div>
         <div className="hidden items-center gap-2 md:flex">
-          <div className="flex border border-border" role="group" aria-label="Language">
+          <div className="flex items-center" role="group" aria-label="Language">
             {LANGUAGES.map((item) => (
               <button
                 key={item.code}
                 type="button"
                 onClick={() => setLanguage(item.code)}
-                className={`h-8 px-2.5 font-mono text-xs ${language === item.code ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-primary'}`}
+                className={`h-8 px-2 font-mono text-xs ${language === item.code ? 'text-primary underline decoration-2 underline-offset-[6px]' : 'text-muted-foreground hover:text-primary'}`}
                 aria-pressed={language === item.code}
               >
                 {item.label}
@@ -71,13 +68,14 @@ export function Nav() {
       </nav>
       {open && (
         <div className="border-t border-border bg-background px-5 py-4 md:hidden">
-          <div className="mb-3 flex border border-border">
+          <div className="mb-3 flex" role="group" aria-label="Language">
             {LANGUAGES.map((item) => (
               <button
                 key={item.code}
                 type="button"
                 onClick={() => setLanguage(item.code)}
-                className={`h-9 flex-1 font-mono text-xs ${language === item.code ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}
+                className={`h-9 flex-1 font-mono text-xs ${language === item.code ? 'text-primary underline decoration-2 underline-offset-[6px]' : 'text-muted-foreground'}`}
+                aria-pressed={language === item.code}
               >
                 {item.label}
               </button>

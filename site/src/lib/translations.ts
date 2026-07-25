@@ -1,10 +1,10 @@
 import type { Language } from './i18n';
 
-export const VERSION = 'v0.2.6';
+export const VERSION = 'v0.2.7';
 
 export const translations = {
   en: {
-    nav: { changes: 'What it does', craft: 'Craft', ledger: 'Session', why: 'Why Relai', start: 'Get started', faq: 'FAQ', github: 'GitHub', install: 'Install plugin', home: 'Relai home', menu: 'Open menu', close: 'Close menu' },
+    nav: { changes: 'What it does', start: 'Get started', faq: 'FAQ', github: 'GitHub', install: 'Install plugin', home: 'Relai home', menu: 'Open menu', close: 'Close menu' },
     hero: {
       eyebrow: 'FIGMA × MCP',
       title: 'Your AI, on the canvas.',
@@ -17,7 +17,7 @@ export const translations = {
     belief: {
       eyebrow: 'THE IDEA',
       p1: 'Relai is built on a simple position: the AI era should put designers more in charge, not less. Taste and judgment stay with you; the labor moves to a model you already trust — under your rules, on your system, with every step visible.',
-      p2: 'In practice that means three habits: say it instead of clicking through it. Let the file carry its own conventions. End every change with evidence. The rest of this page is those habits, running.'
+      p2: 'It is not a position invented for this page: Relai is how its author maintains a production design system — the audits, the repairs, the builds all run through it. The next section is one of those evenings.'
     },
     flows: {
       eyebrow: 'WAYS TO ASK',
@@ -77,18 +77,6 @@ export const translations = {
       ],
       caption: 'Numbers from real sessions on a production design system, July 2026.'
     },
-    why: {
-      eyebrow: 'WHY RELAI',
-      title: 'Open, local, and yours.',
-      body: 'AI on the canvas is getting good fast. Relai is the open-source option on your side of the line — no seat requirements, no metered credits, no fixed model.',
-      items: [
-        { title: 'Every Figma plan', body: 'Writes go through the plugin instead of the paid REST API, so Relai works on free, Professional, and Organization files alike — no full-seat requirement.' },
-        { title: 'Your model, your subscription', body: 'Claude Code, Cursor, Codex, or anything else that speaks MCP. You keep the model you already pay for instead of buying separate AI credits.' },
-        { title: 'Runs on your machine', body: 'The relay is local. Your file contents stay between Figma, your machine, and the AI client you already trust.' },
-        { title: 'You hold the controls', body: 'Toggle code execution, require confirmation before bulk edits, or limit writes to the current selection. Press Stop and the rest of a batch is cancelled.' }
-      ],
-      note: 'Not an either/or: if your team already has AI on the canvas, Relai sits happily alongside it.'
-    },
     start: {
       eyebrow: 'GET STARTED',
       title: 'Three steps. No paid plan required.',
@@ -107,6 +95,7 @@ export const translations = {
       items: [
         { q: 'Do I need a paid Figma plan?', a: 'No. Writes go through a Figma plugin rather than the paid REST API, so Relai works on every Figma plan.' },
         { q: 'Which AI clients does it work with?', a: 'Claude Code, Cursor, Codex — any MCP client. You register Relai once as an MCP server and talk to the model you already use.' },
+        { q: 'Where do my file contents go?', a: 'Nowhere new. The relay runs on your machine; file contents move only between Figma, your machine, and the AI client you already trust.' },
         { q: 'Is there anything to copy between windows?', a: 'No. Pairing is automatic. The join_room tool exists for one rare case only: two Figma files running the plugin at the same time.' },
         { q: 'Can I stop the AI from running code?', a: 'Yes. execute_figma runs JavaScript against the Figma Plugin API as an escape hatch — it is arbitrary code execution, and the docs say so plainly. If you would rather the AI never ran code, turn it off with the plugin’s “Allow code execution” toggle.' },
         { q: 'How does it know what my design uses?', a: 'get_design_system inventories the file and the libraries it uses, so the AI builds from your existing components and tokens instead of redrawing near-copies.' }
@@ -123,7 +112,7 @@ export const translations = {
     copy: { copy: 'Copy', copied: 'Copied' }
   },
   ja: {
-    nav: { changes: 'できること', craft: '品質', ledger: 'セッション', why: '選ぶ理由', start: 'はじめる', faq: 'FAQ', github: 'GitHub', install: 'プラグインを導入', home: 'Relai ホーム', menu: 'メニューを開く', close: 'メニューを閉じる' },
+    nav: { changes: 'できること', start: 'はじめる', faq: 'FAQ', github: 'GitHub', install: 'プラグインを導入', home: 'Relai ホーム', menu: 'メニューを開く', close: 'メニューを閉じる' },
     hero: {
       eyebrow: 'FIGMA × MCP',
       title: 'あなたの AI を、\nキャンバスへ。',
@@ -136,7 +125,7 @@ export const translations = {
     belief: {
       eyebrow: 'THE IDEA',
       p1: 'Relai の出発点はシンプルです。AI の時代には、デザイナーの主導権はむしろ大きくなるべきだ、という立場です。判断と好みはあなたの手元に。作業は、あなたがすでに信頼しているモデルへ — あなたのルールで、あなたのシステムの上で、すべて見えるかたちで。',
-      p2: '実際には、3 つの習慣に落ちます。クリックの代わりに、言葉で頼む。規約は、ファイル自身に持たせる。変更は、証拠で締める。このページの残りは、その習慣が動いている様子です。'
+      p2: 'これは、このページのために用意した主張ではありません。作者自身が、実運用中の自分のデザインシステムの面倒を Relai で見ています — 監査も、修復も、構築も。次のセクションは、そのうちのある晩の記録です。'
     },
     flows: {
       eyebrow: 'WAYS TO ASK',
@@ -152,7 +141,7 @@ export const translations = {
     },
     ledger: {
       eyebrow: 'ONE SESSION',
-      title: 'ひと晩の作業は、こう見える。',
+      title: 'ある晩のセッションは、こう見える。',
       body: 'コマンドは実行と同時にパネルに並びます — 所要時間、結果、そして大きな変更の前にはデザイナーの承認ゲート。行をクリックすれば該当レイヤーへ移動。Stop を押せば、残りのバッチは取り消されます。',
       youLine1: 'このファイルの変数バインディングを全部監査して',
       youLine2: '承認 — 修復を実行して',
@@ -196,18 +185,6 @@ export const translations = {
       ],
       caption: '数値はすべて、実運用中のデザインシステムでの実セッションから。2026 年 7 月。'
     },
-    why: {
-      eyebrow: 'WHY RELAI',
-      title: 'オープンで、ローカルで、あなたのもの。',
-      body: 'キャンバス上の AI は急速に進化しています。Relai はその中で、あなたの側に立つオープンソースの選択肢です。席数の条件も、従量制クレジットも、固定モデルもありません。',
-      items: [
-        { title: 'すべての Figma プラン', body: '書き込みは有料 REST API ではなくプラグイン経由。無料プランでも Professional でも Organization でも同じように動き、フルシートは不要です。' },
-        { title: 'いつものモデルと契約', body: 'Claude Code、Cursor、Codex など MCP 対応クライアントで動作。AI クレジットを別途購入せず、すでに支払っているモデルをそのまま使えます。' },
-        { title: '手元のマシンで動作', body: 'リレーはローカルで動きます。ファイルの内容は Figma、あなたのマシン、そして普段から信頼している AI クライアントの間にとどまります。' },
-        { title: '主導権はデザイナーに', body: 'コード実行の可否、大きな編集前の確認、選択範囲への限定を切り替えられます。Stop を押せば残りのバッチは取り消されます。' }
-      ],
-      note: 'どちらか一方を選ぶ必要はありません。すでにキャンバス上で AI を使うチームでも、Relai は無理なく併用できます。'
-    },
     start: {
       eyebrow: 'GET STARTED',
       title: '3 ステップ。有料プランは不要。',
@@ -226,6 +203,7 @@ export const translations = {
       items: [
         { q: '有料の Figma プランは必要ですか？', a: '不要です。書き込みは有料 REST API ではなく Figma プラグインを経由するため、すべての Figma プランで利用できます。' },
         { q: 'どの AI クライアントで動作しますか？', a: 'Claude Code、Cursor、Codex など、あらゆる MCP クライアントで動作します。Relai を MCP サーバーとして一度登録するだけです。' },
+        { q: 'ファイルの内容はどこかに送られますか？', a: '新しい宛先はありません。リレーはローカルで動き、ファイルの内容は Figma、あなたのマシン、そして普段から信頼している AI クライアントの間にとどまります。' },
         { q: 'ウィンドウ間で何かをコピーする必要は？', a: 'ありません。ペアリングは自動です。join_room ツールは、同時に 2 つの Figma ファイルでプラグインを動かすまれなケース専用です。' },
         { q: 'AI にコードを実行させないことはできますか？', a: 'はい。execute_figma は Figma Plugin API を直接扱うエスケープハッチで、任意コード実行であることをドキュメントにも明記しています。望まない場合は「Allow code execution」をオフにしてください。' },
         { q: 'デザインの利用状況はどう理解しますか？', a: 'get_design_system がファイルと使用中ライブラリを棚卸しし、AI は既存のコンポーネントとトークンから構築します。' }
@@ -242,7 +220,7 @@ export const translations = {
     copy: { copy: 'コピー', copied: 'コピー済み' }
   },
   zh: {
-    nav: { changes: '功能', craft: '功夫', ledger: '会话', why: '为什么选择', start: '开始使用', faq: '常见问题', github: 'GitHub', install: '安装插件', home: 'Relai 首页', menu: '打开菜单', close: '关闭菜单' },
+    nav: { changes: '功能', start: '开始使用', faq: '常见问题', github: 'GitHub', install: '安装插件', home: 'Relai 首页', menu: '打开菜单', close: '关闭菜单' },
     hero: {
       eyebrow: 'FIGMA × MCP',
       title: '让你的 AI，\n来到画布上。',
@@ -255,7 +233,7 @@ export const translations = {
     belief: {
       eyebrow: 'THE IDEA',
       p1: 'Relai 的出发点很简单：AI 时代，设计师的主导权应该变大，而不是变小。判断和品味留在你手里；活交给你已经信任的模型 —— 按你的规则，在你的系统之上，每一步都看得见。',
-      p2: '落到实处是三个习惯：用话说，而不是逐个点。让文件自己携带规约。每次改动，以证据收尾。这一页剩下的部分，就是这些习惯运转的样子。'
+      p2: '这份立场不是为这个页面现写的：Relai 的作者自己，就在用它维护一套生产中的设计系统 —— 审计、修复、构建，都走它。下一节，就是其中一晚的记录。'
     },
     flows: {
       eyebrow: 'WAYS TO ASK',
@@ -271,7 +249,7 @@ export const translations = {
     },
     ledger: {
       eyebrow: 'ONE SESSION',
-      title: '一晚的工作，看起来是这样。',
+      title: '某晚的一次会话，看起来是这样。',
       body: '每条命令在执行时同步出现在面板中 —— 耗时、结果，以及大改动前的设计师审批门。点击记录可跳转到对应图层；按下 Stop，剩余批处理立即取消。',
       youLine1: '审计这个文件里的全部变量绑定',
       youLine2: '批准 —— 执行修复',
@@ -315,18 +293,6 @@ export const translations = {
       ],
       caption: '数字来自生产环境设计系统的真实会话，2026 年 7 月。'
     },
-    why: {
-      eyebrow: 'WHY RELAI',
-      title: '开源、本地、完全属于你。',
-      body: '画布上的 AI 正在快速进步。Relai 是站在你这一侧的开源选择：没有席位要求，没有按量计费的额度，也不锁定某个模型。',
-      items: [
-        { title: '支持每一种 Figma 计划', body: '写入通过插件完成，而不是付费 REST API，因此免费版、Professional、Organization 文件都能使用，不需要完整席位。' },
-        { title: '你的模型，你的订阅', body: 'Claude Code、Cursor、Codex 或任何支持 MCP 的客户端都可以。继续使用你已经付费的模型，不必再购买单独的 AI 额度。' },
-        { title: '在自己的机器上运行', body: '中继在本地运行。文件内容只在 Figma、你的机器和你信任的 AI 客户端之间流动。' },
-        { title: '控制权在你手里', body: '可以开关代码执行、要求批量编辑前确认，或把写入限制在当前选区。按下 Stop，剩余批处理立即取消。' }
-      ],
-      note: '这并不是二选一：如果团队已经在画布上使用 AI，Relai 也可以自然地与之共存。'
-    },
     start: {
       eyebrow: 'GET STARTED',
       title: '三步完成，不需要付费计划。',
@@ -345,6 +311,7 @@ export const translations = {
       items: [
         { q: '需要付费的 Figma 计划吗？', a: '不需要。写入操作通过 Figma 插件而不是付费 REST API 完成，因此 Relai 适用于每种 Figma 计划。' },
         { q: '支持哪些 AI 客户端？', a: 'Claude Code、Cursor、Codex —— 任意 MCP 客户端。只需将 Relai 注册一次为 MCP 服务器。' },
+        { q: '我的文件内容会流向哪里？', a: '不会多出任何新去处。中继在本地运行，文件内容只在 Figma、你的机器和你已经信任的 AI 客户端之间流动。' },
         { q: '需要在窗口之间复制内容吗？', a: '不需要。配对自动完成。join_room 工具只用于一种少见情况：两个 Figma 文件同时运行插件。' },
         { q: '可以阻止 AI 执行代码吗？', a: '可以。execute_figma 是直接调用 Figma Plugin API 的应急出口 —— 文档明确说明这是任意代码执行。不希望的话，在插件中关闭「Allow code execution」即可。' },
         { q: '它如何了解我的设计？', a: 'get_design_system 会盘点文件及其使用的库，让 AI 基于已有组件和 Token 构建。' }

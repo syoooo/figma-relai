@@ -1,3 +1,4 @@
+import { Check } from '@phosphor-icons/react';
 import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
@@ -21,18 +22,21 @@ export function Workflows() {
               <div className="mt-5 border-l border-dashed border-border pl-4">
                 {item.rows.map((row) => {
                   const machine = !row.includes('›');
+                  const done = row.endsWith('✓');
+                  const text = done ? row.slice(0, -1).trimEnd() : row;
                   return (
                     <p
                       key={row}
                       className={`py-1 font-mono text-[12px] leading-relaxed ${machine ? 'text-muted-foreground' : 'text-foreground'}`}
                       style={{ overflowWrap: 'anywhere' }}
                     >
-                      {machine ? row : (
+                      {machine ? text : (
                         <>
-                          <span className="text-primary">{row.slice(0, row.indexOf('›') + 1)}</span>
-                          {row.slice(row.indexOf('›') + 1)}
+                          <span className="text-primary">{text.slice(0, text.indexOf('›') + 1)}</span>
+                          {text.slice(text.indexOf('›') + 1)}
                         </>
                       )}
+                      {done && <Check aria-hidden weight="bold" className="ml-1.5 inline h-[1em] w-[1em] align-[-0.125em] text-primary" />}
                     </p>
                   );
                 })}

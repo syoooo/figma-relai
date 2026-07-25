@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Check, Pause } from '@phosphor-icons/react';
 import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
@@ -99,7 +100,10 @@ export function Ledger() {
                       <i className="absolute bottom-0 right-0 block h-[4px] w-[4px] bg-foreground" />
                     </span>
                   ) : (
-                    <span aria-hidden className="wire-dot relative top-[1px] justify-self-start md:justify-self-center" />
+                    <span
+                      aria-hidden
+                      className={`relative top-[1px] block h-[6px] w-[6px] justify-self-start md:justify-self-center ${row.kind === 'you' ? 'bg-primary' : 'bg-foreground'}`}
+                    />
                   )}
                   {row.kind === 'you' && (
                     <>
@@ -113,7 +117,10 @@ export function Ledger() {
                   {row.kind === 'gate' && (
                     <>
                       <span className="hidden font-mono text-xs text-muted-foreground md:block">gate</span>
-                      <p className="font-mono text-[12px] leading-relaxed text-accent-foreground md:text-[13px]">⏸ {row.text}</p>
+                      <p className="font-mono text-[12px] leading-relaxed text-accent-foreground md:text-[13px]">
+                        <Pause aria-hidden weight="fill" className="mr-1.5 inline h-[1em] w-[1em] align-[-0.125em]" />
+                        {row.text}
+                      </p>
                     </>
                   )}
                   {row.kind === 'tool' && (
@@ -122,7 +129,7 @@ export function Ledger() {
                       <p className="min-w-0 font-mono text-[12px] leading-relaxed text-muted-foreground md:text-[13px]">
                         <span className="text-foreground md:hidden">{row.cmd} · </span>
                         {row.meta}
-                        <span className="ml-2 text-primary">✓</span>
+                        <Check aria-hidden weight="bold" className="ml-2 inline h-[1em] w-[1em] align-[-0.125em] text-primary" />
                       </p>
                     </>
                   )}

@@ -27,7 +27,6 @@ export function Hero() {
             style={{ fontSize: cjk ? 'clamp(1.9rem, 4.6vw, 3.4rem)' : 'clamp(2.4rem, 6.5vw, 4.9rem)', lineHeight: cjk ? 1.32 : 1.04, whiteSpace: 'pre-line', minWidth: 0 }}
           >
             {copy.title}
-            <span aria-hidden className="dockmark"><i /><i /></span>
           </h1>
           <p className="reveal reveal-3 mt-6 max-w-xl text-[15px] leading-relaxed text-muted-foreground md:text-base">
             {copy.body}
