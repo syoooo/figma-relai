@@ -1,6 +1,8 @@
 <img src="assets/relai-logo.svg" alt="Relai" height="36" />
 
-[English](README.md) | 日本語 | [中文](README.zh.md) | [figma-relai.vercel.app](https://figma-relai.vercel.app)
+[English](README.md) | 日本語 | [中文](README.zh.md)
+
+[figma-relai.vercel.app](https://figma-relai.vercel.app)
 
 **Your AI, on the canvas.** Relai は Claude Code・Cursor・Codex など任意の MCP クライアントを Figma につなぎ、普段使っているモデルに話しかけるだけでデザインの読み取り・編集・監査・デザインシステム構築ができるようにします。書き込みは Figma プラグイン経由なので、有料 REST API に依存せず、どの Figma プランでも動きます。
 

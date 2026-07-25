@@ -1,6 +1,8 @@
 <img src="assets/relai-logo.svg" alt="Relai" height="36" />
 
-English | [日本語](README.ja.md) | [中文](README.zh.md) | [figma-relai.vercel.app](https://figma-relai.vercel.app)
+English | [日本語](README.ja.md) | [中文](README.zh.md)
+
+[figma-relai.vercel.app](https://figma-relai.vercel.app)
 
 **Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. It works on every Figma plan, because writes go through a Figma plugin rather than the paid REST API.
 

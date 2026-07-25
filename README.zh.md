@@ -1,6 +1,8 @@
 <img src="assets/relai-logo.svg" alt="Relai" height="36" />
 
-[English](README.md) | [日本語](README.ja.md) | 中文 | [figma-relai.vercel.app](https://figma-relai.vercel.app)
+[English](README.md) | [日本語](README.ja.md) | 中文
+
+[figma-relai.vercel.app](https://figma-relai.vercel.app)
 
 **Your AI, on the canvas.** Relai 把 Claude Code、Cursor、Codex——任何 MCP 客户端——接进 Figma：对你常用的那个模型说话，就能读取、编辑、审计设计，直至搭建整套设计系统。写入走 Figma 插件而非付费 REST API，所以任何 Figma 套餐都能用。
 
