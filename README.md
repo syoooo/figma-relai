@@ -4,6 +4,8 @@ English | [日本語](README.ja.md) | [中文](README.zh.md) | [figma-relai.verc
 
 **Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. It works on every Figma plan, because writes go through a Figma plugin rather than the paid REST API.
 
+Relai is built on a simple position: the AI era should put designers *more* in charge, not less — taste and judgment stay with you, the labor moves to a model you already trust, with every step visible.
+
 <img src="assets/plugin-ui.png" alt="The Relai plugin: activity feed, connection status, and a Stop button" width="380" />
 
 ## What a session looks like
@@ -17,6 +19,16 @@ English | [日本語](README.ja.md) | [中文](README.zh.md) | [figma-relai.verc
 > **AI:** `set_properties · 24 nodes · 1.2s ✓` → `analyze_design · overall → 92/100`
 
 Every command shows up in the plugin as it runs, with timing and success or failure. Click an entry to jump to that layer on the canvas. Press **Stop** if you change your mind — the rest of the batch is cancelled.
+
+Relai is how its author maintains a production design system. From one of those sessions — July 2026, numbers unedited:
+
+```text
+audit_colors     45,509 nodes scanned · 3.9s
+ghost census     30,251 stale references found
+approval gate    designer approved · scope: full file
+batch_execute    25,351 bindings rebound
+re-census        30,251 → 936 · zero visual change
+```
 
 ## Get started
 
@@ -53,7 +65,7 @@ Everything else. `execute_figma` runs JavaScript against the Figma Plugin API di
 
 ## You stay in control
 
-The plugin is the designer's side of the deal: a live activity feed of everything the AI does, an "AI connected" indicator that means an agent is actually paired (not just that a server is running), and a Stop button that cancels pending work. Selection and page changes you make flow back to the AI as events, so "now do the same to this one" works without re-explaining.
+The plugin is the designer's side of the deal: a live activity feed of everything the AI does, an "AI connected" indicator that means an agent is actually paired (not just that a server is running), and a Stop button that cancels pending work. Selection and page changes you make flow back to the AI as events, so "now do the same to this one" works without re-explaining. The relay is local: file contents move only between Figma, your machine, and the AI client you already trust.
 
 Three dials go further when you want them. **Approvals** ("Ask before big edits") holds bulk writes and code execution until you press Approve in the panel. **Lock to selection** rejects edits outside whatever you've selected — the AI gets a clear error, not a silent pass. And **file conventions** are a little CLAUDE.md stored inside the Figma file itself: naming rules, spacing habits, do-not-touch pages — every future session, from any AI client, reads it before working. The UI speaks English, 日本語, and 中文.
 
