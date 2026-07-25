@@ -1,0 +1,38 @@
+import { useEffect } from 'react';
+import { LanguageProvider } from './lib/i18n';
+import { Nav } from './components/landing/Nav';
+import { Hero } from './components/landing/Hero';
+import { Ledger } from './components/landing/Ledger';
+import { Changes } from './components/landing/Changes';
+import { Craft } from './components/landing/Craft';
+import { FieldNotes } from './components/landing/FieldNotes';
+import { Why } from './components/landing/Why';
+import { GetStarted } from './components/landing/GetStarted';
+import { Faq } from './components/landing/Faq';
+import { CtaFooter } from './components/landing/CtaFooter';
+
+export function App() {
+  useEffect(() => {
+    document.documentElement.classList.add('dark');
+    return () => document.documentElement.classList.remove('dark');
+  }, []);
+
+  return (
+    <LanguageProvider>
+      <div className="dark min-h-full w-full bg-background text-foreground antialiased">
+        <Nav />
+        <main>
+          <Hero />
+          <Ledger />
+          <Changes />
+          <Craft />
+          <FieldNotes />
+          <Why />
+          <GetStarted />
+          <Faq />
+        </main>
+        <CtaFooter />
+      </div>
+    </LanguageProvider>
+  );
+}

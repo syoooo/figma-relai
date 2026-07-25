@@ -1,0 +1,56 @@
+
+import { ArrowUpRight } from 'lucide-react';
+import { useLanguage } from '../../lib/i18n';
+import { Kicker } from './Kicker';
+import { getCopy } from '../../lib/translations';
+import { CopyBlock } from './CopyBlock';
+import { btnClass } from './btn';
+
+const COMMAND = 'claude mcp add Relai -- npx -y figma-relai   # Claude Code\ncodex  mcp add Relai -- npx -y figma-relai   # Codex CLI';
+const CURSOR = `{ "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"] } } }`;
+const COMMUNITY_URL = 'https://www.figma.com/community/plugin/1662131506342078142';
+
+export function GetStarted() {
+  const { language } = useLanguage();
+  const copy = getCopy(language).start;
+
+  return (
+    <section id="get-started" className="w-full border-b border-border">
+      <div className="mx-auto w-full max-w-6xl px-5 py-16 md:py-24">
+        <div className="max-w-2xl">
+          <Kicker>{copy.eyebrow}</Kicker>
+          <h2 className="mt-3 font-heading text-[1.7rem] font-semibold leading-tight tracking-tight md:text-[2.2rem]">{copy.title}</h2>
+          <p className="mt-4 text-sm text-muted-foreground">{copy.body}</p>
+        </div>
+        <ol className="mt-12 max-w-3xl space-y-10">
+          {copy.steps.map((step, index) => (
+            <li key={step.title} className="grid gap-4 md:grid-cols-[auto_1fr] md:gap-6">
+              <div className="flex h-9 w-9 items-center justify-center border border-primary font-mono text-sm font-semibold text-primary">{index + 1}</div>
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
+                <p className="mt-1.5 text-sm text-muted-foreground">{step.body}</p>
+                {index === 0 && (
+                  <a href={COMMUNITY_URL} target="_blank" rel="noreferrer" className={btnClass({ variant: 'outline', size: 'sm' }) + ' mt-4'}>
+                    {copy.community}
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                {index === 1 && (
+                  <>
+                    <div className="mt-4"><CopyBlock label="bash" code={COMMAND} /></div>
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        {copy.cursor} <span className="font-mono text-primary">.cursor/mcp.json</span>
+                      </p>
+                      <CopyBlock label="json" code={CURSOR} />
+                    </div>
+                  </>
+                )}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}

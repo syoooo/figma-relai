@@ -1,0 +1,79 @@
+
+import { ArrowRight, Check, Github } from 'lucide-react';
+import { useLanguage } from '../../lib/i18n';
+import { getCopy, VERSION } from '../../lib/translations';
+import { btnClass } from './btn';
+
+const CLIENTS = ['Claude Code', 'Cursor', 'Codex'];
+const PANEL: Record<string, string> = {
+  en: '/panel/plugin-ui.png',
+  ja: '/panel/plugin-ui.ja.png',
+  zh: '/panel/plugin-ui.zh.png'
+};
+
+export function Hero() {
+  const { language } = useLanguage();
+  const copy = getCopy(language).hero;
+  const cjk = language !== 'en';
+
+  return (
+    <section id="top" className="relative w-full border-b border-border">
+      <div className="mx-auto grid w-full max-w-6xl gap-14 px-5 pb-16 pt-14 md:pt-20 lg:grid-cols-[1.15fr_.85fr] lg:gap-12 lg:pb-20">
+        <div className="flex flex-col lg:pt-6">
+          <p className="reveal reveal-1 t-label t-label--amber">
+            {copy.eyebrow} <span className="text-muted-foreground">· {VERSION}</span>
+          </p>
+          <h1
+            className="reveal reveal-2 mt-5 font-heading font-semibold leading-[1.04] tracking-[-0.01em]"
+            style={{ fontSize: cjk ? 'clamp(1.9rem, 4.6vw, 3.4rem)' : 'clamp(2.4rem, 6.5vw, 4.9rem)', lineHeight: cjk ? 1.3 : 1.04, minWidth: 0 }}
+          >
+            {copy.title}
+            <span aria-hidden className="dockmark"><i /><i /></span>
+          </h1>
+          <p className="reveal reveal-3 mt-6 max-w-xl text-[15px] leading-relaxed text-muted-foreground md:text-base">
+            {copy.body}
+          </p>
+          <div className="reveal reveal-4 mt-9 flex flex-col gap-3 sm:flex-row">
+            <a href="#get-started" className={btnClass({ size: 'lg' })}>
+              {copy.install}
+              <ArrowRight className="h-4 w-4" />
+            </a>
+            <a href="https://github.com/syoooo/figma-relai" target="_blank" rel="noreferrer" className={btnClass({ variant: 'outline', size: 'lg' })}>
+              <Github className="h-4 w-4" />
+              {copy.github}
+            </a>
+          </div>
+          <div className="reveal reveal-5 mt-8 flex flex-wrap items-center gap-x-5 gap-y-2">
+            {[...CLIENTS, copy.anyClient].map((client) => (
+              <span key={client} className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                <Check className="h-3.5 w-3.5 text-primary" />
+                {client}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <figure className="reveal reveal-6 mx-auto w-full max-w-[340px] lg:max-w-[360px]">
+          <div aria-hidden className="mb-3 flex items-center gap-2 font-mono text-[10px] tracking-[0.18em] text-muted-foreground">
+            <span className="block h-[5px] w-[5px] bg-primary" />
+            <span className="flex-1 border-t border-dashed border-border" />
+            <span>LINK</span>
+            <span className="flex-1 border-t border-dashed border-border" />
+            <span className="block h-[5px] w-[5px] bg-foreground" />
+          </div>
+          <div className="ticks border border-border bg-card p-1.5">
+            <img
+              src={PANEL[language]}
+              width={760}
+              height={1480}
+              alt="Relai plugin panel showing relay status, connected agent, and a live activity feed."
+              className="block h-auto w-full"
+              loading="eager"
+            />
+          </div>
+          
+        </figure>
+      </div>
+    </section>
+  );
+}

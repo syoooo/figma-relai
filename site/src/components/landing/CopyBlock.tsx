@@ -1,0 +1,6 @@
+import { useState } from 'react';
+import { Check, Copy } from 'lucide-react';
+import { useLanguage } from '../../lib/i18n';
+import { getCopy } from '../../lib/translations';
+type CopyBlockProps = {code: string;label?: string;};
+export function CopyBlock({ code, label }: CopyBlockProps) {const [copied, setCopied] = useState(false);const { language } = useLanguage();const copy = getCopy(language).copy;const onCopy = async () => {try {await navigator.clipboard.writeText(code);setCopied(true);setTimeout(() => setCopied(false), 1600);} catch {/* unavailable */}};return <div className="ticks overflow-visible border border-border bg-[#0b0b08]"><div className="flex items-center justify-between border-b border-border bg-secondary/50 px-3 py-2"><span className="font-mono text-[10px] uppercase tracking-[.15em] text-primary">$ {label ?? 'shell'}</span><button type="button" onClick={onCopy} className="inline-flex items-center gap-1.5 border border-transparent px-1.5 py-0.5 text-[10px] uppercase tracking-[.1em] text-muted-foreground hover:border-border hover:text-primary">{copied ? <><Check className="h-3.5 w-3.5 text-primary" /> {copy.copied}</> : <><Copy className="h-3.5 w-3.5" /> {copy.copy}</>}</button></div><pre className="overflow-x-auto px-4 py-3"><code className="whitespace-pre font-mono text-xs leading-relaxed text-[#f5d365]">{code}</code></pre></div>;}
