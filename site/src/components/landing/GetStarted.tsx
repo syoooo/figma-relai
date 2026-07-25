@@ -6,7 +6,8 @@ import { getCopy } from '../../lib/translations';
 import { CopyBlock } from './CopyBlock';
 import { btnClass } from './btn';
 
-const COMMAND = 'claude mcp add Relai -- npx -y figma-relai   # Claude Code\ncodex  mcp add Relai -- npx -y figma-relai   # Codex CLI';
+const CLAUDE = 'claude mcp add Relai -- npx -y figma-relai';
+const CODEX = 'codex mcp add Relai -- npx -y figma-relai';
 const CURSOR = `{ "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"] } } }`;
 const COMMUNITY_URL = 'https://www.figma.com/community/plugin/1662131506342078142';
 
@@ -38,7 +39,10 @@ export function GetStarted() {
                 )}
                 {index === 1 && (
                   <>
-                    <div className="mt-4"><CopyBlock label="bash" code={COMMAND} /></div>
+                    <div className="mt-4 space-y-3">
+                      <CopyBlock label="claude code" code={CLAUDE} />
+                      <CopyBlock label="codex cli" code={CODEX} />
+                    </div>
                     <div className="mt-3">
                       <p className="mb-2 text-xs text-muted-foreground">
                         {copy.cursor} <span className="font-mono text-primary">.cursor/mcp.json</span>
