@@ -264,7 +264,7 @@ export const translations = {
     },
     changes: {
       eyebrow: 'WHAT IT DOES',
-      title: '阅读、编辑、审计、构建 —— 通过对话完成。',
+      title: '读取、编辑、审计、构建 —— 通过对话完成。',
       items: [
         { title: '理解设计', body: '结构、颜色、布局和Token使用情况一次返回；AI还能截取画布真正查看，而不是猜测。', ask: '这个界面是怎么搭起来的？', result: 'get_design_context · structure · tokens · 1 screenshot' },
         { title: '批量编辑', body: '改名、重绑、间距清扫 —— 这些没人给排期的杂务，变成一次覆盖数千节点的对话，而不是一下午的逐个点击。', ask: '把所有图标重新绑定到图标包变量', result: 'batch_execute · 4,306 instances · one round-trip' },
