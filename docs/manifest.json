@@ -2105,6 +2105,16 @@
       "pattern": null,
       "hint": "",
       "doc": "**A freshly-converted slot can still report `type: \"FRAME\"` to the Plugin API** — the layer panel shows the slot badge while getNodeByIdAsync returns FRAME (a reload boundary was observed to fix it). Never gate automation on `type === \"SLOT\"`; match the frame by name and trust the designer's visual confirmation."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**Deleted variables are soft-deleted ghosts** — `getVariableByIdAsync` still resolves them with name AND working values (`Variable` has no `removed` property), so bindings to them keep rendering while being invisible in pickers and dead on publish. To test aliveness, check membership in `getLocalVariablesAsync()` (remote variables are legitimately absent — check `variable.remote`)."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**Variables cannot be reordered via the API** (`variableIds` is read-only; the `move…After` methods exist only for styles) — new variables always append last; panel order is manual-drag only. NEVER delete-and-recreate variables to reorder: bindings reference variable IDs, so every binding in the file silently dies (observed in production; the ghosts keep rendering, hiding the damage)."
     }
   ]
 }
