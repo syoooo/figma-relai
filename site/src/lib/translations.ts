@@ -109,7 +109,7 @@ export const translations = {
     nav: { changes: 'できること', craft: '品質', ledger: 'セッション', why: '選ぶ理由', start: 'はじめる', faq: 'FAQ', github: 'GitHub', install: 'プラグインを導入', home: 'Relai ホーム', menu: 'メニューを開く', close: 'メニューを閉じる' },
     hero: {
       eyebrow: 'FIGMA × MCP',
-      title: 'あなたの AI を、キャンバスへ。',
+      title: 'あなたの AI を、\nキャンバスへ。',
       body: 'Relai は Claude Code、Cursor、Codex など、あらゆる MCP クライアントを Figma につなぎます。いつものモデルとの会話だけで、読み取り・編集・監査・デザインシステム構築まで。オープンソース、ローカル動作、全プラン対応。',
       install: 'プラグインを導入',
       github: 'GitHub',
@@ -211,7 +211,7 @@ export const translations = {
     nav: { changes: '功能', craft: '功夫', ledger: '会话', why: '为什么选择', start: '开始使用', faq: '常见问题', github: 'GitHub', install: '安装插件', home: 'Relai 首页', menu: '打开菜单', close: '关闭菜单' },
     hero: {
       eyebrow: 'FIGMA × MCP',
-      title: '让你的 AI，来到画布上。',
+      title: '让你的 AI，\n来到画布上。',
       body: 'Relai 将 Claude Code、Cursor、Codex —— 任意 MCP 客户端 —— 连接到 Figma。与你熟悉的模型对话，即可阅读、编辑、审计并构建设计系统。开源、本地运行、支持所有 Figma 计划。',
       install: '安装插件',
       github: 'GitHub',

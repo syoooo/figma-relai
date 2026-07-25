@@ -61,7 +61,14 @@
   ::selection { background: #ffb000; color: #191204; }
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   html, body { overflow-x: clip; }
+  :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) dd,
+  :lang(zh-CN) h1, :lang(zh-CN) h2, :lang(zh-CN) h3, :lang(zh-CN) dd {
+    font-feature-settings: 'palt' 1;
+    letter-spacing: 0.035em;
+  }
+  :lang(ja) body, :lang(ja) p { font-feature-settings: 'palt' 0; }
   code, pre, kbd { font-family: var(--font-mono); }
+  h1, h2, h3 { text-wrap: balance; }
 }
 
 @layer components {

@@ -1,10 +1,9 @@
 
-import { Check, Figma, Github } from 'lucide-react';
+import { Figma, Github } from 'lucide-react';
 import { useLanguage } from '../../lib/i18n';
 import { getCopy, VERSION } from '../../lib/translations';
 import { btnClass } from './btn';
 
-const CLIENTS = ['Claude Code', 'Cursor', 'Codex'];
 const PANEL: Record<string, string> = {
   en: '/panel/plugin-ui.png',
   ja: '/panel/plugin-ui.ja.png',
@@ -25,7 +24,7 @@ export function Hero() {
           </p>
           <h1
             className="reveal reveal-2 mt-5 font-heading font-semibold leading-[1.04] tracking-[-0.01em]"
-            style={{ fontSize: cjk ? 'clamp(1.9rem, 4.6vw, 3.4rem)' : 'clamp(2.4rem, 6.5vw, 4.9rem)', lineHeight: cjk ? 1.3 : 1.04, minWidth: 0 }}
+            style={{ fontSize: cjk ? 'clamp(1.9rem, 4.6vw, 3.4rem)' : 'clamp(2.4rem, 6.5vw, 4.9rem)', lineHeight: cjk ? 1.32 : 1.04, whiteSpace: 'pre-line', minWidth: 0 }}
           >
             {copy.title}
             <span aria-hidden className="dockmark"><i /><i /></span>
@@ -42,14 +41,6 @@ export function Hero() {
               <Github className="h-4 w-4" />
               {copy.github}
             </a>
-          </div>
-          <div className="reveal reveal-5 mt-8 flex flex-wrap items-center gap-x-5 gap-y-2">
-            {[...CLIENTS, copy.anyClient].map((client) => (
-              <span key={client} className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-                <Check className="h-3.5 w-3.5 text-primary" />
-                {client}
-              </span>
-            ))}
           </div>
         </div>
 
