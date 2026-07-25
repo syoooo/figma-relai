@@ -354,6 +354,7 @@
     .feed-entry .st.running { color: var(--amber); animation: blink 1s steps(1) infinite; }
     .feed-entry .st.ok { color: var(--ok); }
     .feed-entry .st.err { color: var(--err); }
+    .feed-entry .st svg { display: inline-block; vertical-align: -1px; }
     .feed-entry .cmd {
       flex: 1; color: var(--text);
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -484,7 +485,11 @@
       color: var(--faint); text-align: center;
       text-transform: uppercase;
     }
-    .footer .deco { color: var(--amber-dim); }
+    .footer .dockpair { position: relative; display: inline-block; width: 9px; height: 9px; vertical-align: -1px; }
+    .footer .dockpair i { position: absolute; width: 4px; height: 4px; }
+    .footer .dockpair i:first-child { left: 0; top: 0; background: var(--amber); }
+    .footer .dockpair i:last-child { right: 0; bottom: 0; background: var(--text); }
+    .footer .dockpair.flip { transform: rotate(180deg); }
   </style>
 </head>
 <body>
@@ -660,7 +665,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="footer"><span class="deco">▚</span> Relai v0.2.7 <span class="deco">▞</span></div>
+  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.2.7 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
 
   <script>
     // ---------- i18n ----------
@@ -1127,9 +1132,11 @@
       runningCount = Math.max(0, runningCount - 1);
       updateStopBtn();
 
+      var ICON_OK = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>';
+      var ICON_ERR = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg>';
       var st = e.el.querySelector('.st');
       st.className = 'st ' + (ok ? 'ok' : 'err');
-      st.textContent = ok ? '✓' : '✕';
+      st.innerHTML = ok ? ICON_OK : ICON_ERR;
       e.el.querySelector('.dur').textContent = ((Date.now() - e.t0) / 1000).toFixed(1) + 's';
       if (!ok && errMsg) {
         var m = document.createElement('span');
