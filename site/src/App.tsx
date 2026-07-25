@@ -3,7 +3,9 @@ import { Analytics } from '@vercel/analytics/react';
 import { LanguageProvider } from './lib/i18n';
 import { Nav } from './components/landing/Nav';
 import { Hero } from './components/landing/Hero';
+import { Belief } from './components/landing/Belief';
 import { Ledger } from './components/landing/Ledger';
+import { Workflows } from './components/landing/Workflows';
 import { Changes } from './components/landing/Changes';
 import { Craft } from './components/landing/Craft';
 import { FieldNotes } from './components/landing/FieldNotes';
@@ -22,9 +24,11 @@ export function App() {
     <LanguageProvider>
       <div className="dark min-h-full w-full bg-background text-foreground antialiased">
         <Nav />
-        <main>
+        <main id="main">
           <Hero />
+          <Belief />
           <Ledger />
+          <Workflows />
           <Changes />
           <Craft />
           <FieldNotes />

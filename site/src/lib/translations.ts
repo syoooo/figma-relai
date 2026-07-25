@@ -14,6 +14,23 @@ export const translations = {
       anyClient: 'any MCP client',
       panelCaption: 'The plugin panel — live activity, approval gate, scope lock. Real screenshot, not a mockup.'
     },
+    belief: {
+      eyebrow: 'THE IDEA',
+      p1: 'Relai is built on a simple position: the AI era should put designers more in charge, not less. Taste and judgment stay with you; the labor moves to a model you already trust — under your rules, on your system, with every step visible.',
+      p2: 'In practice that means three habits: say it instead of clicking through it. Let the file carry its own conventions. End every change with evidence. The rest of this page is those habits, running.'
+    },
+    flows: {
+      eyebrow: 'WAYS TO ASK',
+      title: 'The canvas is an input, too.',
+      items: [
+        { title: 'A comment becomes a task', body: 'Leave an @-comment on the canvas. When you tell the AI to check the comments, it claims the thread, does the work, and replies on it. Asynchronous by design — it picks up when you send it looking.',
+          rows: ['comment › @relai round every button corner to 8', 'manage_comments · thread claimed', 'set_properties · 12 nodes ✓', 'reply posted · thread resolved ✓'] },
+        { title: 'Your selection is context', body: 'Select a layer and say “this one too.” Selection and page changes flow back as events, so you point instead of describing paths.',
+          rows: ['you › (selects Card / Pricing)', 'you › same treatment as the last one', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
+        { title: 'It reads the manual first', body: 'Nine workflow documents ship with the server as MCP prompts — token strategy, component conventions, audits, bulk cleanup, comment-driven work — so the AI arrives briefed. And the whole tool contract is a machine-readable manifest, regenerated from the running code on every build.',
+          rows: ['9 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+      ]
+    },
     ledger: {
       eyebrow: 'ONE SESSION',
       title: 'This is what an evening looks like.',
@@ -35,8 +52,8 @@ export const translations = {
       items: [
         { title: 'Understand a design', body: 'Structure, colors, layout, and token usage come back in one pass — and the AI can screenshot the canvas to actually look, not guess.', ask: 'How is this screen put together?', result: 'get_design_context · structure · tokens · 1 screenshot' },
         { title: 'Bulk edits', body: 'The janitorial work nobody budgets time for — renames, rebinds, spacing sweeps — becomes one conversation across thousands of nodes, instead of an afternoon of clicking.', ask: 'Rebind every icon to the icon-pack variable', result: 'batch_execute · 4,306 instances · one round-trip' },
-        { title: 'Audits', body: 'Color-token coverage, auto-layout quality, component health, accessibility — checked node by node, not vibes. Evidence you can put in a review.', ask: 'Is this page ready for review?', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
-        { title: 'Design systems', body: 'Variable collections, token binding, shared styles, proper variants, team-library imports. The AI builds from your components instead of redrawing near-copies.', ask: 'Open a brand-specific padding token and wire it up', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
+        { title: 'Audits', body: 'Color-token coverage, auto-layout quality, component health, accessibility — checked node by node, or rolled into one weighted 0–100 health score you can put in a review.', ask: 'Is this page ready for review?', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
+        { title: 'Design systems', body: 'Variable collections, token binding, shared styles, proper variants, team-library imports. The AI builds from your components instead of redrawing near-copies — and tokenize binds every hardcoded value that visually matches an existing variable, in one call.', ask: 'Open a brand-specific padding token and wire it up', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
       ]
     },
     craft: {
@@ -47,7 +64,7 @@ export const translations = {
         { kicker: 'pitfalls', title: 'The minefield, mapped', body: 'The Figma Plugin API is full of traps — fonts must load before text edits, instances reject new children, resizing pins auto-layout axes. Relai ships 24 pitfalls learned in production: when the AI trips one, the raw error comes back with the fix attached, and the same registry compiles into the cheat sheet the AI reads before writing any code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', title: 'It checks its own work', body: 'After a write, the AI can look: screenshot the node, compare against intent, re-read the result. Verification is a first-class step in the loop, not an afterthought — the difference between “done” and “actually done”.', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
         { kicker: 'conventions', title: 'Your system comes first', body: 'Before building, the AI inventories the file — collections, tokens, components, the libraries actually in use — and the conventions you store in the file itself ride along into its context: naming rules, token routing, no-go zones. It builds from your components instead of redrawing near-copies.', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
-        { kicker: 'navigation', title: 'A map, not a maze', body: 'Thirty-two tools is a curated surface, not an API dump. Every result comes back structured — a summary, honest notes about what got truncated, and a recommended next step — so the model navigates instead of wandering. And if the chain itself misbehaves, one doctor command diagnoses it end to end.', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
+        { kicker: 'navigation', title: 'A map, not a maze', body: 'Thirty-two tools is a curated surface, not an API dump. Every result comes back structured — a summary, honest notes about what got truncated, and a recommended next step — so the model navigates instead of wandering. The full contract also exists as a machine-readable manifest, regenerated from the running code on every build — and if the chain itself misbehaves, one doctor command diagnoses it end to end.', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
       ]
     },
     notes: {
@@ -116,6 +133,23 @@ export const translations = {
       anyClient: 'すべての MCP クライアント',
       panelCaption: 'プラグインパネル — 実行ログ、承認ゲート、スコープロック。モックではなく実際のスクリーンショットです。'
     },
+    belief: {
+      eyebrow: 'THE IDEA',
+      p1: 'Relai の出発点はシンプルです。AI の時代には、デザイナーの主導権はむしろ大きくなるべきだ、という立場です。判断と好みはあなたの手元に。作業は、あなたがすでに信頼しているモデルへ — あなたのルールで、あなたのシステムの上で、すべて見えるかたちで。',
+      p2: '実際には、3 つの習慣に落ちます。クリックの代わりに、言葉で頼む。規約は、ファイル自身に持たせる。変更は、証拠で締める。このページの残りは、その習慣が動いている様子です。'
+    },
+    flows: {
+      eyebrow: 'WAYS TO ASK',
+      title: 'キャンバスも、入力になる。',
+      items: [
+        { title: 'コメントが、そのままタスクになる', body: 'キャンバスに @ コメントを残しておき、AI に「コメントを見て」と言うと、スレッドを引き受けて作業し、そのスレッドに返信します。設計上、非同期です — 見に行かせたときに拾います。',
+          rows: ['comment › @relai ボタンの角丸を全部 8 に', 'manage_comments · thread claimed', 'set_properties · 12 nodes ✓', 'reply posted · thread resolved ✓'] },
+        { title: '選択が、そのまま文脈になる', body: 'レイヤーを選んで「これも同じように」。選択やページの移動はイベントとして AI 側に流れるので、パスを説明する代わりに、指させます。',
+          rows: ['you › （Card / Pricing を選択）', 'you › さっきと同じように', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
+        { title: '働く前に、手引きを読んでいる', body: 'トークン戦略、コンポーネント規約、監査、一括整理、コメント運用 — 9 本のワークフロー文書が MCP プロンプトとしてサーバーに同梱され、AI は下調べ済みで現場に来ます。ツール契約の全体も機械可読の manifest として、ビルドごとに実行コードから再生成されます。',
+          rows: ['9 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+      ]
+    },
     ledger: {
       eyebrow: 'ONE SESSION',
       title: 'ひと晩の作業は、こう見える。',
@@ -137,8 +171,8 @@ export const translations = {
       items: [
         { title: 'デザインを理解する', body: '構造・色・レイアウト・トークン利用状況が一度に返ります。AI はキャンバスをスクリーンショットして、推測ではなく実際に確認できます。', ask: 'この画面、どう組み立てられてる？', result: 'get_design_context · structure · tokens · 1 screenshot' },
         { title: '一括編集', body: 'リネーム、再バインド、余白の一斉調整 — 誰も工数を見積もらない雑務が、数千ノードへの一度の会話になります。クリック作業の午後は不要です。', ask: 'アイコンを全部アイコンパック変数につなぎ直して', result: 'batch_execute · 4,306 instances · one round-trip' },
-        { title: '監査', body: 'カラートークン網羅性、オートレイアウト品質、コンポーネント健全性、アクセシビリティ — 雰囲気ではなくノード単位で確認します。レビューに出せる証拠になります。', ask: 'このページ、レビューに出せる状態？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
-        { title: 'デザインシステム', body: '変数コレクション、トークン接続、共有スタイル、正しいバリアント、チームライブラリ。AI は近い見た目を描き直すのではなく、既存コンポーネントから構築します。', ask: 'ブランド差分のパディングトークンを開いて配線して', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
+        { title: '監査', body: 'カラートークン網羅性、オートレイアウト品質、コンポーネント健全性、アクセシビリティ — ノード単位で確認し、重み付きの 0〜100 ヘルススコアにもまとめられます。レビューにそのまま出せる数字です。', ask: 'このページ、レビューに出せる状態？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
+        { title: 'デザインシステム', body: '変数コレクション、トークン接続、共有スタイル、正しいバリアント、チームライブラリ。AI は近い見た目を描き直すのではなく、既存コンポーネントから構築します。tokenize は、既存の変数と見た目が一致するハードコード値を一括で接続します。', ask: 'ブランド差分のパディングトークンを開いて配線して', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
       ]
     },
     craft: {
@@ -149,7 +183,7 @@ export const translations = {
         { kicker: 'pitfalls', title: '落とし穴には、地図がある。', body: 'Figma Plugin API には落とし穴が多くあります — テキスト編集前のフォント読み込み、子を追加できないインスタンス、リサイズで固定されるオートレイアウト。Relai には実際の運用で踏んだ 24 件の知見が同梱されていて、AI が同じ穴を踏むと、エラーに解決策を添えて返します。同じ一覧は、コードを書く前に AI が読むチートシートにもなります。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', title: '書いたら、見て確かめる。', body: '書き込みのあと、AI はスクリーンショットで実物を確認し、意図と見比べ、結果を読み直せます。検証は後付けではなく、作業ループの標準ステップです。「終わった」と「本当に終わった」の差は、ここで生まれます。', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
         { kicker: 'conventions', title: 'まず、あなたのシステムから。', body: '構築の前に、AI はまずファイルを調べます — コレクション、トークン、コンポーネント、実際に使われているライブラリ。ファイル自身に保存した規約（命名、トークンの通し方、触らない場所）も、そのままコンテキストに入ります。似た見た目を描き直すのではなく、あなたのコンポーネントから組み立てます。', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
-        { kicker: 'navigation', title: '結果には、次の一手がついてくる。', body: '32 個のツールは、API をそのまま並べたものではなく、選んで設計した操作面です。結果は必ず構造化されて返ります — 要約、省略した箇所の注記、そして推奨される次の一手。だからモデルは迷いません。接続の調子が悪いときは、doctor コマンド一発で全体を診断できます。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
+        { kicker: 'navigation', title: '結果には、次の一手がついてくる。', body: '32 個のツールは、API をそのまま並べたものではなく、選んで設計した操作面です。結果は必ず構造化されて返ります — 要約、省略した箇所の注記、そして推奨される次の一手。だからモデルは迷いません。契約の全体は機械可読の manifest としてビルドごとに再生成され、接続の調子が悪いときは doctor コマンド一発で全体を診断できます。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
       ]
     },
     notes: {
@@ -218,6 +252,23 @@ export const translations = {
       anyClient: '任意 MCP 客户端',
       panelCaption: '插件面板 —— 实时活动、审批门、选区锁。真实截图，不是示意稿。'
     },
+    belief: {
+      eyebrow: 'THE IDEA',
+      p1: 'Relai 的出发点很简单：AI 时代，设计师的主导权应该变大，而不是变小。判断和品味留在你手里；活交给你已经信任的模型 —— 按你的规则，在你的系统之上，每一步都看得见。',
+      p2: '落到实处是三个习惯：用话说，而不是逐个点。让文件自己携带规约。每次改动，以证据收尾。这一页剩下的部分，就是这些习惯运转的样子。'
+    },
+    flows: {
+      eyebrow: 'WAYS TO ASK',
+      title: '画布本身，也是输入。',
+      items: [
+        { title: '评论直接变成任务', body: '在画布上留一条 @ 评论；当你让 AI 去看评论时，它会认领线程、完成工作、并在线程里回复。这是有意为之的异步 —— 你派它去看，它才来接。',
+          rows: ['comment › @relai 把所有按钮圆角统一为 8', 'manage_comments · thread claimed', 'set_properties · 12 nodes ✓', 'reply posted · thread resolved ✓'] },
+        { title: '选区就是上下文', body: '选中图层，说一句「这个也一样」。选区和页面切换会作为事件流回 AI，你用手指，不用描述路径。',
+          rows: ['you › （选中 Card / Pricing）', 'you › 和刚才一样处理', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
+        { title: '开工之前，先读手册', body: 'Token 策略、组件规范、审计流程、批量整理、评论协作 —— 9 份工作流文档以 MCP prompts 形式随服务器发货，AI 是备过课才进场的。整套工具契约也是机器可读的 manifest，每次构建都从运行代码重新生成。',
+          rows: ['9 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+      ]
+    },
     ledger: {
       eyebrow: 'ONE SESSION',
       title: '一晚的工作，看起来是这样。',
@@ -239,8 +290,8 @@ export const translations = {
       items: [
         { title: '理解设计', body: '结构、颜色、布局和 Token 使用情况一次返回；AI 还能截取画布真正查看，而不是猜测。', ask: '这个界面是怎么搭起来的？', result: 'get_design_context · structure · tokens · 1 screenshot' },
         { title: '批量编辑', body: '改名、重绑、间距清扫 —— 这些没人给排期的杂务，变成一次对话、覆盖数千节点，而不是一下午的逐个点击。', ask: '把所有图标重新绑定到图标包变量', result: 'batch_execute · 4,306 instances · one round-trip' },
-        { title: '设计审计', body: '颜色 Token 覆盖、自动布局质量、组件健康度、无障碍性 —— 逐节点检查，不靠感觉。可以直接放进评审的证据。', ask: '这一页能送评审了吗？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
-        { title: '设计系统', body: '变量集合、Token 绑定、共享样式、正确的变体与团队库导入。AI 基于你已有的组件构建，而不是重画近似副本。', ask: '开一个品牌差分的内边距 Token 并接好线', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
+        { title: '设计审计', body: '颜色 Token 覆盖、自动布局质量、组件健康度、无障碍性 —— 逐节点检查，也可以合成一个 0–100 的加权健康分，直接放进评审。', ask: '这一页能送评审了吗？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
+        { title: '设计系统', body: '变量集合、Token 绑定、共享样式、正确的变体与团队库导入。AI 基于你已有的组件构建，而不是重画近似副本；tokenize 还能把所有与现有变量视觉一致的硬编码值一次性全部绑定。', ask: '开一个品牌差分的内边距 Token 并接好线', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
       ]
     },
     craft: {
@@ -251,7 +302,7 @@ export const translations = {
         { kicker: 'pitfalls', title: '雷区，已绘制成图。', body: 'Figma Plugin API 处处是坑 — 编辑文本前必须加载字体、实例不接受新子级、resize 会锁死自动布局轴。Relai 内置了 24 条生产环境踩出来的坑：AI 一旦踩中，原始报错会连同解法一起返回；同一份台账还会编译成 AI 写代码前要读的速查表。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', title: '自己的活，自己验。', body: '写入之后，AI 能"亲眼看"：截图节点、对照意图、重读结果。验证是循环里的一等公民，而不是事后补救 — "做完了"和"真的做完了"的差别就在这里。', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
         { kicker: 'conventions', title: '先学你的系统。', body: '动手之前，AI 会先盘点文件 — 集合、Token、组件、实际在用的库；你存在文件里的规约（命名规则、Token 路径、禁改区）也会直接进入它的上下文。它基于你的组件构建，而不是重画近似副本。', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
-        { kicker: 'navigation', title: '给的是路标，不是迷宫。', body: '32 个工具是精心策展的操作面，不是 API 的倾倒。每个结果都以结构化形式返回 — 摘要、对截断之处的诚实标注，以及建议的下一步 — 模型不再瞎逛，而是循路前进。链路本身出问题时，一条 doctor 命令即可端到端诊断。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
+        { kicker: 'navigation', title: '给的是路标，不是迷宫。', body: '32 个工具是精心策展的操作面，不是 API 的倾倒。每个结果都以结构化形式返回 — 摘要、对截断之处的诚实标注，以及建议的下一步 — 模型不再瞎逛，而是循路前进。整套契约同时以机器可读的 manifest 存在、随每次构建重新生成；链路出问题时，一条 doctor 命令即可端到端诊断。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
       ]
     },
     notes: {
