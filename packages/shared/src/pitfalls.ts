@@ -20,6 +20,11 @@ export interface Pitfall {
 
 export const PITFALLS: Pitfall[] = [
   {
+    pattern: "not a function",
+    hint: "Figma's VM often omits which symbol failed ('not a function' with no name). Usual cause: an API from a different agent stack that doesn't exist in this sandbox — e.g. node.query() or figma.notify(). Search with findAll/findAllWithCriteria; when the message names nothing, bisect the script.",
+    doc: "**`not a function` errors may name no symbol** — Figma's VM drops the subject. Usual cause: APIs from other agent tools that don't exist here (`node.query()`, `figma.notify()`). Use `findAll`/`findAllWithCriteria` for search; bisect when the message names nothing.",
+  },
+  {
     pattern: "unloaded font",
     hint: "await figma.loadFontAsync(node.fontName) before editing text — new TextNodes default to Inter Regular; for mixed ranges load every font from getRangeAllFontNames().",
     doc: "**Editing text without loading its font throws** (`unloaded font`). `await figma.loadFontAsync(textNode.fontName)` first; new TextNodes default to Inter Regular; when `fontName === figma.mixed`, load every font from `getRangeAllFontNames()`.",

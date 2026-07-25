@@ -76,6 +76,7 @@ Two important facts: **scripts are NOT atomic** — on error, changes made befor
 When one of these throws inside `execute_figma`, the error already carries the remedy as a `Hint:` — this list is generated from the same registry (`packages/shared/src/pitfalls.ts`).
 
 <!-- PITFALLS:START -->
+- **`not a function` errors may name no symbol** — Figma's VM drops the subject. Usual cause: APIs from other agent tools that don't exist here (`node.query()`, `figma.notify()`). Use `findAll`/`findAllWithCriteria` for search; bisect when the message names nothing.
 - **Editing text without loading its font throws** (`unloaded font`). `await figma.loadFontAsync(textNode.fontName)` first; new TextNodes default to Inter Regular; when `fontName === figma.mixed`, load every font from `getRangeAllFontNames()`.
 - **`getNodeById` throws in dynamic-page mode** — always `await figma.getNodeByIdAsync(id)`.
 - **Traversing a non-current page throws until you `await page.loadAsync()`** — `figma.currentPage` is always loaded, other pages are not.
