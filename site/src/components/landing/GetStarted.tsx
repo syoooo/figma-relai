@@ -1,5 +1,5 @@
 
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Figma } from 'lucide-react';
 import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
@@ -31,6 +31,7 @@ export function GetStarted() {
                 <p className="mt-1.5 text-sm text-muted-foreground">{step.body}</p>
                 {index === 0 && (
                   <a href={COMMUNITY_URL} target="_blank" rel="noreferrer" className={btnClass({ variant: 'outline', size: 'sm' }) + ' mt-4'}>
+                    <Figma className="h-3.5 w-3.5" />
                     {copy.community}
                     <ArrowUpRight className="h-3.5 w-3.5" />
                   </a>

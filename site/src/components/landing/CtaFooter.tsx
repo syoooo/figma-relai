@@ -1,5 +1,5 @@
 
-import { ArrowRight, Github } from 'lucide-react';
+import { Figma, Github } from 'lucide-react';
 import { useLanguage } from '../../lib/i18n';
 import { getCopy, VERSION } from '../../lib/translations';
 import { Kicker } from './Kicker';
@@ -26,8 +26,8 @@ export function CtaFooter() {
           <p className="mt-5 max-w-md text-[15px] leading-relaxed text-muted-foreground">{copy.body}</p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <a href="#get-started" className={btnClass({ size: 'lg' })}>
+              <Figma className="h-4 w-4" />
               {copy.install}
-              <ArrowRight className="h-4 w-4" />
             </a>
             <a href="https://github.com/syoooo/figma-relai" target="_blank" rel="noreferrer" className={btnClass({ variant: 'outline', size: 'lg' })}>
               <Github className="h-4 w-4" />
@@ -40,9 +40,6 @@ export function CtaFooter() {
         <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-4 px-5 py-8 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
             <img src={LOGO_URL} alt="Relai" className="h-4 w-auto" />
-            <span className="font-mono text-xs text-muted-foreground">
-              <span aria-hidden className="text-primary">▚</span> {copy.tagline} <span aria-hidden className="text-primary">▞</span>
-            </span>
           </div>
           <div className="flex items-center gap-6 font-mono text-[11px] uppercase tracking-[.08em] text-muted-foreground">
             <span>{VERSION}</span>

@@ -1,5 +1,5 @@
 
-import { ArrowRight, Check, Github } from 'lucide-react';
+import { Check, Figma, Github } from 'lucide-react';
 import { useLanguage } from '../../lib/i18n';
 import { getCopy, VERSION } from '../../lib/translations';
 import { btnClass } from './btn';
@@ -35,8 +35,8 @@ export function Hero() {
           </p>
           <div className="reveal reveal-4 mt-9 flex flex-col gap-3 sm:flex-row">
             <a href="#get-started" className={btnClass({ size: 'lg' })}>
+              <Figma className="h-4 w-4" />
               {copy.install}
-              <ArrowRight className="h-4 w-4" />
             </a>
             <a href="https://github.com/syoooo/figma-relai" target="_blank" rel="noreferrer" className={btnClass({ variant: 'outline', size: 'lg' })}>
               <Github className="h-4 w-4" />

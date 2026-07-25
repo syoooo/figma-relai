@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Github, Menu, X } from 'lucide-react';
+import { Figma, Github, Menu, X } from 'lucide-react';
 import { useLanguage, type Language } from '../../lib/i18n';
 import { getCopy, VERSION } from '../../lib/translations';
 import { btnClass } from './btn';
@@ -56,7 +56,7 @@ export function Nav() {
             <Github className="h-4 w-4" />
             {copy.nav.github}
           </a>
-          <a href="#get-started" className={btnClass({ size: 'sm' })}>{copy.nav.install}</a>
+          <a href="#get-started" className={btnClass({ size: 'sm' })}><Figma className="h-3.5 w-3.5" />{copy.nav.install}</a>
         </div>
         <button
           type="button"

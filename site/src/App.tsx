@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { LanguageProvider } from './lib/i18n';
 import { Nav } from './components/landing/Nav';
 import { Hero } from './components/landing/Hero';
@@ -32,6 +33,7 @@ export function App() {
           <Faq />
         </main>
         <CtaFooter />
+        <Analytics />
       </div>
     </LanguageProvider>
   );
