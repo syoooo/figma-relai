@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.7
+
+- Docs-only release to refresh the npm page: README (×3 languages) gains the project's position statement, a real-session receipt block (45,509 nodes scanned · 30,251 stale bindings → 936, zero visual change, numbers unedited), and an explicit data-path sentence (the relay is local; file contents move only between Figma, your machine, and your AI client). No code changes.
+
 ## 0.2.6
 
 - Four new pitfalls from a production ghost-variable recovery (30k dead bindings cleaned in one design system file):
