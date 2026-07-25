@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.8
+
+- Plugin panel: activity-feed status marks are drawn icons instead of text glyphs, and the footer decos became the amber+cream docking mark — the plugin now carries the same identity as the website.
+- New pitfall (25 total): Figma's VM omits the failing symbol in "not a function" errors; the commonest cause is API bleed from other agent stacks (`node.query()`, `figma.notify()`) — the runtime hint now says so.
+- Verified fixed (no code change needed): document-overview style counts, deep token-coverage in validate_design_rules.
+
 ## 0.2.7
 
 - Docs-only release to refresh the npm page: README (×3 languages) gains the project's position statement, a real-session receipt block (45,509 nodes scanned · 30,251 stale bindings → 936, zero visual change, numbers unedited), and an explicit data-path sentence (the relay is local; file contents move only between Figma, your machine, and your AI client). No code changes.
