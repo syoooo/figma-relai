@@ -1,6 +1,6 @@
 import type { Language } from './i18n';
 
-export const VERSION = 'v0.2.7';
+export const VERSION = 'v0.2.8';
 
 export const translations = {
   en: {
@@ -61,7 +61,7 @@ export const translations = {
       title: 'Why the results come out better.',
       body: 'Connecting an AI to Figma is the easy part. Most of Relai is the unglamorous work that decides whether the output is production-grade or plausible-looking noise.',
       items: [
-        { kicker: 'pitfalls', title: 'The minefield, mapped', body: 'The Figma Plugin API is full of traps — fonts must load before text edits, instances reject new children, resizing pins auto-layout axes. Relai ships 24 pitfalls learned in production: when the AI trips one, the raw error comes back with the fix attached, and the same registry compiles into the cheat sheet the AI reads before writing any code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
+        { kicker: 'pitfalls', title: 'The minefield, mapped', body: 'The Figma Plugin API is full of traps — fonts must load before text edits, instances reject new children, resizing pins auto-layout axes. Relai ships 25 pitfalls learned in production: when the AI trips one, the raw error comes back with the fix attached, and the same registry compiles into the cheat sheet the AI reads before writing any code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', title: 'It checks its own work', body: 'After a write, the AI can look: screenshot the node, compare against intent, re-read the result. Verification is a first-class step in the loop, not an afterthought — the difference between “done” and “actually done”.', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
         { kicker: 'conventions', title: 'Your system comes first', body: 'Before building, the AI inventories the file — collections, tokens, components, the libraries actually in use — and the conventions you store in the file itself ride along into its context: naming rules, token routing, no-go zones. It builds from your components instead of redrawing near-copies.', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
         { kicker: 'navigation', title: 'A map, not a maze', body: 'Thirty-two tools is a curated surface, not an API dump. Every result comes back structured — a summary, honest notes about what got truncated, and a recommended next step — so the model navigates instead of wandering. The full contract also exists as a machine-readable manifest, regenerated from the running code on every build — and if the chain itself misbehaves, one doctor command diagnoses it end to end.', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
@@ -73,7 +73,7 @@ export const translations = {
         { n: '32', label: 'tools, one MCP server' },
         { n: '30,251', label: 'stale bindings repaired in one evening — zero visual change' },
         { n: '0', label: 'credits. Your model, your subscription, every Figma plan' },
-        { n: '24', label: 'pitfalls learned in production, shipped as hints' }
+        { n: '25', label: 'pitfalls learned in production, shipped as hints' }
       ],
       caption: 'Numbers from real sessions on a production design system, July 2026.'
     },
@@ -169,7 +169,7 @@ export const translations = {
       title: '結果の質は、地味な作り込みで決まる。',
       body: 'AIをFigmaにつなぐこと自体は簡単です。Relaiの中身の大半は、出力を「それっぽい何か」で終わらせないための、目立たない作り込みです。',
       items: [
-        { kicker: 'pitfalls', title: '落とし穴には、地図がある。', body: 'Figma Plugin APIには落とし穴が多くあります — テキスト編集前のフォント読み込み、子を追加できないインスタンス、リサイズで固定されるオートレイアウト。Relaiには実際の運用で踏んだ24件の知見が同梱されていて、AIが同じ穴を踏むと、エラーに解決策を添えて返します。同じ一覧は、コードを書く前にAIが読むチートシートにもなります。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
+        { kicker: 'pitfalls', title: '落とし穴には、地図がある。', body: 'Figma Plugin APIには落とし穴が多くあります — テキスト編集前のフォント読み込み、子を追加できないインスタンス、リサイズで固定されるオートレイアウト。Relaiには実際の運用で踏んだ25件の知見が同梱されていて、AIが同じ穴を踏むと、エラーに解決策を添えて返します。同じ一覧は、コードを書く前にAIが読むチートシートにもなります。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', title: '書いたら、見て確かめる。', body: '書き込みのあと、AIはスクリーンショットで実物を確認し、意図と見比べ、結果を読み直せます。検証は後付けではなく、作業ループの標準ステップです。「終わった」と「本当に終わった」の差は、ここで生まれます。', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
         { kicker: 'conventions', title: 'まず、あなたのシステムから。', body: '構築の前に、AIはまずファイルを調べます — コレクション、トークン、コンポーネント、実際に使われているライブラリ。ファイル自身に保存した規約（命名、トークンの通し方、触らない場所）も、そのままコンテキストに入ります。似た見た目を描き直すのではなく、あなたのコンポーネントから組み立てます。', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
         { kicker: 'navigation', title: '結果には、次の一手がついてくる。', body: '32個のツールは、APIをそのまま並べたものではなく、選んで設計した操作面です。結果は必ず構造化されて返ります — 要約、省略した箇所の注記、そして推奨される次の一手。だからモデルは迷いません。契約の全体は機械可読のmanifestとしてビルドごとに再生成され、接続の調子が悪いときはdoctorコマンド一発で全体を診断できます。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
@@ -181,7 +181,7 @@ export const translations = {
         { n: '32', label: 'ツール、ひとつのMCPサーバー' },
         { n: '30,251', label: 'ひと晩で修復した無効バインディング — 見た目の変化ゼロ' },
         { n: '0', label: 'クレジット。いつものモデルと契約、全Figmaプラン' },
-        { n: '24', label: '実際の運用で得た知見を、ヒントとして同梱' }
+        { n: '25', label: '実際の運用で得た知見を、ヒントとして同梱' }
       ],
       caption: '数値はすべて、実運用中のデザインシステムでの実セッションから。2026年7月。'
     },
@@ -224,7 +224,7 @@ export const translations = {
     hero: {
       eyebrow: 'FIGMA × MCP',
       title: '让你的AI，\n来到画布上。',
-      body: 'Relai将Claude Code、Cursor、Codex —— 任意MCP客户端 —— 连接到Figma。与你熟悉的模型对话，即可阅读、编辑、审计并构建设计系统。开源、本地运行、支持所有Figma计划。',
+      body: 'Relai将Claude Code、Cursor、Codex —— 任意MCP客户端 —— 连接到Figma。与你熟悉的模型对话，就能读取、编辑、审计设计，直至搭建整套设计系统。开源、本地运行、支持所有Figma计划。',
       install: '安装插件',
       github: 'GitHub',
       anyClient: '任意MCP客户端',
@@ -239,18 +239,18 @@ export const translations = {
       eyebrow: 'WAYS TO ASK',
       title: '画布本身，也是输入。',
       items: [
-        { title: '评论直接变成任务', body: '在画布上留一条@评论；当你让AI去看评论时，它会认领线程、完成工作、并在线程里回复。这是有意为之的异步 —— 你派它去看，它才来接。',
+        { title: '评论直接变成任务', body: '在画布上留一条@评论；当你让AI去看评论时，它会认领线程、完成工作，并在线程里回复。这是有意为之的异步 —— 你派它去看，它才来接。',
           rows: ['comment › @relai把所有按钮圆角统一为8', 'manage_comments · thread claimed', 'set_properties · 12 nodes ✓', 'reply posted · thread resolved ✓'] },
-        { title: '选区就是上下文', body: '选中图层，说一句「这个也一样」。选区和页面切换会作为事件流回AI，你用手指，不用描述路径。',
+        { title: '选区就是上下文', body: '选中图层，说一句「这个也一样」。选区和页面切换会作为事件流回AI——你指给它看，不用描述路径。',
           rows: ['you › （选中Card / Pricing）', 'you › 和刚才一样处理', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
-        { title: '开工之前，先读手册', body: 'Token策略、组件规范、审计流程、批量整理、评论协作 —— 9份工作流文档以MCP prompts形式随服务器发货，AI是备过课才进场的。整套工具契约也是机器可读的manifest，每次构建都从运行代码重新生成。',
+        { title: '开工之前，先读手册', body: 'Token策略、组件规范、审计流程、批量整理、评论协作 —— 9份工作流文档作为MCP prompts内置在服务器里，AI是备过课才进场的。整套工具契约也是机器可读的manifest，每次构建都从运行代码重新生成。',
           rows: ['9 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
       ]
     },
     ledger: {
       eyebrow: 'ONE SESSION',
       title: '某晚的一次会话，看起来是这样。',
-      body: '每条命令在执行时同步出现在面板中 —— 耗时、结果，以及大改动前的设计师审批门。点击记录可跳转到对应图层；按下Stop，剩余批处理立即取消。',
+      body: '每条命令在执行时同步出现在面板中 —— 耗时、结果，以及大改动前的设计师审批门。点击记录可跳转到对应图层；按下Stop，剩下的批量任务立即取消。',
       youLine1: '审计这个文件里的全部变量绑定',
       youLine2: '批准 —— 执行修复',
       gateLine: '设计师已批准 · 范围: 整个文件',
@@ -267,9 +267,9 @@ export const translations = {
       title: '阅读、编辑、审计、构建 —— 通过对话完成。',
       items: [
         { title: '理解设计', body: '结构、颜色、布局和Token使用情况一次返回；AI还能截取画布真正查看，而不是猜测。', ask: '这个界面是怎么搭起来的？', result: 'get_design_context · structure · tokens · 1 screenshot' },
-        { title: '批量编辑', body: '改名、重绑、间距清扫 —— 这些没人给排期的杂务，变成一次对话、覆盖数千节点，而不是一下午的逐个点击。', ask: '把所有图标重新绑定到图标包变量', result: 'batch_execute · 4,306 instances · one round-trip' },
+        { title: '批量编辑', body: '改名、重绑、间距清扫 —— 这些没人给排期的杂务，变成一次覆盖数千节点的对话，而不是一下午的逐个点击。', ask: '把所有图标重新绑定到图标包变量', result: 'batch_execute · 4,306 instances · one round-trip' },
         { title: '设计审计', body: '颜色Token覆盖、自动布局质量、组件健康度、无障碍性 —— 逐节点检查，也可以合成一个0–100的加权健康分，直接放进评审。', ask: '这一页能送评审了吗？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
-        { title: '设计系统', body: '变量集合、Token绑定、共享样式、正确的变体与团队库导入。AI基于你已有的组件构建，而不是重画近似副本；tokenize还能把所有与现有变量视觉一致的硬编码值一次性全部绑定。', ask: '开一个品牌差分的内边距Token并接好线', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
+        { title: '设计系统', body: '变量集合、Token绑定、共享样式、正确的变体与团队库导入。AI基于你已有的组件构建，而不是重画近似副本；tokenize还能把所有与现有变量视觉一致的硬编码值一次性全部绑定。', ask: '开一个分品牌的内边距Token并接好线', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
       ]
     },
     craft: {
@@ -277,10 +277,10 @@ export const translations = {
       title: '结果更好，是有原因的。',
       body: '把AI接到Figma上并不难。Relai的大部分工作，是那些决定输出到底是生产级、还是"看着像回事的噪音"的朴素功夫。',
       items: [
-        { kicker: 'pitfalls', title: '雷区，已绘制成图。', body: 'Figma Plugin API处处是坑 —— 编辑文本前必须加载字体、实例不接受新子级、resize会锁死自动布局轴。Relai内置了24条生产环境踩出来的坑：AI一旦踩中，原始报错会连同解法一起返回；同一份台账还会编译成AI写代码前要读的速查表。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text —— new TextNodes\n        default to Inter Regular' },
-        { kicker: 'verification', title: '自己的活，自己验。', body: '写入之后，AI能"亲眼看"：截图节点、对照意图、重读结果。验证是循环里的一等公民，而不是事后补救 —— "做完了"和"真的做完了"的差别就在这里。', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
+        { kicker: 'pitfalls', title: '雷区，已绘制成图。', body: 'Figma Plugin API处处是坑 —— 编辑文本前必须加载字体、实例不接受新子级、resize会锁死自动布局轴。Relai内置了25条生产环境踩出来的坑：AI一旦踩中，原始报错会连同解法一起返回；同一份清单还会编译成AI写代码前要读的速查表。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text —— new TextNodes\n        default to Inter Regular' },
+        { kicker: 'verification', title: '自己的活，自己验。', body: '写入之后，AI能"亲眼看"：截图节点、对照意图、重读结果。验证是循环里的标配步骤，而不是事后补救 —— "做完了"和"真的做完了"的差别就在这里。', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
         { kicker: 'conventions', title: '先学你的系统。', body: '动手之前，AI会先盘点文件 —— 集合、Token、组件、实际在用的库；你存在文件里的规约（命名规则、Token路径、禁改区）也会直接进入它的上下文。它基于你的组件构建，而不是重画近似副本。', artifact: '# conventions —— carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
-        { kicker: 'navigation', title: '给的是路标，不是迷宫。', body: '32个工具是精心策展的操作面，不是API的倾倒。每个结果都以结构化形式返回 —— 摘要、对截断之处的诚实标注，以及建议的下一步 —— 模型不再瞎逛，而是循路前进。整套契约同时以机器可读的manifest存在、随每次构建重新生成；链路出问题时，一条doctor命令即可端到端诊断。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
+        { kicker: 'navigation', title: '给的是路标，不是迷宫。', body: '32个工具是挑过、排过的操作面，不是把API原样倒出来。每个结果都以结构化形式返回 —— 摘要、对截断之处的诚实标注，以及建议的下一步 —— 模型不再瞎逛，而是循路前进。整套契约同时以机器可读的manifest存在、随每次构建重新生成；链路出问题时，一条doctor命令即可端到端诊断。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
       ]
     },
     notes: {
@@ -289,7 +289,7 @@ export const translations = {
         { n: '32', label: '个工具，一个MCP服务器' },
         { n: '30,251', label: '一晚修复的失效绑定 —— 视觉零变化' },
         { n: '0', label: '额度。你的模型、你的订阅、所有Figma计划' },
-        { n: '24', label: '生产环境踩过的坑，已内置为提示' }
+        { n: '25', label: '生产环境踩过的坑，已内置为提示' }
       ],
       caption: '数字来自生产环境设计系统的真实会话，2026年7月。'
     },
@@ -300,7 +300,7 @@ export const translations = {
       steps: [
         { title: '安装插件', body: '从Figma Community获取并运行。它会自行连接，并在重启后记住所在房间。' },
         { title: '注册服务器', body: '将你的AI客户端指向Relai。' },
-        { title: '提出请求', body: '配对自动完成，不需要在窗口之间复制任何内容。' }
+        { title: '开口提需求', body: '配对自动完成，不需要在窗口之间复制任何内容。' }
       ],
       community: '在Figma Community打开',
       cursor: '对于Cursor，将以下内容加入'
@@ -311,7 +311,7 @@ export const translations = {
       items: [
         { q: '需要付费的Figma计划吗？', a: '不需要。写入操作通过Figma插件而不是付费REST API完成，因此Relai适用于每种Figma计划。' },
         { q: '支持哪些AI客户端？', a: 'Claude Code、Cursor、Codex —— 任意MCP客户端。只需将Relai注册一次为MCP服务器。' },
-        { q: '我的文件内容会流向哪里？', a: '不会多出任何新去处。中继在本地运行，文件内容只在Figma、你的机器和你已经信任的AI客户端之间流动。' },
+        { q: '我的文件内容会流向哪里？', a: '不会有新的去向。中继在本地运行，文件内容只在Figma、你的机器和你已经信任的AI客户端之间流动。' },
         { q: '需要在窗口之间复制内容吗？', a: '不需要。配对自动完成。join_room工具只用于一种少见情况：两个Figma文件同时运行插件。' },
         { q: '可以阻止AI执行代码吗？', a: '可以。execute_figma是直接调用Figma Plugin API的应急出口 —— 文档明确说明这是任意代码执行。不希望的话，在插件中关闭「Allow code execution」即可。' },
         { q: '它如何了解我的设计？', a: 'get_design_system会盘点文件及其使用的库，让AI基于已有组件和Token构建。' }
@@ -320,7 +320,7 @@ export const translations = {
     cta: {
       eyebrow: 'READY',
       title: '把你的AI带到画布上。',
-      body: '安装插件、注册服务器，然后直接提出请求。它支持你现在使用的Figma计划。',
+      body: '安装插件、注册服务器，然后直接开口提需求。它支持你现在使用的Figma计划。',
       install: '安装插件',
       star: '在GitHub点星',
       tagline: '让你的AI，来到画布上。'
