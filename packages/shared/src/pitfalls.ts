@@ -125,6 +125,16 @@ export const PITFALLS: Pitfall[] = [
     hint: "",
     doc: "**Variables cannot be reordered via the API** (`variableIds` is read-only; the `move…After` methods exist only for styles) — new variables always append last; panel order is manual-drag only. NEVER delete-and-recreate variables to reorder: bindings reference variable IDs, so every binding in the file silently dies (observed in production; the ghosts keep rendering, hiding the damage).",
   },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**A remote (library) text style dominates variable bindings** — on text with a remote style applied, `setBoundVariable` writes appear to succeed but snap back to the style's own bindings. Clear the style first (`await setTextStyleIdAsync(\"\")`), then bind.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**Binding writes inside instances silently revert — with two escape hatches.** `setBoundVariable` on a node nested inside an INSTANCE succeeds without error, then reverts (instance roots placed directly in a main ARE writable; anything deeper is not). What does persist: reassigning the whole `fills`/`strokes` array (variable-bound paints ride inside), and range-level `setRangeBoundVariable` on text. Verify after writing; never trust the call alone.",
+  },
 ];
 
 // First matching pitfall's hint, or null. Doc-only entries never match.

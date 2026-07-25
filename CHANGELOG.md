@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.6
+
+- Four new pitfalls from a production ghost-variable recovery (30k dead bindings cleaned in one design system file):
+  - Deleted variables are soft-deleted ghosts: `getVariableByIdAsync` still resolves them with name and working values — aliveness means membership in `getLocalVariablesAsync()`.
+  - Variables cannot be reordered via the API, and delete-and-recreate to reorder silently kills every binding in the file (bindings follow IDs).
+  - A remote library text style dominates variable bindings — `setBoundVariable` snaps back until the style is cleared.
+  - Binding writes inside instances silently revert; instance roots in a main are writable, and the two escape hatches are paints-array reassignment and range-level `setRangeBoundVariable`.
+
 ## 0.2.5
 
 - npm publishing is now mistake-proof: bare `npm publish` fails with the correct command in the error (`npm run release -- --otp=…`); the release script places the root README/LICENSE before npm captures metadata, and a restored `prepack` keeps the tarball covered either way. (0.2.2–0.2.4 each missed the npm-page README a different way; this closes the case.)
