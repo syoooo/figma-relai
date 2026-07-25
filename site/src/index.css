@@ -72,6 +72,8 @@
     letter-spacing: 0.035em;
   }
   :lang(ja) body, :lang(ja) p { font-feature-settings: 'palt' 0; }
+  /* CJK↔Latin spacing comes from the engine, not hand-typed half-width spaces */
+  :root:lang(ja), :root:lang(zh-CN) { text-autospace: normal; }
   code, pre, kbd { font-family: var(--font-mono); }
   h1, h2, h3 { text-wrap: balance; }
 }
