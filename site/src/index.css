@@ -74,6 +74,41 @@
   :lang(ja) body, :lang(ja) p { font-feature-settings: 'palt' 0; }
   /* CJK↔Latin spacing comes from the engine, not hand-typed half-width spaces */
   :root:lang(ja), :root:lang(zh-CN) { text-autospace: normal; }
+  /* JA line breaks follow phrases, not characters (Chrome's built-in BudouX;
+     other engines ignore the value and keep default behavior) */
+  :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) p, :lang(ja) dd,
+  :lang(ja) figcaption, :lang(ja) li {
+    word-break: auto-phrase;
+  }
+  /* avoid stranded short last lines in every language (progressive) */
+  p { text-wrap: pretty; }
+
+  /* ---- reading typography, tuned per script ----
+     Latin and CJK want opposite corrections from one shared markup:
+     · leading — Latin body sits at 1.6–1.7; full-width CJK needs 1.9–2.0
+     · measure — 65ch of Latin (~36rem) is NARROWER than 37 kanji (~40rem)
+     · kinsoku strict + hung punctuation are CJK-only niceties
+     .t-lede  = the quiet essays (belief / outlook / philosophy)
+     .t-prose = standard body text (section intros, cards, FAQ)
+     .prose-col = a reading column sized per script */
+  .t-lede { line-height: 1.7; }
+  .t-prose { line-height: 1.62; }
+  .prose-col { max-width: 36rem; }
+  :lang(ja) .t-lede, :lang(zh-CN) .t-lede { line-height: 2; letter-spacing: 0.01em; }
+  :lang(ja) .t-prose, :lang(zh-CN) .t-prose { line-height: 1.88; letter-spacing: 0.015em; }
+  :lang(ja) .prose-col, :lang(zh-CN) .prose-col { max-width: 40rem; }
+  /* strict kinsoku (no small kana / dashes opening a line) + hanging 、。 (Safari) */
+  :lang(ja), :lang(zh-CN) { line-break: strict; hanging-punctuation: allow-end; }
+
+  /* inline code chip — paths and tool names inside prose */
+  .code-chip {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    border: 1px solid var(--border);
+    background: var(--secondary);
+    padding: 0.05em 0.35em;
+    white-space: nowrap;
+  }
   code, pre, kbd { font-family: var(--font-mono); }
   h1, h2, h3 { text-wrap: balance; }
 }
@@ -116,11 +151,17 @@
   .kicker { display: flex; align-items: center; gap: 12px; }
   .kicker-line { flex: none; width: 88px; border-top: 1px dashed var(--border); transform: translateY(1px); }
 
-  /* panel-DNA: scan-dot texture */
+  /* panel-DNA: scan-dot texture — drifts a cell every ~9s, dead under reduced motion */
   .dots-bg {
     background-image: radial-gradient(rgba(255, 176, 0, 0.05) 1px, transparent 1px);
     background-size: 14px 14px;
+    animation: relai-drift 90s linear infinite;
   }
+  @keyframes relai-drift { to { background-position: 140px 140px; } }
+
+  /* faint amber warmth bracketing the page — hero (top right) and the closing CTA (bottom left) */
+  .glow-open { background-image: radial-gradient(90rem 42rem at 80% -12%, rgba(255, 176, 0, 0.05), transparent 62%); }
+  .glow-close { background-image: radial-gradient(80rem 38rem at 20% 112%, rgba(255, 176, 0, 0.045), transparent 62%); }
 
   /* kicker glyph — section-enter docking */
   .kdock { position: relative; flex: none; width: 12px; height: 12px; }
@@ -130,6 +171,13 @@
   .kdock.undocked i:first-child { transform: translate(-7px, -7px); opacity: 0; }
   .kdock.undocked i:last-child { transform: translate(7px, 7px); opacity: 0; }
 
+
+  /* case-law dial — one ruling traveling the ring (freezes under reduced motion) */
+  .loop-dot {
+    stroke-dasharray: 0.5 941.9;
+    animation: relai-orbit 28s linear infinite;
+  }
+  @keyframes relai-orbit { to { stroke-dashoffset: -942.4; } }
 
   /* ledger replay */
   .wire-live { transform-origin: top; animation: relai-wire 1.4s cubic-bezier(0.22, 1, 0.36, 1) both; }

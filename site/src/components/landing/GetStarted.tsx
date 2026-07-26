@@ -16,12 +16,12 @@ export function GetStarted() {
   const copy = getCopy(language).start;
 
   return (
-    <section id="get-started" className="w-full border-b border-border">
+    <section id="get-started" className="dots-bg w-full border-b border-t border-border bg-[#0d0c09]">
       <div className="mx-auto w-full max-w-6xl px-5 py-16 md:py-24">
         <div className="max-w-2xl">
           <Kicker>{copy.eyebrow}</Kicker>
           <h2 className="mt-3 font-heading text-[1.7rem] font-semibold leading-tight tracking-tight md:text-[2.2rem]">{copy.title}</h2>
-          <p className="mt-4 text-sm text-muted-foreground">{copy.body}</p>
+          <p className="t-prose mt-4 text-sm text-muted-foreground">{copy.body}</p>
         </div>
         <ol className="mt-12 max-w-3xl space-y-10">
           {copy.steps.map((step, index) => (
@@ -29,7 +29,7 @@ export function GetStarted() {
               <div className="flex h-9 w-9 items-center justify-center border border-primary font-mono text-sm font-semibold text-primary">{index + 1}</div>
               <div className="min-w-0">
                 <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
-                <p className="mt-1.5 text-sm text-muted-foreground">{step.body}</p>
+                <p className="t-prose mt-1.5 text-sm text-muted-foreground">{step.body}</p>
                 {index === 0 && (
                   <a href={COMMUNITY_URL} target="_blank" rel="noreferrer" className={btnClass({ variant: 'outline', size: 'sm' }) + ' mt-4'}>
                     <Figma className="h-3.5 w-3.5" />
@@ -45,7 +45,7 @@ export function GetStarted() {
                     </div>
                     <div className="mt-3">
                       <p className="mb-2 text-xs text-muted-foreground">
-                        {copy.cursor} <span className="font-mono text-primary">.cursor/mcp.json</span>
+                        {copy.cursor} <span className="font-mono text-foreground">.cursor/mcp.json</span>
                       </p>
                       <CopyBlock label="json" code={CURSOR} />
                     </div>

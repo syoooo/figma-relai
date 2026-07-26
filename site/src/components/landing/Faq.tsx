@@ -3,6 +3,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '..
 import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
+import { codeText } from './inline';
 
 export function Faq() {
   const { language } = useLanguage();
@@ -20,7 +21,7 @@ export function Faq() {
             {copy.items.map((item, i) => (
               <AccordionItem key={i} value={`item-${i}`} className="border-border">
                 <AccordionTrigger className="text-left text-sm hover:text-primary">{item.q}</AccordionTrigger>
-                <AccordionContent className="text-sm leading-relaxed text-muted-foreground">{item.a}</AccordionContent>
+                <AccordionContent className="t-prose text-sm text-muted-foreground">{codeText(item.a)}</AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>

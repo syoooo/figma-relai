@@ -4,12 +4,10 @@ import { LanguageProvider } from './lib/i18n';
 import { Nav } from './components/landing/Nav';
 import { Hero } from './components/landing/Hero';
 import { Belief } from './components/landing/Belief';
-import { Ledger } from './components/landing/Ledger';
 import { Workflows } from './components/landing/Workflows';
 import { Law } from './components/landing/Law';
 import { Changes } from './components/landing/Changes';
 import { Craft } from './components/landing/Craft';
-import { FieldNotes } from './components/landing/FieldNotes';
 import { Outlook } from './components/landing/Outlook';
 import { GetStarted } from './components/landing/GetStarted';
 import { Faq } from './components/landing/Faq';
@@ -28,12 +26,10 @@ export function App() {
         <main id="main">
           <Hero />
           <Belief />
-          <Ledger />
           <Workflows />
           <Law />
           <Changes />
           <Craft />
-          <FieldNotes />
           <Outlook />
           <GetStarted />
           <Faq />
