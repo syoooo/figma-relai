@@ -46,3 +46,15 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 28. Approvals BULK: a 10+ command batch shows the approval card; Approve executes fully; Deny returns "Denied by designer" with nothing applied; the MCP side does not time out while the card waits.
 29. Scope lock: parentless creates and out-of-scope targets get a "Scope lock" error (including batch sub-commands); `execute_figma` outside the lock reports SCOPE VIOLATION in warnings.
 30. `npx figma-relai doctor` with Figma open → relay ok + plugin online with the file name; with nothing running → actionable warns.
+
+## 0.3–0.4 additions (memory, guards, dial, gauges)
+
+31. Record a precedent by chat ("这是意图,记住") — agent calls record_precedent AND says so; MEMORY row count increments live.
+32. Panel memory modal: "+ note a precedent" input adds an entry; ✕ deletes it; agent's list_precedents reflects both within one call.
+33. Approval card shows the agent's intent line (or the no-description callout); typed reason becomes a `decision` precedent with the op's refs.
+34. Touch a variable referenced by a precedent → the write result carries `precedents:[…]`; reads never do.
+35. Guard a page from the NO-GO modal → any write targeting nodes on it is rejected with the page named; unguard restores. `manage_pages action:guard` refuses without pageId.
+36. Dial stops: OPEN passes a `delete_variable` silently; RISK stops it (`ghost-risk` tag on the card); BULK also stops execute_figma; ALL stops a single-node write. Legacy settings migrate to the right stop on first load after update.
+37. Bulk write (10+ nodes) leaves an amber evidence row in the feed and a `bulk_write` event in get_events.
+38. analyze_design voice/readiness/ghosts return on the current page; ghosts criterion line names the live-list rule; validate_design_rules includes advisory `voice_drift` that never fails the run.
+39. User skill in ~/.figma-relai/skills appears as `user:<name>` prompt after server restart; doctor counts it; broken frontmatter is named by doctor and skipped by the server.

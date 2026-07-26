@@ -39,3 +39,7 @@
 ---
 
 *Tool parameter contracts are deliberately not duplicated in this document — every tool is self-describing over MCP, and `npx figma-relai docs <tool>` (or the generated `docs/manifest.json`) is the always-current reference.*
+
+## Gauges (0.4+)
+
+Fold the gauges into audits where they fit: `aspect:readiness` opens the report (one number + top gaps), `aspect:ghosts` is a publish blocker when nonzero (live-list criterion), `aspect:voice` gives the file's signature so findings can distinguish drift from intent — and anything a precedent marks as intent is not a finding. For the full review-moment pass, load the `qa-gate` skill instead.

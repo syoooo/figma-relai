@@ -1,5 +1,7 @@
 # Security Policy
 
+**Designer-side containment (0.4).** Beyond the code-execution toggle: a four-stop confirmation dial (OPEN · RISK · BULK · ALL — RISK stops ghost-making and irreversible operations even in otherwise-silent mode), per-page AI no-go zones enforced at dispatch, and a selection lock. All are designer-set in the panel; agents cannot change the dial or the exec toggle, and may change guards only via a visible, feed-logged command.
+
 ## Threat model
 
 Relai runs entirely on your machine:
