@@ -90,6 +90,13 @@ export const translations = {
       ],
       caption: 'Numbers from real sessions on a production design system, July 2026.'
     },
+    outlook: {
+      eyebrow: 'NOW & NEXT',
+      title: 'Where this stands, and where it goes.',
+      p1: 'Today, Relai is thirty-two tools and a set of laws a file can carry: conventions you write, precedents you rule, pages you fence off. An agent reads them before working, asks at the level you set — one dial, four stops — and leaves receipts for everything. All of it is built and tested inside one production design system, nightly.',
+      p2: 'What comes next follows a single line: rulings grow into rules, rules into enforcement, enforcement into review. More of your judgment should outlive the session it happened in — promoted, with your consent, into things the file itself upholds. Someday, craft packs worth sharing between teams, with provenance. Not on the roadmap: generation races, and anything that acts without leaving a trace.',
+      p3: 'None of this is a promise with a date. It is a direction, checked against real work.'
+    },
     start: {
       eyebrow: 'GET STARTED',
       title: 'Three steps. No paid plan required.',
@@ -213,6 +220,13 @@ export const translations = {
       ],
       caption: '数値はすべて、実運用中のデザインシステムでの実セッションから。2026年7月。'
     },
+    outlook: {
+      eyebrow: 'NOW & NEXT',
+      title: 'いまの姿と、この先。',
+      p1: 'いまのRelaiは、32のツールと、ファイルが携える法——あなたが書く規約、あなたが下す判例、立ち入らせないページ——です。エージェントは働く前にそれを読み、あなたが決めたレベルで確認を取り（ダイヤルひとつ、4段階）、すべてに記録を残します。その全部が、ひとつの実運用デザインシステムの中で毎晩使われながら作られています。',
+      p2: 'この先は一本の線に沿って進みます。裁定は規約に、規約は執行に、執行はレビューに育っていく。あなたの判断が、その場かぎりで消えないこと——あなたの同意のもとで、ファイル自身が守るものへ昇格していくこと。いつか、出どころ付きでチーム間に共有できる工法集も。ロードマップに載らないもの:生成の速さ比べと、痕跡を残さず動くすべて。',
+      p3: '日付つきの約束ではありません。実際の仕事で確かめながら進む、方向です。'
+    },
     start: {
       eyebrow: 'GET STARTED',
       title: '3ステップ。有料プランは不要。',
@@ -233,7 +247,7 @@ export const translations = {
         { q: 'どのAIクライアントで動作しますか？', a: 'Claude Code、Cursor、Codexなど、あらゆるMCPクライアントで動作します。RelaiをMCPサーバーとして一度登録するだけです。' },
         { q: 'ファイルの内容はどこかに送られますか？', a: '新しい宛先はありません。リレーはローカルで動き、ファイルの内容はFigma、あなたのマシン、そして普段から信頼しているAIクライアントの間にとどまります。' },
         { q: 'ファイルは何を記憶しますか？消せますか？', a: '0.3から、ファイルは判例——あなたが下した裁定——を持てます。記録されるのは、あなたかAIが明示的に記録したときだけ。パネルのMEMORY行に全件が並び、いつでも削除できます。黙って記録されるものはありません。' },
-        { q: 'AIに触らせたくないページを守れますか？', a: 'はい。パネルでページ単位の「AI禁区」を設定でき、禁区への書き込みはディスパッチ段階で明確なエラーとして拒否されます。確認は4段階のダイヤル（OPEN · RISK · BULK · ALL）に統合されています。既定のRISKでは、破壊的操作（変数/スタイル削除・detach・flatten）だけが確認を求め、それ以外は流れます。ブランチ作業ならOPENへ。' },
+        { q: 'AIに触らせたくないページを守れますか？', a: 'はい。パネルでページ単位の立入禁止（NO-GO）を設定でき、対象ページへの書き込みはディスパッチ段階で明確なエラーとして拒否されます。確認は4段階のダイヤル（OPEN · RISK · BULK · ALL）に統合されています。既定のRISKでは、破壊的操作（変数/スタイル削除・detach・flatten）だけが確認を求め、それ以外は流れます。ブランチ作業ならOPENへ。' },
         { q: 'ウィンドウ間で何かをコピーする必要は？', a: 'ありません。ペアリングは自動です。join_roomツールは、同時に2つのFigmaファイルでプラグインを動かすまれなケース専用です。' },
         { q: 'AIにコードを実行させないことはできますか？', a: 'はい。execute_figmaはFigma Plugin APIを直接扱うエスケープハッチで、任意コード実行であることをドキュメントにも明記しています。望まない場合は「Allow code execution」をオフにしてください。' },
         { q: 'デザインの利用状況はどう理解しますか？', a: 'get_design_systemがファイルと使用中ライブラリを棚卸しし、AIは既存のコンポーネントとトークンから構築します。' }
@@ -335,6 +349,13 @@ export const translations = {
         { n: '25', label: '生产环境踩过的坑，已内置为提示' }
       ],
       caption: '数字来自生产环境设计系统的真实会话，2026年7月。'
+    },
+    outlook: {
+      eyebrow: 'NOW & NEXT',
+      title: '现在的样子，和接下来的路。',
+      p1: '今天的Relai，是32个工具，加上一套文件自己携带的法：你写下的规约、你裁定的判例、你圈出的禁区。agent开工前先读它们，按你定的档位来问——一个刻度盘，四档——做过的每件事都留痕。这一切，都是在一套生产中的设计系统里每晚边用边造出来的。',
+      p2: '接下来沿一条线走：裁决长成规约，规约长成执法，执法长成巡检。你的判断不该随会话消散——在你点头之后，升格为文件自己守护的东西。或许有一天，还有值得在团队之间共享的、带出处的工法集。不在路线图上的：生成速度的竞赛，和一切不留痕迹的动作。',
+      p3: '这些都不是带日期的承诺，是一个方向——在真实的工作里边验证边走。'
     },
     start: {
       eyebrow: 'GET STARTED',

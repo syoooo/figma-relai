@@ -10,6 +10,7 @@ import { Law } from './components/landing/Law';
 import { Changes } from './components/landing/Changes';
 import { Craft } from './components/landing/Craft';
 import { FieldNotes } from './components/landing/FieldNotes';
+import { Outlook } from './components/landing/Outlook';
 import { GetStarted } from './components/landing/GetStarted';
 import { Faq } from './components/landing/Faq';
 import { CtaFooter } from './components/landing/CtaFooter';
@@ -33,6 +34,7 @@ export function App() {
           <Changes />
           <Craft />
           <FieldNotes />
+          <Outlook />
           <GetStarted />
           <Faq />
         </main>
