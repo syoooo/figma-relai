@@ -374,6 +374,8 @@
       padding: var(--sp-6) 0;
     }
     .setting-row + .setting-row { border-top: 1px dashed var(--line-soft); }
+    .setting-row.stack { flex-direction: column; align-items: stretch; }
+    .setting-row.stack .seg { align-self: flex-end; margin-top: var(--sp-4); }
     .setting-row .label { font-size: 10px; color: var(--text); }
     .setting-row .sub { display: block; font-size: 9px; color: var(--faint); }
 
@@ -698,7 +700,7 @@
     <!-- Settings -->
     <div class="rule"><span data-i18n="settings">Config</span></div>
     <div class="panel">
-      <div class="setting-row">
+      <div class="setting-row stack">
         <span class="label"><span data-i18n="approvals">When to ask</span><span class="sub" data-i18n="approvals_hint">OPEN nothing · RISK ghost-making &amp; irreversible · BULK +code &amp; 10+ nodes · ALL every write</span></span>
         <div class="seg approval-seg" role="group" aria-label="Approvals">
           <button id="apprOpen" onclick="setApproval('open')">OPEN</button>
