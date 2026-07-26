@@ -76,6 +76,10 @@ export const FIGMA_COMMANDS = [
   "scan_token_drift",
   "get_conventions",
   "set_conventions",
+  "record_precedent",
+  "list_precedents",
+  "update_precedent",
+  "remove_precedent",
   // Components
   "get_local_components",
   "get_instance_overrides",

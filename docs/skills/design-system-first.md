@@ -5,7 +5,7 @@ The difference between "AI slop" and work a design team accepts is almost always
 ## The sequence
 
 1. **`get_design_system`** — one call, cached per session. Read what exists: components (sorted by usage — high-usage items are the file's vocabulary), variable collections, styles, and the remote items the file already consumes. If the team's library lives in another file and `FIGMA_TOKEN` is set, pass `libraryFileUrl` for the full catalog.
-2. **`manage_conventions` (get)** — if the file carries conventions, they outrank your defaults. (`get_document_overview` includes them automatically.)
+2. **`manage_conventions` (get)** — if the file carries conventions or precedents, they outrank your defaults: conventions are the statutes, precedents are the designer's case law (a precedent saying a deviation is intent means you never "fix" it). (`get_document_overview` includes conventions automatically.)
 3. **Compose from instances** — `manage_components` `action:"instantiate"` with the component key (works for local AND enabled-library keys; remote keys import automatically). Set variants/text via `set_props`. Only draw raw shapes for genuinely new elements.
 4. **Bind, don't hardcode** — colors/spacing/radius come from the file's variables (`manage_variables` `action:"bind"`, or variable fields in `set_properties`). If you must hardcode during exploration, run `analyze_design aspect:"tokens"` afterward and fix with `manage_variables action:"tokenize" fix:true`.
 5. **Verify like a designer** — `screenshot` / `verify_visual` after each increment, not at the end.

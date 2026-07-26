@@ -26,6 +26,7 @@ export interface Manifest {
     inputSchema: unknown;
   }>;
   prompts: Array<{ name: string; description: string }>;
+  userSkills: string;
   pluginCommands: readonly string[];
   pitfalls: typeof PITFALLS;
 }
@@ -54,10 +55,14 @@ export async function buildManifest(version: string): Promise<Manifest> {
       inputSchema: t.inputSchema,
     }))
     .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
-  const prompts = (await client.listPrompts()).prompts.map((p) => ({
-    name: p.name,
-    description: p.description ?? "",
-  }));
+  // User-authored skills (user: prefix) are machine-local, not part of the
+  // contract — excluding them keeps the committed manifest deterministic.
+  const prompts = (await client.listPrompts()).prompts
+    .filter((p) => !p.name.startsWith("user:"))
+    .map((p) => ({
+      name: p.name,
+      description: p.description ?? "",
+    }));
 
   await client.close();
   await server.close();
@@ -67,6 +72,7 @@ export async function buildManifest(version: string): Promise<Manifest> {
     version,
     tools,
     prompts,
+    userSkills: "loaded at runtime from ~/.figma-relai/skills/*.md (registered as user:<name>; not part of this contract)",
     pluginCommands: FIGMA_COMMANDS,
     pitfalls: PITFALLS,
   };

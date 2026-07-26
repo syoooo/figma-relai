@@ -61,17 +61,51 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
 
   server.tool(
     "manage_conventions",
-    "File-level design conventions — a CLAUDE.md that lives INSIDE this Figma file (shared plugin data, travels with the file). action:get reads it, action:set overwrites it with markdown. get_document_overview auto-includes it, and whatever it says (naming rules, spacing habits, do-not-touch areas, library preferences) should be FOLLOWED like user instructions. When the designer states a durable preference ('always use our green', 'never touch the Archive page'), offer to record it here so every future session — from any AI client — inherits it.",
+    "The file's law: conventions (statutes) + precedents (case law), stored INSIDE this Figma file so they travel with it to every future session from any AI client. action:get returns both — read them BEFORE working and follow them like user instructions. Conventions are a markdown doc (action:set overwrites). Precedents are single adjudications the designer made — record one (action:record_precedent, one sentence, with refs to the tokens/nodes/pages it concerns) whenever the designer rules on something durable ('this deviation is intent, not drift', 'never restructure this table'), and SAY in your reply that you recorded it. Write results automatically surface precedents whose refs they touch.",
     {
-      action: z.enum(["get", "set"]),
+      action: z.enum([
+        "get",
+        "set",
+        "record_precedent",
+        "list_precedents",
+        "update_precedent",
+        "remove_precedent",
+      ]),
       content: z.string().optional().describe("set: the full markdown doc (overwrites; max 20k chars)"),
+      kind: z
+        .enum(["decision", "intent", "correction"])
+        .optional()
+        .describe("record/update_precedent: decision (an approval/rejection), intent (a deviation that is deliberate), correction (a do-it-differently ruling). Default intent"),
+      text: z.string().optional().describe("record/update_precedent: the adjudication, one sentence, ≤280 chars"),
+      id: z.string().optional().describe("update/remove_precedent: precedent id (from list_precedents)"),
+      refs: z
+        .object({
+          tokens: z.array(z.string()).optional().describe("Variable IDs this precedent concerns"),
+          nodes: z.array(z.string()).optional().describe("Node IDs this precedent concerns"),
+          pages: z.array(z.string()).optional().describe("Page IDs this precedent concerns"),
+        })
+        .optional()
+        .describe("What the precedent is anchored to — enables in-band surfacing when writes touch these"),
+      limit: z.number().optional().describe("list_precedents: max entries returned (default 50)"),
     },
-    async ({ action, content }) => {
+    async ({ action, content, kind, text, id, refs, limit }) => {
       try {
-        if (action === "set") {
-          return jsonResult(await sendCommand("set_conventions", { content: content ?? "" }));
+        switch (action) {
+          case "set":
+            return jsonResult(await sendCommand("set_conventions", { content: content ?? "" }));
+          case "record_precedent":
+            return jsonResult(
+              await sendCommand("record_precedent", { kind, text, refs, source: "chat" })
+            );
+          case "list_precedents":
+            return jsonResult(await sendCommand("list_precedents", { limit }));
+          case "update_precedent":
+            return jsonResult(await sendCommand("update_precedent", { id, kind, text, refs }));
+          case "remove_precedent":
+            return jsonResult(await sendCommand("remove_precedent", { id }));
+          default:
+            return jsonResult(await sendCommand("get_conventions", {}));
         }
-        return jsonResult(await sendCommand("get_conventions", {}));
       } catch (error) {
         return errorResult(error);
       }

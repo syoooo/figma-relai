@@ -1,5 +1,6 @@
 import { registerHandler } from "../dispatcher.js";
 import { getNodeById } from "../utils/node-helpers.js";
+import { readMemory } from "./memory.js";
 
 registerHandler("set_plugin_data", async (params) => {
   const node = await getNodeById(params.nodeId as string);
@@ -25,7 +26,14 @@ const CONVENTIONS_MAX_CHARS = 20000;
 
 registerHandler("get_conventions", async () => {
   const content = figma.root.getSharedPluginData(CONVENTIONS_NS, CONVENTIONS_KEY);
-  return { content: content || null };
+  // Precedents ride along: conventions are the statutes, precedents the case
+  // law — agents read both in one call at session start.
+  const precedents = readMemory();
+  return {
+    content: content || null,
+    precedents: precedents.slice(0, 30),
+    precedentCount: precedents.length,
+  };
 });
 
 registerHandler("set_conventions", async (params) => {

@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { loadState } from "../state.js";
+import { loadUserSkills } from "../user-skills.js";
 
 // figma-relai doctor — environment triage in one command. Each check reports
 // ok/warn plus the one-line fix, so "it doesn't work" becomes actionable
@@ -154,6 +155,25 @@ export async function runDoctor(): Promise<CheckResult[]> {
           fix: "Optional: add a personal access token to the MCP config env to unlock manage_comments",
         }
   );
+
+  const userSkills = loadUserSkills();
+  if (userSkills.skills.length === 0 && userSkills.errors.length === 0) {
+    results.push({
+      check: "skills",
+      status: "ok",
+      detail: "No user skills — optional (~/.figma-relai/skills/*.md with name/description frontmatter)",
+    });
+  } else {
+    const bad = userSkills.errors
+      .map((e) => `${e.file}: ${e.error}`)
+      .join("; ");
+    results.push({
+      check: "skills",
+      status: userSkills.errors.length ? "warn" : "ok",
+      detail: `${userSkills.skills.length} user skill(s) loaded${userSkills.errors.length ? `, ${userSkills.errors.length} skipped` : ""}`,
+      ...(userSkills.errors.length ? { fix: `Fix frontmatter: ${bad}` } : {}),
+    });
+  }
 
   return results;
 }

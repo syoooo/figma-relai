@@ -427,6 +427,37 @@
     .approval-actions { display: flex; gap: var(--sp-8); }
     .approval-actions .btn.deny { border-color: var(--line); color: var(--faint); }
     .approval-actions .btn.deny:hover { background: var(--line); color: var(--text); }
+    .approval-intent {
+      color: var(--text); font-size: 11px; line-height: 1.5;
+      margin-bottom: var(--sp-4); overflow-wrap: anywhere;
+    }
+    .approval-intent.none { color: var(--faint); font-style: normal; }
+    .approval-reason {
+      width: 100%; margin-bottom: var(--sp-8);
+      background: var(--bg); border: 1px solid var(--line); color: var(--text);
+      font-family: var(--mono); font-size: 10px; padding: 5px var(--sp-8);
+    }
+    .approval-reason::placeholder { color: var(--faint); }
+    .approval-reason:focus { outline: none; border-color: var(--amber-dim); }
+
+    /* ── File memory (precedents) ───────────────────────── */
+    .mem-entry { display: flex; align-items: baseline; gap: var(--sp-8); padding: 4px 0; border-bottom: 1px solid var(--line-soft); font-size: 10px; }
+    .mem-entry:last-child { border-bottom: none; }
+    .mem-date { color: var(--faint); flex-shrink: 0; }
+    .mem-kind { flex-shrink: 0; color: var(--amber-dim); border: 1px solid var(--line); padding: 0 4px; font-size: 9px; }
+    .mem-text { color: var(--muted); flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .mem-del { flex-shrink: 0; background: none; border: none; color: var(--faint); cursor: pointer; font-family: var(--mono); font-size: 10px; padding: 0 2px; line-height: 1; }
+    .mem-del:hover { color: var(--err); }
+    .mem-del svg { display: inline-block; vertical-align: -1px; }
+    .mem-empty { color: var(--faint); font-size: 10px; padding: 4px 0; }
+    .mem-input {
+      width: 100%; margin-top: var(--sp-8);
+      background: var(--bg); border: 1px dashed var(--line); color: var(--text);
+      font-family: var(--mono); font-size: 10px; padding: 5px var(--sp-8);
+    }
+    .mem-input::placeholder { color: var(--faint); }
+    .mem-input:focus { outline: none; border-color: var(--amber-dim); }
+    .mem-count { color: var(--faint); font-size: 9px; margin-left: auto; }
 
     /* ── Tools list ─────────────────────────────────────── */
     .tools-list {
@@ -574,6 +605,11 @@
         <span class="dots"></span>
         <span class="val muted"><span class="view-link" data-i18n="conventions_view">view</span></span>
       </div>
+      <div class="leader-row conv-row" id="memRow" onclick="openMemModal()">
+        <span class="key">MEMORY</span>
+        <span class="dots"></span>
+        <span class="val muted"><span id="memCount">0</span> · <span class="view-link" data-i18n="conventions_view">view</span></span>
+      </div>
       <div class="room-line" id="roomLine" onclick="copyConnectedRoom()">
         <span class="room-key" data-i18n="room_label">Room</span>
         <span class="room-value" id="connectedRoom"></span>
@@ -593,6 +629,19 @@
       </div>
     </div>
 
+    <!-- Memory modal: the file's precedents — the designer's record, editable -->
+    <div class="modal-overlay" id="memModal" onclick="if (event.target === this) closeMemModal()">
+      <div class="panel modal-box">
+        <div class="modal-head">
+          <span class="key">MEMORY</span>
+          <span class="dots"></span>
+          <button class="modal-close" onclick="closeMemModal()" aria-label="close">&#10005;</button>
+        </div>
+        <div id="memList"><div class="mem-empty" data-i18n="memory_empty">no precedents yet — they accumulate as you adjudicate</div></div>
+        <input class="mem-input" id="memInput" data-i18n-ph="memory_add_ph" placeholder="+ note a precedent… (Enter)" onkeydown="onMemInputKey(event)">
+      </div>
+    </div>
+
     <!-- Progress -->
     <div id="progressContainer" class="progress-container">
       <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
@@ -602,7 +651,9 @@
     <!-- Approval gate: the agent wants to write; the designer decides -->
     <div class="panel approval-card" id="approvalCard">
       <div class="approval-title" data-i18n="approval_title">AGENT REQUESTS</div>
+      <div class="approval-intent" id="approvalIntent"></div>
       <div class="approval-cmd"><code id="approvalCmd"></code></div>
+      <input class="approval-reason" id="approvalReason" data-i18n-ph="approval_reason_ph" placeholder="reason → saved to file memory (optional)">
       <div class="approval-actions">
         <button class="btn" onclick="answerApproval(true)" data-i18n="approve">Approve</button>
         <button class="btn deny" onclick="answerApproval(false)" data-i18n="deny">Deny</button>
@@ -665,7 +716,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.2.8 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
+  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.3.0 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
 
   <script>
     // ---------- i18n ----------
@@ -712,6 +763,14 @@
         lock_empty: 'select something first, then toggle',
         lock_on_prefix: 'locked to: ',
         conventions_view: 'view',
+        approval_no_intent: '(agent gave no description of what this does)',
+        approval_reason_ph: 'reason → saved to file memory (optional)',
+        memory_title: 'Memory',
+        memory_add_ph: '+ note a precedent… (Enter)',
+        memory_empty: 'no precedents yet — they accumulate as you adjudicate',
+        kind_decision: 'decision',
+        kind_intent: 'intent',
+        kind_correction: 'correction',
         tools_title: 'Toolset',
         disconnect: 'Disconnect'
       },
@@ -757,6 +816,14 @@
         lock_empty: '先にオブジェクトを選択してください',
         lock_on_prefix: 'ロック中: ',
         conventions_view: '表示',
+        approval_no_intent: '（エージェントは目的を説明していません）',
+        approval_reason_ph: '理由 → ファイルの記憶に残す（任意）',
+        memory_title: '記憶',
+        memory_add_ph: '+ 判例をひとこと…（Enter で保存）',
+        memory_empty: 'まだ判例はありません — 裁決のたびに増えていきます',
+        kind_decision: '裁決',
+        kind_intent: '意図',
+        kind_correction: '修正',
         tools_title: 'ツール一覧',
         disconnect: '切断'
       },
@@ -802,6 +869,14 @@
         lock_empty: '请先选中内容再开启',
         lock_on_prefix: '已锁定: ',
         conventions_view: '查看',
+        approval_no_intent: '（agent 没有说明这次要做什么）',
+        approval_reason_ph: '理由 → 记入文件记忆（可选）',
+        memory_title: '记忆',
+        memory_add_ph: '+ 记一笔…（Enter 保存）',
+        memory_empty: '还没有判例 — 每次裁决都会沉淀在这里',
+        kind_decision: '裁决',
+        kind_intent: '意图',
+        kind_correction: '修正',
         tools_title: '工具列表',
         disconnect: '断开'
       }
@@ -820,6 +895,10 @@
       document.querySelectorAll('[data-i18n-title]').forEach(function (el) {
         el.title = t(el.getAttribute('data-i18n-title'));
       });
+      document.querySelectorAll('[data-i18n-ph]').forEach(function (el) {
+        el.placeholder = t(el.getAttribute('data-i18n-ph'));
+      });
+      renderMemory();
       var ids = { en: 'langEn', ja: 'langJa', zh: 'langZh' };
       for (var l in ids) {
         document.getElementById(ids[l]).className = l === locale ? 'active' : '';
@@ -934,6 +1013,14 @@
         return;
       }
       var req = approvalQueue[0];
+      var intentEl = document.getElementById('approvalIntent');
+      if (req.intent) {
+        intentEl.textContent = req.intent;
+        intentEl.className = 'approval-intent';
+      } else {
+        intentEl.textContent = t('approval_no_intent');
+        intentEl.className = 'approval-intent none';
+      }
       document.getElementById('approvalCmd').textContent =
         req.command + (req.scale ? ' · ' + req.scale : '');
       card.classList.add('show');
@@ -941,13 +1028,75 @@
 
     function answerApproval(approved) {
       var req = approvalQueue.shift();
+      var reasonEl = document.getElementById('approvalReason');
+      var reason = reasonEl ? reasonEl.value.trim() : '';
+      if (reasonEl) reasonEl.value = '';
       if (req) {
         parent.postMessage(
-          { pluginMessage: { type: 'approval-response', id: req.id, approved: approved } },
+          { pluginMessage: { type: 'approval-response', id: req.id, approved: approved, reason: reason } },
           '*'
         );
       }
       showNextApproval();
+    }
+
+    // ---------- File memory (precedents) ----------
+    var memoryEntries = [];
+    var MEM_DEL_SVG = '<svg viewBox="0 0 256 256" width="9" height="9" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg>';
+
+    function renderMemory() {
+      var list = document.getElementById('memList');
+      if (!list) return;
+      list.textContent = '';
+      document.getElementById('memCount').textContent = String(memoryEntries.length);
+      if (memoryEntries.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'mem-empty';
+        empty.textContent = t('memory_empty');
+        list.appendChild(empty);
+        return;
+      }
+      memoryEntries.forEach(function (e) {
+        var row = document.createElement('div');
+        row.className = 'mem-entry';
+        var d = document.createElement('span');
+        d.className = 'mem-date';
+        d.textContent = e.date;
+        var k = document.createElement('span');
+        k.className = 'mem-kind';
+        k.textContent = t('kind_' + e.kind);
+        var x = document.createElement('span');
+        x.className = 'mem-text';
+        x.textContent = e.text;
+        var del = document.createElement('button');
+        del.className = 'mem-del';
+        del.innerHTML = MEM_DEL_SVG;
+        del.setAttribute('aria-label', 'delete precedent');
+        del.onclick = function () {
+          parent.postMessage({ pluginMessage: { type: 'memory-remove', id: e.id } }, '*');
+        };
+        row.appendChild(d);
+        row.appendChild(k);
+        row.appendChild(x);
+        row.appendChild(del);
+        list.appendChild(row);
+      });
+    }
+
+    function onMemInputKey(ev) {
+      if (ev.key !== 'Enter') return;
+      var input = document.getElementById('memInput');
+      var text = (input.value || '').trim();
+      if (!text) return;
+      parent.postMessage({ pluginMessage: { type: 'memory-record', text: text, kind: 'intent' } }, '*');
+      input.value = '';
+    }
+
+    function openMemModal() {
+      document.getElementById('memModal').classList.add('open');
+    }
+    function closeMemModal() {
+      document.getElementById('memModal').classList.remove('open');
     }
 
     var conventionsContent = '';
@@ -1310,7 +1459,15 @@
         renderApprovalSeg();
         document.getElementById('convRow').style.display = msg.hasConventions ? '' : 'none';
         conventionsContent = msg.conventionsContent || '';
+        memoryEntries = msg.memory || [];
+        renderMemory();
         if (s.autoConnect !== false) connect();
+        return;
+      }
+
+      if (msg.type === 'memory-state') {
+        memoryEntries = msg.entries || [];
+        renderMemory();
         return;
       }
 
@@ -1322,7 +1479,7 @@
       }
 
       if (msg.type === 'approval-request') {
-        approvalQueue.push({ id: msg.id, command: msg.command, scale: msg.scale });
+        approvalQueue.push({ id: msg.id, command: msg.command, scale: msg.scale, intent: msg.intent });
         showNextApproval();
         return;
       }

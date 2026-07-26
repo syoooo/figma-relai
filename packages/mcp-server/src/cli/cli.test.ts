@@ -22,7 +22,7 @@ describe("figma-relai manifest", () => {
   test("stdout is pure JSON with the contract shape", () => {
     expect(out.status).toBe(0);
     expect(Object.keys(manifest).sort()).toEqual(
-      ["name", "pitfalls", "pluginCommands", "prompts", "tools", "version"].sort()
+      ["name", "pitfalls", "pluginCommands", "prompts", "tools", "userSkills", "version"].sort()
     );
   });
 
@@ -81,7 +81,7 @@ describe("figma-relai doctor", () => {
     const out = run("doctor", "--json");
     const results = JSON.parse(out.stdout);
     const checks = results.map((r: { check: string }) => r.check);
-    expect(checks).toEqual(["node", "relay", "plugin", "state", "token"]);
+    expect(checks).toEqual(["node", "relay", "plugin", "state", "token", "skills"]);
     for (const r of results) {
       expect(["ok", "warn"]).toContain(r.status);
       expect(r.detail.length).toBeGreaterThan(0);

@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { loadUserSkills } from "./user-skills.js";
 
 // Skill documents are inlined into the bundle at build time (tsup .md loader),
 // so they ship with the npm package and need no filesystem access at runtime.
@@ -11,6 +12,7 @@ import componentSpec from "../../../docs/skills/component-spec.md";
 import commentDrivenTasks from "../../../docs/skills/comment-driven-tasks.md";
 import designSystemFirst from "../../../docs/skills/design-system-first.md";
 import janitorialCleanup from "../../../docs/skills/janitorial-cleanup.md";
+import memoryAndPrecedents from "../../../docs/skills/memory-and-precedents.md";
 
 const SKILLS: Array<[name: string, description: string, text: string]> = [
   [
@@ -58,6 +60,11 @@ const SKILLS: Array<[name: string, description: string, text: string]> = [
     "Bulk cleanup recipes: content-based layer renaming, tokenizing hardcoded values, spacing normalization, detached-instance sweeps — with preview-first discipline.",
     janitorialCleanup,
   ],
+  [
+    "memory-and-precedents",
+    "The file's case law: when to record a designer adjudication as a precedent, when not to, and how memory is maintained. Load in any session that adjudicates or touches a file with existing precedents.",
+    memoryAndPrecedents,
+  ],
 ];
 
 export function registerPrompts(server: McpServer): void {
@@ -67,6 +74,20 @@ export function registerPrompts(server: McpServer): void {
         {
           role: "user" as const,
           content: { type: "text" as const, text },
+        },
+      ],
+    }));
+  }
+
+  // User-authored skills: ~/.figma-relai/skills/*.md, registered with a
+  // "user:" prefix so they can never shadow the built-ins. Invalid files are
+  // skipped silently here; `figma-relai doctor` names them.
+  for (const skill of loadUserSkills().skills) {
+    server.prompt(`user:${skill.name}`, skill.description, () => ({
+      messages: [
+        {
+          role: "user" as const,
+          content: { type: "text" as const, text: skill.text },
         },
       ],
     }));
