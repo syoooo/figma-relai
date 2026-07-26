@@ -2,6 +2,8 @@
 
 Every Figma file this plugin touches can carry its own case law: **precedents** — single adjudications the designer made, stored inside the file (shared plugin data) so they reach every future session from any AI client. Conventions are the statutes; precedents are the case law. Together they are the file's law, and `manage_conventions action:get` returns both.
 
+When a write touches something a precedent references, **the file speaks**: the ruling arrives attached to your tool result. Treat it as the designer's voice from a past session calling a halt — the four-act shape is always the same: they said it once, the file kept it, you came to "fix" it knowing nothing, their words stop you. Back off before you undo something intentional.
+
 ## Read before you work
 
 At the start of any session that will modify the file, call `manage_conventions action:get`. Treat what comes back the way you treat user instructions:

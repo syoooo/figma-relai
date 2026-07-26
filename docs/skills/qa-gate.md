@@ -6,7 +6,7 @@ Human-triggered, review-moment audit of a file (or a set of pages). Run it when 
 
 Run in this order (each is read-only):
 
-1. `manage_conventions action:get` — the law you'll be judging against (conventions + precedents). If precedents mark deviations as intent, they are NOT findings.
+1. `manage_conventions action:get` — the law you'll be judging against (conventions + precedents). If precedents mark deviations as intent, they are NOT findings — the file already ruled. List them as "waived by precedent", never as problems.
 2. `analyze_design aspect:readiness` — agent-readiness score + top gaps.
 3. `analyze_design aspect:ghosts` (pass `pageIds` for a multi-page pass) — stale references to soft-deleted variables. Any ghost count > 0 is a red flag for publish.
 4. `analyze_design aspect:voice` — the file's signature (radius/spacing/type, tokenized-paint rate, instance rate).

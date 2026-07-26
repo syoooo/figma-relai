@@ -4,9 +4,9 @@ English | [日本語](README.ja.md) | [中文](README.zh.md)
 
 [figma-relai.vercel.app](https://figma-relai.vercel.app)
 
-**Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. It works on every Figma plan, because writes go through a Figma plugin rather than the paid REST API.
+**Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. Writes go through a Figma plugin rather than the paid REST API, so it works on every Figma plan — and the file itself keeps your rules and rulings as you go.
 
-Relai is built on a simple position: the AI era should put designers *more* in charge, not less — taste and judgment stay with you, the labor moves to a model you already trust, with every step visible.
+Relai's position: the AI era should put designers *more* in charge, not less. Taste and judgment stay with you; the labor moves to a model you already trust, with every step visible.
 
 <img src="assets/plugin-ui.png" alt="The Relai plugin: activity feed, connection status, and a Stop button" width="380" />
 
@@ -22,7 +22,7 @@ Relai is built on a simple position: the AI era should put designers *more* in c
 
 Every command shows up in the plugin as it runs, with timing and success or failure. Click an entry to jump to that layer on the canvas. Press **Stop** if you change your mind — the rest of the batch is cancelled.
 
-Relai is how its author maintains a production design system. From one of those sessions — July 2026, numbers unedited:
+The numbers scale. Relai is how its author maintains a production design system, and this excerpt is from one of those sessions — July 2026, unedited:
 
 ```text
 audit_colors     45,509 nodes scanned · 3.9s
@@ -51,13 +51,13 @@ For Cursor, add this to `.cursor/mcp.json`:
 { "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"] } } }
 ```
 
-**3. Ask for something.** Pairing is automatic; there is nothing to copy between windows. The `join_room` tool exists for one rare case only: two Figma files running the plugin at the same time.
+**3. Ask for something.** Pairing is automatic; there is nothing to copy between windows.
 
 ## What it's good at
 
 Understanding a design. "How is this screen put together?" gets you structure, colors, layout, and token usage in one pass, and the AI can take a screenshot to actually look at the canvas rather than guess.
 
-Bulk edits. "Translate every button label to English" or "recolor this for dark mode" become one round-trip across dozens of nodes instead of an afternoon of clicking.
+Bulk edits. "Translate every button label to English" or "recolor this for dark mode" become one round-trip across dozens of layers instead of an afternoon of clicking.
 
 Audits. `analyze_design` checks color-token coverage, auto-layout quality, component health, and accessibility (WCAG contrast, touch targets, text sizes) — or all four at once as a weighted 0–100 health score you can put in a review. It also scores agent-readiness (how prepared the file is for AI work, with top gaps), fingerprints the file's voice (its radius/spacing/type signature), and runs a ghost census for references to soft-deleted variables.
 
@@ -65,24 +65,46 @@ Design systems. Variable collections with modes, token binding, shared styles, c
 
 Everything else. `execute_figma` runs JavaScript against the Figma Plugin API directly — the same escape-hatch approach as Figma's official MCP — with a `relai.*` helper library that makes the correct pattern the shortest one, hints attached to known errors, and a lint that flags silent mistakes. If you'd rather the AI never ran code, turn it off with the plugin's "Allow code execution" toggle.
 
+## The file carries the law
+
+Rules you'd normally paste into every prompt live inside the Figma file itself, so any future session — from any MCP client, by anyone who opens the file — starts already briefed.
+
+**Conventions** are a little CLAUDE.md stored in the file: naming rules, token routing, spacing habits. The AI reads them before working.
+
+**Memory** holds your precedents. Rule once — "this gap is on purpose" — and the ruling is recorded in the file; any later edit that touches what it references gets your words attached to its result:
+
+```text
+you        "this gap is on purpose — remember it"
+file       record_precedent · saved ✓
+
+(another session, a different AI, about to "fix" the gap)
+file       precedent attached — "…is on purpose" · the edit backs off
+```
+
+The panel's Memory row lists every entry; delete any of them any time. Nothing is recorded silently.
+
+**AI no-go zones** fence off whole pages — brand masters, legal, the one that is already pixel-perfect. Writes into a guarded page are rejected before they run, with the reason on the receipt, and only you edit the guard list.
+
+**Confirmation** is one level with four stops — OPEN · RISK · BULK · ALL. At RISK, the default, only dangerous operations ask (deleting variables or styles, detach, flatten); everything else keeps moving. Set it in the panel; agents can't move it.
+
 ## You stay in control
 
-The plugin is the designer's side of the deal: a live activity feed of everything the AI does, an "AI connected" indicator that means an agent is actually paired (not just that a server is running), and a Stop button that cancels pending work. Selection and page changes you make flow back to the AI as events, so "now do the same to this one" works without re-explaining. The relay is local: file contents move only between Figma, your machine, and the AI client you already trust.
+The plugin is the designer's side of the deal: a live activity feed of everything the AI does, an AI-connected indicator that means an agent is actually paired (not just that a server is running), and a Stop button that cancels pending work. Selection and page changes you make flow back to the AI as events, so "now do the same to this one" works without re-explaining.
 
-Three dials go further when you want them. **Approvals** ("Ask before big edits") holds bulk writes and code execution until you press Approve in the panel. **Lock to selection** rejects edits outside whatever you've selected — the AI gets a clear error, not a silent pass. And **file conventions** are a little CLAUDE.md stored inside the Figma file itself: naming rules, spacing habits, do-not-touch pages — every future session, from any AI client, reads it before working. Since 0.3 the file also keeps **memory**: rulings you make ("this deviation is intent, not drift") are recorded as precedents inside the file, and any future edit that touches what they reference gets the precedent attached to its result — the AI is corrected by your own case law, in the moment. The panel's Memory row shows every entry; delete any of them any time. **AI no-go zones** guard whole pages: writes into a guarded page are rejected at dispatch, and only you edit the guard list. And confirmation is one four-stop dial — OPEN · RISK · BULK · ALL: at RISK (the default) only ghost-making and irreversible operations ask; dial to OPEN for branch workflows. The UI speaks English, 日本語, and 中文.
+**Lock to selection** rejects edits outside whatever you've selected — the AI gets a clear error, not a silent pass. The relay is local: file contents move only between Figma, your machine, and the AI client you already trust. The UI speaks English, 日本語, and 中文.
 
 ## How it works
 
 ```
 AI (any MCP client)
   ↕ stdio
-MCP server            30 tools · analysis · verification
+MCP server            32 tools · analysis · verification
   (embedded relay)    WebSocket room hub on 127.0.0.1:9055
   ↕ WebSocket
 Figma plugin          executes Plugin API calls
 ```
 
-The relay lives inside the MCP server, so there is no extra process to keep alive. When several MCP clients run at once, the first one hosts the relay and the others connect to it; if the host exits, a survivor takes over. Both sides remember their room, rejoin after restarts or sleep, and find each other without any copy-pasting.
+The relay lives inside the MCP server, so there is no extra process to keep alive. When several MCP clients run at once, the first one hosts the relay and the others connect to it; if the host exits, a survivor takes over. Both sides remember their room, rejoin after restarts or sleep, and find each other without any copy-pasting. The `join_room` tool exists for one rare case only: two Figma files running the plugin at the same time.
 
 Ports are fixed by Figma's plugin sandbox: the manifest allowlists `ws://localhost:9055–9057`, and other ports cannot work without editing `manifest.json`. That's why there is no port setting in the UI.
 
@@ -107,7 +129,7 @@ Each tool is self-describing, so the AI sees full parameter docs. The same contr
 
 ## Relai and Figma's official MCP
 
-Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are excellent, and both are reserved for full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: every plan including free, whatever model and subscription you already use, everything running on your machine, and the designer holding the controls. If you have the seats, the two coexist happily — run both.
+Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are reserved for full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: every plan including free, whatever model and subscription you already use, everything running on your machine, and the designer holding the controls. If you have the seats, the two coexist happily — run both.
 
 ## Optional: comments
 
