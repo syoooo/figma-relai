@@ -6,6 +6,7 @@ import { Hero } from './components/landing/Hero';
 import { Belief } from './components/landing/Belief';
 import { Ledger } from './components/landing/Ledger';
 import { Workflows } from './components/landing/Workflows';
+import { Law } from './components/landing/Law';
 import { Changes } from './components/landing/Changes';
 import { Craft } from './components/landing/Craft';
 import { FieldNotes } from './components/landing/FieldNotes';
@@ -28,6 +29,7 @@ export function App() {
           <Belief />
           <Ledger />
           <Workflows />
+          <Law />
           <Changes />
           <Craft />
           <FieldNotes />

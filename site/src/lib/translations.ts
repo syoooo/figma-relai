@@ -17,7 +17,8 @@ export const translations = {
     belief: {
       eyebrow: 'THE IDEA',
       p1: 'Relai is built on a simple position: the AI era should put designers more in charge, not less. Taste and judgment stay with you; the labor moves to a model you already trust — under your rules, on your system, with every step visible.',
-      p2: 'It is not a position invented for this page: Relai is how its author maintains a production design system — the audits, the repairs, the builds all run through it. The next section is one of those evenings.'
+      p2: 'It is not a position invented for this page: Relai is how its author maintains a production design system — the audits, the repairs, the builds all run through it. The next section is one of those evenings.',
+      p3: 'The writable part of taste becomes rules the machine keeps. The part that can\u2019t be written always waits for your yes.'
     },
     flows: {
       eyebrow: 'WAYS TO ASK',
@@ -29,6 +30,18 @@ export const translations = {
           rows: ['you › (selects Card / Pricing)', 'you › same treatment as the last one', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
         { title: 'It reads the manual first', body: 'Ten workflow documents ship with the server as MCP prompts — token strategy, component conventions, audits, bulk cleanup, comment-driven work, file memory & precedents — so the AI arrives briefed. Your own skills load too, from ~/.figma-relai/skills. And the whole tool contract is a machine-readable manifest, regenerated from the running code on every build.',
           rows: ['10 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+      ]
+    },
+    law: {
+      eyebrow: 'CASE LAW',
+      title: 'Rule once. The file remembers.',
+      body: 'Say “this deviation is intent, not drift” and it becomes a precedent — recorded inside the file, deletable any time in the panel. From then on, any edit that touches what it references gets the precedent attached to its result, from any AI client. Your judgment compounds; the agent is corrected by your own case law, in the moment.',
+      rows: [
+        'you › this deviation is intent — remember it',
+        'record_precedent · saved to file ✓',
+        '(a week later, a different client)',
+        'manage_variables · update demo/corner',
+        'precedents: “…is intent, not drift” — reverted'
       ]
     },
     ledger: {
@@ -63,7 +76,7 @@ export const translations = {
       items: [
         { kicker: 'pitfalls', title: 'The minefield, mapped', body: 'The Figma Plugin API is full of traps — fonts must load before text edits, instances reject new children, resizing pins auto-layout axes. Relai ships 25 pitfalls learned in production: when the AI trips one, the raw error comes back with the fix attached, and the same registry compiles into the cheat sheet the AI reads before writing any code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', title: 'It checks its own work', body: 'After a write, the AI can look: screenshot the node, compare against intent, re-read the result. Verification is a first-class step in the loop, not an afterthought — the difference between “done” and “actually done”.', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
-        { kicker: 'conventions', title: 'Your system comes first', body: 'Before building, the AI inventories the file — collections, tokens, components, the libraries actually in use — and the conventions you store in the file itself ride along into its context: naming rules, token routing, no-go zones. It builds from your components instead of redrawing near-copies.', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
+        { kicker: 'conventions', title: 'Your system comes first', body: 'Before building, the AI inventories the file — collections, tokens, components, the libraries actually in use — and the conventions you store in the file itself ride along into its context: naming rules, token routing, no-go zones. Since 0.3 the file also carries precedents — your recorded rulings, surfaced on any write that touches them. It builds from your components instead of redrawing near-copies.', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components\n# memory — precedents, e.g.\n· "KARTE Badge border=1 is intent"' },
         { kicker: 'navigation', title: 'A map, not a maze', body: 'Thirty-two tools is a curated surface, not an API dump. Every result comes back structured — a summary, honest notes about what got truncated, and a recommended next step — so the model navigates instead of wandering. The full contract also exists as a machine-readable manifest, regenerated from the running code on every build — and if the chain itself misbehaves, one doctor command diagnoses it end to end.', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
       ]
     },
@@ -126,7 +139,8 @@ export const translations = {
     belief: {
       eyebrow: 'THE IDEA',
       p1: 'Relaiの出発点はシンプルです。AIの時代には、デザイナーの主導権はむしろ大きくなるべきだ、という立場です。判断と好みはあなたの手元に。作業は、あなたがすでに信頼しているモデルへ — あなたのルールで、あなたのシステムの上で、すべて見えるかたちで。',
-      p2: 'これは、このページのために用意した主張ではありません。作者自身が、実運用中の自分のデザインシステムの面倒をRelaiで見ています — 監査も、修復も、構築も。次のセクションは、そのうちのある晩の記録です。'
+      p2: 'これは、このページのために用意した主張ではありません。作者自身が、実運用中の自分のデザインシステムの面倒をRelaiで見ています — 監査も、修復も、構築も。次のセクションは、そのうちのある晩の記録です。',
+      p3: '書ける好みは、機械も守る規約に。書けない部分は、いつまでもあなたの頷きを待つ。'
     },
     flows: {
       eyebrow: 'WAYS TO ASK',
@@ -138,6 +152,18 @@ export const translations = {
           rows: ['you › （Card / Pricingを選択）', 'you › さっきと同じように', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
         { title: '働く前に、手引きを読んでいる', body: 'トークン戦略、コンポーネント規約、監査、一括整理、コメント運用、ファイルの記憶と判例 — 10本のワークフロー文書がMCPプロンプトとしてサーバーに同梱され、AIは下調べ済みで現場に来ます。自作スキルも~/.figma-relai/skillsから読み込めます。ツール契約の全体も機械可読のmanifestとして、ビルドごとに実行コードから再生成されます。',
           rows: ['10 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+      ]
+    },
+    law: {
+      eyebrow: 'CASE LAW',
+      title: '一度の裁定を、\nファイルは忘れない。',
+      body: '「この逸脱は意図で、ドリフトではない」と言えば、それは判例になります — ファイルの中に記録され、パネルからいつでも消せます。以後、その参照先に触れる編集には、どのAIクライアントからでも結果に判例が添付されます。あなたの判断は積み重なり、agentはあなた自身の判例法に、その場で正されます。',
+      rows: [
+        'you › この逸脱は意図 — 覚えておいて',
+        'record_precedent · saved to file ✓',
+        '（一週間後、別のクライアントで）',
+        'manage_variables · update demo/corner',
+        'precedents: “…is intent, not drift” — reverted'
       ]
     },
     ledger: {
@@ -172,7 +198,7 @@ export const translations = {
       items: [
         { kicker: 'pitfalls', title: '落とし穴には、地図がある。', body: 'Figma Plugin APIには落とし穴が多くあります — テキスト編集前のフォント読み込み、子を追加できないインスタンス、リサイズで固定されるオートレイアウト。Relaiには実際の運用で踏んだ25件の知見が同梱されていて、AIが同じ穴を踏むと、エラーに解決策を添えて返します。同じ一覧は、コードを書く前にAIが読むチートシートにもなります。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', title: '書いたら、見て確かめる。', body: '書き込みのあと、AIはスクリーンショットで実物を確認し、意図と見比べ、結果を読み直せます。検証は後付けではなく、作業ループの標準ステップです。「終わった」と「本当に終わった」の差は、ここで生まれます。', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
-        { kicker: 'conventions', title: 'まず、あなたのシステムから。', body: '構築の前に、AIはまずファイルを調べます — コレクション、トークン、コンポーネント、実際に使われているライブラリ。ファイル自身に保存した規約（命名、トークンの通し方、触らない場所）も、そのままコンテキストに入ります。似た見た目を描き直すのではなく、あなたのコンポーネントから組み立てます。', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
+        { kicker: 'conventions', title: 'まず、あなたのシステムから。', body: '構築の前に、AIはまずファイルを調べます — コレクション、トークン、コンポーネント、実際に使われているライブラリ。ファイル自身に保存した規約（命名、トークンの通し方、触らない場所）も、そのままコンテキストに入ります。0.3からはファイルが判例——あなたの裁定の記録——も携え、参照先に触れる書き込みには判例が浮上します。似た見た目を描き直すのではなく、あなたのコンポーネントから組み立てます。', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components\n# memory — precedents, e.g.\n· "KARTE Badge border=1 is intent"' },
         { kicker: 'navigation', title: '結果には、次の一手がついてくる。', body: '32個のツールは、APIをそのまま並べたものではなく、選んで設計した操作面です。結果は必ず構造化されて返ります — 要約、省略した箇所の注記、そして推奨される次の一手。だからモデルは迷いません。契約の全体は機械可読のmanifestとしてビルドごとに再生成され、接続の調子が悪いときはdoctorコマンド一発で全体を診断できます。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
       ]
     },
@@ -235,7 +261,8 @@ export const translations = {
     belief: {
       eyebrow: 'THE IDEA',
       p1: 'Relai的出发点很简单：AI时代，设计师的主导权应该变大，而不是变小。判断和品味留在你手里；活交给你已经信任的模型 —— 按你的规则，在你的系统之上，每一步都看得见。',
-      p2: '这份立场不是为这个页面现写的：Relai的作者自己，就在用它维护一套生产中的设计系统 —— 审计、修复、构建，都走它。下一节，就是其中一晚的记录。'
+      p2: '这份立场不是为这个页面现写的：Relai的作者自己，就在用它维护一套生产中的设计系统 —— 审计、修复、构建，都走它。下一节，就是其中一晚的记录。',
+      p3: '可写的品味，写成机器也守的规矩；写不下的部分，永远等你点头。'
     },
     flows: {
       eyebrow: 'WAYS TO ASK',
@@ -247,6 +274,18 @@ export const translations = {
           rows: ['you › （选中Card / Pricing）', 'you › 和刚才一样处理', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
         { title: '开工之前，先读手册', body: 'Token策略、组件规范、审计流程、批量整理、评论协作、文件记忆与判例 —— 10份工作流文档作为MCP prompts内置在服务器里，AI是备过课才进场的。你自作的skill也能从~/.figma-relai/skills装载。整套工具契约也是机器可读的manifest，每次构建都从运行代码重新生成。',
           rows: ['10 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+      ]
+    },
+    law: {
+      eyebrow: 'CASE LAW',
+      title: '裁决一次，文件记一辈子。',
+      body: '说一句「这个偏离是意图，不是漂移」，它就成了判例——记录在文件体内，面板里随时可删。此后任何触到其引用对象的编辑，无论来自哪个AI客户端，结果里都会附上这条判例。你的判断在累积；agent在动手的瞬间，被你自己的判例法纠正。',
+      rows: [
+        'you › 这个偏离是意图——记住',
+        'record_precedent · saved to file ✓',
+        '（一周后，另一个客户端）',
+        'manage_variables · update demo/corner',
+        'precedents: “…is intent, not drift” — reverted'
       ]
     },
     ledger: {
@@ -281,7 +320,7 @@ export const translations = {
       items: [
         { kicker: 'pitfalls', title: '雷区，已绘制成图。', body: 'Figma Plugin API处处是坑 —— 编辑文本前必须加载字体、实例不接受新子级、resize会锁死自动布局轴。Relai内置了25条生产环境踩出来的坑：AI一旦踩中，原始报错会连同解法一起返回；同一份清单还会编译成AI写代码前要读的速查表。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text —— new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', title: '自己的活，自己验。', body: '写入之后，AI能"亲眼看"：截图节点、对照意图、重读结果。验证是循环里的标配步骤，而不是事后补救 —— "做完了"和"真的做完了"的差别就在这里。', artifact: 'set_properties         24 nodes · 0.6s  ✓\nexport_node_as_image                    ✓\nverify_visual          → match          ✓' },
-        { kicker: 'conventions', title: '先学你的系统。', body: '动手之前，AI会先盘点文件 —— 集合、Token、组件、实际在用的库；你存在文件里的规约（命名规则、Token路径、禁改区）也会直接进入它的上下文。它基于你的组件构建，而不是重画近似副本。', artifact: '# conventions —— carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components' },
+        { kicker: 'conventions', title: '先学你的系统。', body: '动手之前，AI会先盘点文件 —— 集合、Token、组件、实际在用的库；你存在文件里的规约（命名规则、Token路径、禁改区）也会直接进入它的上下文。从0.3起文件还携带判例——你的裁决记录，任何触到引用对象的写入都会浮出对应判例。它基于你的组件构建，而不是重画近似副本。', artifact: '# conventions —— carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components\n# memory — precedents, e.g.\n· "KARTE Badge border=1 is intent"' },
         { kicker: 'navigation', title: '给的是路标，不是迷宫。', body: '32个工具是挑过、排过的操作面，不是把API原样倒出来。每个结果都以结构化形式返回 —— 摘要、对截断之处的诚实标注，以及建议的下一步 —— 模型不再瞎逛，而是循路前进。整套契约同时以机器可读的manifest存在、随每次构建重新生成；链路出问题时，一条doctor命令即可端到端诊断。', artifact: '{ "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_info on\n    the set you plan to extend" }' }
       ]
     },

@@ -13,6 +13,7 @@ export function Belief() {
         <div className="mt-8 max-w-3xl space-y-6">
           <p className="text-[17px] leading-[1.9] text-foreground md:text-[19px]">{copy.p1}</p>
           <p className="text-[17px] leading-[1.9] text-muted-foreground md:text-[19px]">{copy.p2}</p>
+          <p className="border-l-2 border-primary pl-5 text-[17px] leading-[1.9] text-foreground md:text-[19px]">{copy.p3}</p>
         </div>
       </div>
     </section>
