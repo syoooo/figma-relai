@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- **AI no-go zones (page guards).** Guard whole pages in the panel (or via `manage_pages` guard/unguard — agents may only do that when the designer asks). Writes into a guarded page are rejected at dispatch with a clear, named error; batch_execute's nested commands are covered too.
+- **One confirmation dial, four stops.** The approval setting is now a single scale — OPEN (nothing asks; branch workflows) · RISK (ghost-making and irreversible ops ask: variable/style/collection deletes, detach, flatten, 10+-node deletions — the default) · BULK (+ code execution, big batches, wide fan-outs) · ALL (every write). Cards label taxed ops `ghost-risk` / `irreversible`. Legacy settings migrate automatically.
+- **The file-law cluster.** RULES · MEMORY · NO-GO now sit together at the top of the panel — the laws that travel with the file — while Config below holds only session behavior.
+- **Gauges.** `analyze_design` grows three aspects: `voice` (the file's statistical fingerprint — radius/spacing/type signatures, tokenized-paint and instance rates), `readiness` (0–100 agent-readiness with top gaps), and `ghosts` (census of references to soft-deleted variables, live-list criterion — born from a 30,251-reference production repair). `validate_design_rules` gains an advisory `voice_drift` rule that never fails a run: deviations may be intent — record a precedent, or align.
+- **Bulk-write evidence markers** in the activity feed (10+ nodes / 10+ batch commands leave a flagged row + session-log event).
+- **Gate-precedent denoising**: approval reasons no longer surface on every same-page write; they match only via direct node/variable refs.
+- New skill `qa-gate` (eleven total): the review-moment full physical — readiness + ghosts + voice + health + tokens composed into one verdicted report; precedent-protected deviations are never findings. The memory skill now covers promoting repeated rulings into guards (ask-first) and digest-mode reporting that keeps skepticism cheap.
+
 ## 0.3.0
 
 - **File memory (precedents).** Every file can now carry its own case law: single adjudications the designer made ("this deviation is intent, not drift"), stored in shared plugin data so they travel with the file to every future session from any AI client. `manage_conventions` grew four actions (`record_precedent` / `list_precedents` / `update_precedent` / `remove_precedent`), and `action:get` returns conventions and recent precedents in one call.

@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "tools": [
     {
       "name": "batch_execute",
@@ -94,7 +94,7 @@
     {
       "name": "analyze_design",
       "category": "analysis",
-      "description": "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), or overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports). Defaults to the current selection; tokens defaults to the current page.",
+      "description": "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports), voice (the file's statistical fingerprint: radius/spacing/type signatures, tokenized-paint and instance rates — what \"sounds like this file\"), readiness (0-100 agent-readiness score with top gaps: conventions, precedents, semantic tokens, components), or ghosts (stale references to soft-deleted variables — they still render but are invisible in pickers and dead on publish). Defaults to the current selection; tokens/voice/ghosts default to the current page.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -106,12 +106,22 @@
               "components",
               "accessibility",
               "tokens",
-              "overall"
+              "overall",
+              "voice",
+              "readiness",
+              "ghosts"
             ]
           },
           "nodeId": {
             "type": "string",
             "description": "Root node to analyze (default: current selection)"
+          },
+          "pageIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "voice/ghosts: pages to scan (default: current page)"
           }
         },
         "required": [
@@ -1133,7 +1143,7 @@
     {
       "name": "manage_pages",
       "category": "document",
-      "description": "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page.",
+      "description": "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page. Guards: list_guards shows the designer's AI no-go zones; guard/unguard change them — ONLY do that when the designer explicitly asks (guards are theirs; every change shows in their activity feed). Writes into a guarded page are rejected at dispatch.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1144,12 +1154,15 @@
               "create",
               "rename",
               "delete",
-              "set_background"
+              "set_background",
+              "list_guards",
+              "guard",
+              "unguard"
             ]
           },
           "pageId": {
             "type": "string",
-            "description": "Target page (rename/delete/set_background)"
+            "description": "Target page (rename/delete/set_background/guard/unguard)"
           },
           "name": {
             "type": "string",
@@ -1918,6 +1931,10 @@
     {
       "name": "memory-and-precedents",
       "description": "The file's case law: when to record a designer adjudication as a precedent, when not to, and how memory is maintained. Load in any session that adjudicates or touches a file with existing precedents."
+    },
+    {
+      "name": "qa-gate",
+      "description": "Review-moment full physical: readiness + ghosts + voice + health + tokens composed into one verdicted report with evidence. Load when asked 'is this ready?' or before a library merge."
     }
   ],
   "userSkills": "loaded at runtime from ~/.figma-relai/skills/*.md (registered as user:<name>; not part of this contract)",
@@ -1993,6 +2010,12 @@
     "list_precedents",
     "update_precedent",
     "remove_precedent",
+    "get_guards",
+    "set_guards",
+    "audit_voice",
+    "audit_voice_drift",
+    "audit_readiness",
+    "audit_ghosts",
     "get_local_components",
     "get_instance_overrides",
     "set_instance_overrides",
