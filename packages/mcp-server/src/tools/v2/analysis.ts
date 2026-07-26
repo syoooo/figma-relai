@@ -51,24 +51,102 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
 
   server.tool(
     "analyze_design",
-    "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), or overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports). Defaults to the current selection; tokens defaults to the current page.",
+    "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports), voice (the file's statistical fingerprint: radius/spacing/type signatures, tokenized-paint and instance rates — what \"sounds like this file\"), readiness (0-100 agent-readiness score with top gaps: conventions, precedents, semantic tokens, components), or ghosts (stale references to soft-deleted variables — they still render but are invisible in pickers and dead on publish). Defaults to the current selection; tokens/voice/ghosts default to the current page.",
     {
-      aspect: z.enum(["color", "layout", "components", "accessibility", "tokens", "overall"]),
+      aspect: z.enum(["color", "layout", "components", "accessibility", "tokens", "overall", "voice", "readiness", "ghosts"]),
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
+      pageIds: z.array(z.string()).optional().describe("voice/ghosts: pages to scan (default: current page)"),
     },
     { readOnlyHint: true },
-    async ({ aspect, nodeId }) => {
+    async ({ aspect, nodeId, pageIds }) => {
       if (aspect === "overall") {
         return runOverallAudit(aspectHandlers, nodeId);
       }
       if (aspect === "tokens") {
         return runTokenDrift(sendCommand, nodeId);
       }
+      if (aspect === "voice") {
+        return runVoice(sendCommand, pageIds);
+      }
+      if (aspect === "readiness") {
+        return runReadiness(sendCommand);
+      }
+      if (aspect === "ghosts") {
+        return runGhosts(sendCommand, pageIds);
+      }
       const handler = aspectHandlers.get(ASPECT_TOOL[aspect]);
       if (!handler) throw new Error(`Unknown aspect: ${aspect}`);
       return handler({ nodeId });
     }
   );
+}
+
+// Voice: the file's statistical fingerprint — what "sounds like this file".
+async function runVoice(sendCommand: SendCommandFn, pageIds?: string[]): Promise<CallToolResult> {
+  const data = (await sendCommand("audit_voice", { pageIds }, 120000)) as {
+    pages?: string[];
+    nodesScanned?: number;
+    signatures?: Record<string, Array<{ value: number; share: number }>>;
+    tokenizedPaintRate?: number;
+    instanceRate?: number;
+  };
+  const sig = (k: string) =>
+    (data.signatures?.[k] ?? [])
+      .slice(0, 3)
+      .map((e) => `${e.value} (${Math.round(e.share * 100)}%)`)
+      .join(", ") || "—";
+  return standardResult({
+    summary: `Voice of ${data.pages?.join(", ")}: radius ${sig("cornerRadius")} · spacing ${sig("spacing")} · type ${sig("fontSize")} · ${Math.round((data.tokenizedPaintRate ?? 0) * 100)}% tokenized paint · ${Math.round((data.instanceRate ?? 0) * 100)}% instance rate (${data.nodesScanned} nodes).`,
+    data,
+    recommended_next: [
+      { tool: "validate_design_rules", reason: "Check any node against this voice (voice_drift rule, advisory)" },
+    ],
+  });
+}
+
+// Readiness: how prepared this file is for agents to work in.
+async function runReadiness(sendCommand: SendCommandFn): Promise<CallToolResult> {
+  const data = (await sendCommand("audit_readiness", {}, 120000)) as {
+    score?: number;
+    topGaps?: Array<{ dimension: string; lost: number; fix: string }>;
+  };
+  const gaps = (data.topGaps ?? []).map((g) => `${g.dimension} (−${g.lost}): ${g.fix}`);
+  return standardResult({
+    summary: `Agent-readiness: ${data.score ?? 0}/100.${gaps.length ? ` Top gaps: ${gaps.join(" | ")}` : " Fully wired."}`,
+    data,
+    recommended_next:
+      (data.score ?? 0) < 80
+        ? [{ tool: "manage_conventions", reason: "Close the cheapest gap first — conventions and precedents compound" }]
+        : [],
+  });
+}
+
+// Ghost census: stale variable references (the live-list criterion).
+async function runGhosts(sendCommand: SendCommandFn, pageIds?: string[]): Promise<CallToolResult> {
+  const data = (await sendCommand("audit_ghosts", { pageIds }, 300000)) as {
+    pages?: string[];
+    ghostRefs?: number;
+    ghostCount?: number;
+    danglingRefs?: number;
+    refsScanned?: number;
+    nodesScanned?: number;
+  };
+  const ghosts = data.ghostRefs ?? 0;
+  return standardResult({
+    summary:
+      ghosts === 0
+        ? `No ghost references on ${data.pages?.join(", ")} (${data.refsScanned} refs across ${data.nodesScanned} nodes; dangling: ${data.danglingRefs ?? 0}).`
+        : `${ghosts} ghost reference(s) to ${data.ghostCount} soft-deleted variable(s) on ${data.pages?.join(", ")} — they still render but are invisible in pickers and dead on publish.`,
+    data,
+    warnings:
+      ghosts > 0
+        ? [{ category: "general" as const, message: `${ghosts} bindings reference soft-deleted variables` }]
+        : [],
+    recommended_next:
+      ghosts > 0
+        ? [{ tool: "manage_variables", reason: "Rebind to live twins (compare terminal values, collection-aware) — never delete-and-recreate" }]
+        : [],
+  });
 }
 
 // Token drift is a report-only pass over scan_token_drift; the write path

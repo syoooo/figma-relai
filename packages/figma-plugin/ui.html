@@ -458,6 +458,18 @@
     .mem-input::placeholder { color: var(--faint); }
     .mem-input:focus { outline: none; border-color: var(--amber-dim); }
     .mem-count { color: var(--faint); font-size: 9px; margin-left: auto; }
+    .guards-btn {
+      background: none; border: 1px solid var(--line); color: var(--muted);
+      font-family: var(--mono); font-size: 10px; padding: 4px 10px; cursor: pointer;
+    }
+    .guards-btn:hover { border-color: var(--amber-dim); color: var(--text); }
+    .guard-row { display: flex; align-items: center; gap: var(--sp-8); padding: 5px 0; border-bottom: 1px solid var(--line-soft); font-size: 10px; color: var(--muted); }
+    .guard-row:last-child { border-bottom: none; }
+    .guard-row input { accent-color: var(--amber); }
+    .guard-row .gname { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .guard-row.on { color: var(--text); }
+    .feed-entry.evidence { color: var(--amber-dim); }
+    .feed-entry.evidence .sq { width: 6px; height: 6px; background: var(--amber); flex-shrink: 0; }
 
     /* ── Tools list ─────────────────────────────────────── */
     .tools-list {
@@ -610,6 +622,11 @@
         <span class="dots"></span>
         <span class="val muted"><span id="memCount">0</span> · <span class="view-link" data-i18n="conventions_view">view</span></span>
       </div>
+      <div class="leader-row conv-row" id="guardRow" onclick="openGuardsModal()">
+        <span class="key">NO-GO</span>
+        <span class="dots"></span>
+        <span class="val muted"><span id="guardsCount">0</span> · <span class="view-link" data-i18n="guards_edit">edit</span></span>
+      </div>
       <div class="room-line" id="roomLine" onclick="copyConnectedRoom()">
         <span class="room-key" data-i18n="room_label">Room</span>
         <span class="room-value" id="connectedRoom"></span>
@@ -639,6 +656,18 @@
         </div>
         <div id="memList"><div class="mem-empty" data-i18n="memory_empty">no precedents yet — they accumulate as you adjudicate</div></div>
         <input class="mem-input" id="memInput" data-i18n-ph="memory_add_ph" placeholder="+ note a precedent… (Enter)" onkeydown="onMemInputKey(event)">
+      </div>
+    </div>
+
+    <!-- Guards modal: pages the agent may not touch -->
+    <div class="modal-overlay" id="guardsModal" onclick="if (event.target === this) closeGuardsModal()">
+      <div class="panel modal-box">
+        <div class="modal-head">
+          <span class="key">AI NO-GO</span>
+          <span class="dots"></span>
+          <button class="modal-close" onclick="closeGuardsModal()" aria-label="close">&#10005;</button>
+        </div>
+        <div id="guardsList"></div>
       </div>
     </div>
 
@@ -680,7 +709,8 @@
       <div class="setting-row">
         <span class="label"><span data-i18n="approvals">Ask before big edits</span><span class="sub" data-i18n="approvals_hint">OFF · BULK (10+ nodes &amp; code) · ALL writes</span></span>
         <div class="seg approval-seg" role="group" aria-label="Approvals">
-          <button id="apprOff" onclick="setApproval('off')">OFF</button>
+          <button id="apprOpen" onclick="setApproval('open')">OPEN</button>
+          <button id="apprRisk" onclick="setApproval('risk')">RISK</button>
           <button id="apprBulk" onclick="setApproval('bulk')">BULK</button>
           <button id="apprAll" onclick="setApproval('all')">ALL</button>
         </div>
@@ -716,7 +746,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.3.0 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
+  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.4.0 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
 
   <script>
     // ---------- i18n ----------
@@ -753,8 +783,8 @@
         allow_exec_hint: 'execute_figma — AI-written Plugin API scripts',
         auto_connect: 'Connect automatically',
         auto_connect_hint: 'rejoin this room when the plugin opens',
-        approvals: 'Ask before big edits',
-        approvals_hint: 'OFF · BULK (10+ nodes & code) · ALL writes',
+        approvals: 'When to ask',
+        approvals_hint: 'OPEN nothing · RISK ghost-making & irreversible · BULK +code & 10+ nodes · ALL every write',
         approval_title: 'AGENT REQUESTS',
         approve: 'Approve',
         deny: 'Deny',
@@ -771,6 +801,13 @@
         kind_decision: 'decision',
         kind_intent: 'intent',
         kind_correction: 'correction',
+        highrisk_label: 'Confirm high-risk ops',
+        highrisk_hint: 'variable/style deletes, detach, flatten — asks even when approvals are OFF',
+        guards_label: 'AI no-go zones',
+        guards_hint: 'pages the agent may not touch',
+        guards_edit: 'edit',
+        guards_empty: 'no pages yet',
+        evidence_bulk: 'bulk write',
         tools_title: 'Toolset',
         disconnect: 'Disconnect'
       },
@@ -806,8 +843,8 @@
         allow_exec_hint: 'execute_figma — AI が書いた Plugin API スクリプト',
         auto_connect: '自動接続',
         auto_connect_hint: 'プラグイン起動時にこのルームへ再接続',
-        approvals: '大きな編集の前に確認',
-        approvals_hint: 'OFF · BULK（10ノード以上・コード実行）· ALL（すべての書き込み）',
+        approvals: '確認レベル',
+        approvals_hint: 'OPEN なし · RISK 破壊的操作 · BULK +コード実行と10ノード以上 · ALL 全書き込み',
         approval_title: 'エージェントからのリクエスト',
         approve: '承認',
         deny: '拒否',
@@ -824,6 +861,13 @@
         kind_decision: '裁決',
         kind_intent: '意図',
         kind_correction: '修正',
+        highrisk_label: '高危険操作の確認',
+        highrisk_hint: '変数/スタイル削除・detach・flatten — 承認OFFでも確認します',
+        guards_label: 'AI 禁区',
+        guards_hint: 'エージェントが触れないページ',
+        guards_edit: '編集',
+        guards_empty: 'ページがありません',
+        evidence_bulk: '一括書き込み',
         tools_title: 'ツール一覧',
         disconnect: '切断'
       },
@@ -859,8 +903,8 @@
         allow_exec_hint: 'execute_figma — AI 编写的 Plugin API 脚本',
         auto_connect: '自动连接',
         auto_connect_hint: '插件启动时自动重连到此房间',
-        approvals: '大改动前先确认',
-        approvals_hint: 'OFF · BULK(10 节点以上与代码执行) · ALL(全部写入)',
+        approvals: '确认级别',
+        approvals_hint: 'OPEN 不问 · RISK 高危操作 · BULK +代码与10节点以上 · ALL 全部写入',
         approval_title: 'Agent 请求',
         approve: '批准',
         deny: '拒绝',
@@ -877,6 +921,13 @@
         kind_decision: '裁决',
         kind_intent: '意图',
         kind_correction: '修正',
+        highrisk_label: '高危操作确认',
+        highrisk_hint: '删变量/样式、detach、flatten——审批OFF时也会确认',
+        guards_label: 'AI 禁区',
+        guards_hint: 'agent 不可触碰的页面',
+        guards_edit: '编辑',
+        guards_empty: '暂无页面',
+        evidence_bulk: '批量写入',
         tools_title: '工具列表',
         disconnect: '断开'
       }
@@ -989,21 +1040,76 @@
       });
     }
 
+    // ---------- Page guards (AI no-go zones) ----------
+    var guardPages = [];
+
+    function renderGuards() {
+      document.getElementById('guardsCount').textContent =
+        String(guardPages.filter(function (p) { return p.guarded; }).length);
+      var list = document.getElementById('guardsList');
+      if (!list) return;
+      list.textContent = '';
+      if (guardPages.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'mem-empty';
+        empty.textContent = t('guards_empty');
+        list.appendChild(empty);
+        return;
+      }
+      guardPages.forEach(function (p) {
+        var row = document.createElement('label');
+        row.className = 'guard-row' + (p.guarded ? ' on' : '');
+        var box = document.createElement('input');
+        box.type = 'checkbox';
+        box.checked = p.guarded;
+        box.onchange = function () {
+          p.guarded = box.checked;
+          parent.postMessage({ pluginMessage: { type: 'guards-set',
+            pages: guardPages.filter(function (g) { return g.guarded; }).map(function (g) { return g.id; }) } }, '*');
+        };
+        var name = document.createElement('span');
+        name.className = 'gname';
+        name.textContent = p.name;
+        row.appendChild(box);
+        row.appendChild(name);
+        list.appendChild(row);
+      });
+    }
+
+    function openGuardsModal() {
+      parent.postMessage({ pluginMessage: { type: 'guards-refresh' } }, '*');
+      document.getElementById('guardsModal').classList.add('open');
+    }
+    function closeGuardsModal() {
+      document.getElementById('guardsModal').classList.remove('open');
+    }
+
+    function evidenceMark(command, count) {
+      var feed = document.getElementById('feed');
+      document.getElementById('feedEmpty').style.display = 'none';
+      var el = document.createElement('div');
+      el.className = 'feed-entry evidence';
+      el.innerHTML = '<span class="t"></span><span class="sq"></span><span class="cmd"></span><span class="dur"></span>';
+      el.querySelector('.t').textContent = timeStamp();
+      el.querySelector('.cmd').textContent = t('evidence_bulk') + ' · ' + command + ' · ' + count;
+      feed.insertBefore(el, feed.children[1] || null);
+    }
+
     // ---------- Approval gate + scope lock ----------
-    var approvalMode = 'off';
+    var confirmLevel = 'risk';
     var approvalQueue = [];
 
     function renderApprovalSeg() {
-      var ids = { off: 'apprOff', bulk: 'apprBulk', all: 'apprAll' };
+      var ids = { open: 'apprOpen', risk: 'apprRisk', bulk: 'apprBulk', all: 'apprAll' };
       for (var m in ids) {
-        document.getElementById(ids[m]).className = m === approvalMode ? 'active' : '';
+        document.getElementById(ids[m]).className = m === confirmLevel ? 'active' : '';
       }
     }
 
-    function setApproval(mode) {
-      approvalMode = mode;
+    function setApproval(level) {
+      confirmLevel = level;
       renderApprovalSeg();
-      saveSettings({ requireApproval: mode });
+      saveSettings({ confirmLevel: level });
     }
 
     function showNextApproval() {
@@ -1453,14 +1559,19 @@
         if (!s.room) saveSettings({ room: roomName });
         document.getElementById('allowExec').checked = s.allowCodeExec !== false;
         document.getElementById('autoConnect').checked = s.autoConnect !== false;
-        if (s.requireApproval === 'bulk' || s.requireApproval === 'all') {
-          approvalMode = s.requireApproval;
+        if (s.confirmLevel === 'open' || s.confirmLevel === 'risk' || s.confirmLevel === 'bulk' || s.confirmLevel === 'all') {
+          confirmLevel = s.confirmLevel;
+        } else if (s.requireApproval === 'bulk' || s.requireApproval === 'all') {
+          confirmLevel = s.requireApproval;
+        } else if (s.confirmHighRisk === false) {
+          confirmLevel = 'open';
         }
         renderApprovalSeg();
         document.getElementById('convRow').style.display = msg.hasConventions ? '' : 'none';
         conventionsContent = msg.conventionsContent || '';
         memoryEntries = msg.memory || [];
         renderMemory();
+        if (msg.guards) { guardPages = msg.guards.pages || []; renderGuards(); }
         if (s.autoConnect !== false) connect();
         return;
       }
@@ -1468,6 +1579,17 @@
       if (msg.type === 'memory-state') {
         memoryEntries = msg.entries || [];
         renderMemory();
+        return;
+      }
+
+      if (msg.type === 'guards-state') {
+        guardPages = msg.pages || [];
+        renderGuards();
+        return;
+      }
+
+      if (msg.type === 'evidence-marker') {
+        evidenceMark(msg.command, msg.count);
         return;
       }
 

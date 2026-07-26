@@ -80,6 +80,12 @@ export const FIGMA_COMMANDS = [
   "list_precedents",
   "update_precedent",
   "remove_precedent",
+  "get_guards",
+  "set_guards",
+  "audit_voice",
+  "audit_voice_drift",
+  "audit_readiness",
+  "audit_ghosts",
   // Components
   "get_local_components",
   "get_instance_overrides",

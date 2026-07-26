@@ -73,6 +73,14 @@ describe("index + match", () => {
   test("no refs, no hits", () => {
     expect(matchPrecedents(index, { tokenIds: ["nope"] })).toEqual([]);
   });
+
+  test("gate entries never match at page level, still match direct refs", () => {
+    const gatePage = entry({ id: "gp", source: "gate", refs: { pages: [{ id: "0:1" }] } });
+    const gateNode = entry({ id: "gn", source: "gate", refs: { nodes: [{ id: "7:7" }] } });
+    const idx = buildIndex([gatePage, gateNode, c]);
+    expect(matchPrecedents(idx, { pageId: "0:1" }).map((e) => e.id)).toEqual(["c"]);
+    expect(matchPrecedents(idx, { nodeIds: ["7:7"] }).map((e) => e.id)).toEqual(["gn"]);
+  });
 });
 
 describe("toSurfaced", () => {

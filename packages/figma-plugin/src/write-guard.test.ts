@@ -4,6 +4,7 @@ import {
   collectNodeRefs,
   needsApproval,
   describeScale,
+  migrateConfirmLevel,
 } from "./write-guard.js";
 
 describe("isWriteCommand", () => {
@@ -53,20 +54,32 @@ describe("collectNodeRefs", () => {
   });
 });
 
-describe("needsApproval", () => {
+describe("needsApproval (four-stop dial)", () => {
   const many = { nodeIds: Array.from({ length: 12 }, (_, i) => `1:${i}`) };
 
-  test("off mode never asks", () => {
-    expect(needsApproval("off", "execute_code", {})).toBe(false);
-    expect(needsApproval("off", "delete_node", many)).toBe(false);
+  test("open never asks — even for ghost-making deletes", () => {
+    expect(needsApproval("open", "execute_code", {})).toBe(false);
+    expect(needsApproval("open", "delete_variable", { variableId: "V:1" })).toBe(false);
+    expect(needsApproval("open", "delete_multiple_nodes", many)).toBe(false);
   });
 
-  test("all mode asks for any write but never for reads", () => {
+  test("risk asks only for the reversibility tax", () => {
+    expect(needsApproval("risk", "delete_variable", { variableId: "V:1" })).toBe(true);
+    expect(needsApproval("risk", "delete_style", { styleId: "S:1" })).toBe(true);
+    expect(needsApproval("risk", "detach_instance", { nodeId: "1:1" })).toBe(true);
+    expect(needsApproval("risk", "flatten_node", { nodeId: "1:1" })).toBe(true);
+    expect(needsApproval("risk", "delete_multiple_nodes", many)).toBe(true);
+    expect(needsApproval("risk", "execute_code", {})).toBe(false);
+    expect(needsApproval("risk", "set_fill_color", { nodeId: "1:1" })).toBe(false);
+  });
+
+  test("all asks for any write but never for reads", () => {
     expect(needsApproval("all", "set_fill_color", { nodeId: "1:1" })).toBe(true);
     expect(needsApproval("all", "get_node_info", { nodeId: "1:1" })).toBe(false);
   });
 
-  test("bulk mode: code exec, drift fixes, big batches, wide fan-outs", () => {
+  test("bulk: tax + code exec, drift fixes, big batches, wide fan-outs", () => {
+    expect(needsApproval("bulk", "delete_variable", { variableId: "V:1" })).toBe(true);
     expect(needsApproval("bulk", "execute_code", {})).toBe(true);
     expect(needsApproval("bulk", "scan_token_drift", { fix: true })).toBe(true);
     expect(
@@ -77,11 +90,21 @@ describe("needsApproval", () => {
     expect(needsApproval("bulk", "delete_multiple_nodes", many)).toBe(true);
   });
 
-  test("bulk mode lets small writes through silently", () => {
+  test("bulk lets small writes through silently", () => {
     expect(needsApproval("bulk", "set_fill_color", { nodeId: "1:1" })).toBe(false);
     expect(
       needsApproval("bulk", "batch_execute", { commands: [{ command: "x" }, { command: "y" }] })
     ).toBe(false);
+  });
+});
+
+describe("migrateConfirmLevel", () => {
+  test("legacy pairs map onto the dial", () => {
+    expect(migrateConfirmLevel(undefined, undefined)).toBe("risk");
+    expect(migrateConfirmLevel("off", false)).toBe("open");
+    expect(migrateConfirmLevel("off", true)).toBe("risk");
+    expect(migrateConfirmLevel("bulk", undefined)).toBe("bulk");
+    expect(migrateConfirmLevel("all", false)).toBe("all");
   });
 });
 

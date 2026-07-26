@@ -131,11 +131,14 @@ export async function recordGatePrecedent(
       : typeof params.targetVariableId === "string"
         ? [params.targetVariableId]
         : [];
+  // Page ref only as a last resort (no direct anchors) — and page-level
+  // surfacing skips gate entries anyway, so this is purely for the record.
+  const pages = nodes.length === 0 && variableId.length === 0 ? [figma.currentPage.id] : [];
   try {
     await recordPrecedent({
       kind: "decision",
       text: `${approved ? "approved" : "rejected"} ${command}: ${reason}`,
-      refs: { nodes, tokens: variableId, pages: [figma.currentPage.id] },
+      refs: { nodes, tokens: variableId, pages },
       source: "gate",
     });
   } catch {

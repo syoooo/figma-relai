@@ -165,6 +165,33 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
             : undefined,
         });
 
+        // Rule 3.5: Voice drift — advisory only, never fails the run.
+        // Approved deviations are how design evolves; the flags exist so the
+        // designer can rule "intent" (→ precedent) or "drift" (→ fix).
+        try {
+          const drift = (await sendCommand("audit_voice_drift", { nodeId: targetId }, 60000)) as {
+            flagCount?: number;
+            flags?: Array<{ property: string; value: number; name: string }>;
+          };
+          const count = drift?.flagCount ?? 0;
+          const sample = (drift?.flags ?? [])
+            .slice(0, 3)
+            .map((f) => `${f.name}: ${f.property}=${f.value}`)
+            .join("; ");
+          results.push({
+            rule: "voice_drift",
+            passed: true,
+            severity: "info",
+            message:
+              count === 0
+                ? "On voice: every sampled value sits in this file's signature."
+                : `${count} value(s) off this file's voice (advisory — may be intent): ${sample}${count > 3 ? " …" : ""}. If intentional, record a precedent; if drift, align to the file's signature.`,
+            nodeId: targetId,
+          });
+        } catch {
+          // Older plugin build — skip silently
+        }
+
         // Rule 4: Touch target minimum size (for interactive elements)
         if (nodeInfo.type === "INSTANCE" || nodeInfo.name?.toLowerCase().includes("button")) {
           const w = nodeInfo.width ?? 0;

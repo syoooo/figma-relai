@@ -30,6 +30,19 @@ One precedent = one sentence (≤280 chars), written so a future session with ze
 - Secrets, personal information, or anything about people rather than the file.
 - Your own inferences the designer has not confirmed. Precedents are the DESIGNER's rulings, not your observations. When unsure, ask: "记为判例吗?"
 
+## Promote rulings into enforcement
+
+When conventions or repeated precedents describe something ENFORCEABLE, propose the promotion in chat — never enact it silently:
+
+- "Never touch page X" (in conventions or a repeated ruling) → offer: "要把 X 设为 AI 禁区吗?(manage_pages action:guard)" — set it only after the designer agrees.
+- Repeated identical adjudications ("this is intent" three times on the same token family) → offer to consolidate them into one conventions line, then remove the superseded precedents.
+
+Guards belong to the designer: never guard/unguard on your own judgment, and mention any guard change in your reply.
+
+## Reporting style as trust matures
+
+Early sessions: report every change. Once the designer clearly stops reading full receipts (they say "简报就好" or approve digests), switch to digest mode: lead with **the two changes you are least sure about** and anything a precedent or guard touched, then one line for the rest ("其余 N 处按规约"). Full detail must always remain one question away — digest is a summary, never a omission. Never digest away errors, guard rejections, or precedent hits.
+
 ## Maintenance
 
 - The designer sees and can delete every entry in the plugin panel (Memory section). Their record, their rules.

@@ -104,21 +104,28 @@ export interface MatchQuery {
   pageId?: string;
 }
 
-/** Newest-first, deduped. Page matches rank after direct token/node hits. */
+/** Newest-first, deduped. Page matches rank after direct token/node hits.
+ * Gate-sourced entries (approval reasons) never match at page level — they
+ * would spam every write on the page; they surface only via direct refs. */
 export function matchPrecedents(index: PrecedentIndex, query: MatchQuery): PrecedentEntry[] {
   const seen = new Set<string>();
   const direct: PrecedentEntry[] = [];
   const pageLevel: PrecedentEntry[] = [];
-  const take = (list: PrecedentEntry[] | undefined, into: PrecedentEntry[]) => {
+  const take = (
+    list: PrecedentEntry[] | undefined,
+    into: PrecedentEntry[],
+    skipGate = false
+  ) => {
     for (const entry of list ?? []) {
       if (seen.has(entry.id)) continue;
+      if (skipGate && entry.source === "gate") continue;
       seen.add(entry.id);
       into.push(entry);
     }
   };
   for (const id of query.tokenIds ?? []) take(index.byToken.get(id), direct);
   for (const id of query.nodeIds ?? []) take(index.byNode.get(id), direct);
-  if (query.pageId) take(index.byPage.get(query.pageId), pageLevel);
+  if (query.pageId) take(index.byPage.get(query.pageId), pageLevel, true);
   return [...direct, ...pageLevel];
 }
 

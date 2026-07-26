@@ -26,16 +26,20 @@ import "./handlers/audit.js";
 import "./handlers/batch.js";
 import "./handlers/execute-code.js";
 import "./handlers/memory.js";
+import "./handlers/guards.js";
+import "./handlers/audits-extra.js";
 
 import { dispatch, hasHandler, cancelCommand, clearCancelled } from "./dispatcher.js";
 import { beginCommand, endCommand, pushEvent, drainEvents } from "./event-buffer.js";
 import {
   needsApproval,
   describeScale,
+  migrateConfirmLevel,
   setScopeLock,
   clearScopeLock,
   scopeLockState,
   type ApprovalMode,
+  type ConfirmLevel,
 } from "./write-guard.js";
 import { sendProgressUpdate } from "./progress.js";
 import {
@@ -45,6 +49,8 @@ import {
   recordPrecedent,
   removePrecedentById,
 } from "./handlers/memory.js";
+import { guardsStatePayload, refreshGuardsUI, setGuardedPages } from "./handlers/guards.js";
+import { collectNodeRefs, isWriteCommand } from "./write-guard.js";
 
 // Show the plugin UI
 figma.showUI(__html__, { width: 380, height: 850, themeColors: true });
@@ -56,7 +62,13 @@ interface RelaiSettings {
   allowCodeExec?: boolean;
   locale?: "en" | "ja" | "zh";
   client?: "claude" | "codex" | "cursor";
-  requireApproval?: ApprovalMode;
+  requireApproval?: ApprovalMode; // legacy (pre-0.4)
+  confirmHighRisk?: boolean; // legacy (pre-0.4)
+  confirmLevel?: ConfirmLevel;
+}
+
+function effectiveConfirmLevel(s: RelaiSettings): ConfirmLevel {
+  return s.confirmLevel ?? migrateConfirmLevel(s.requireApproval, s.confirmHighRisk);
 }
 
 const SETTINGS_KEY = "relai.settings";
@@ -82,6 +94,7 @@ loadSettings().then((settings) => {
     hasConventions: figma.root.getSharedPluginData("relai", "conventions").length > 0,
     conventionsContent: figma.root.getSharedPluginData("relai", "conventions"),
     memory: readMemory(),
+    guards: guardsStatePayload(),
   });
 });
 
@@ -186,6 +199,16 @@ figma.ui.onmessage = async (msg: any) => {
     return;
   }
 
+  if (msg.type === "guards-set") {
+    setGuardedPages(Array.isArray(msg.pages) ? (msg.pages as string[]) : []);
+    return;
+  }
+
+  if (msg.type === "guards-refresh") {
+    refreshGuardsUI();
+    return;
+  }
+
   if (msg.type === "scope-lock") {
     if (msg.on) {
       const sel = figma.currentPage.selection;
@@ -238,7 +261,7 @@ figma.ui.onmessage = async (msg: any) => {
         return;
       }
 
-      if (needsApproval(currentSettings.requireApproval ?? "off", command, params ?? {})) {
+      if (needsApproval(effectiveConfirmLevel(currentSettings), command, params ?? {})) {
         const approved = await requestApproval(id, command, params ?? {});
         figma.ui.postMessage({ type: "approval-settled", id, approved });
         if (!approved) {
@@ -263,6 +286,18 @@ figma.ui.onmessage = async (msg: any) => {
       // In-band surfacing: this file's own precedents ride the result the
       // moment a write touches something they reference.
       result = attachPrecedents(command, params || {}, result);
+
+      // Auto-evidence marker: big writes leave a flag in the feed + session
+      // log so the batch is findable later (checkpoint/verify are the agent's
+      // follow-up; the marker is the designer's breadcrumb).
+      const touched =
+        command === "batch_execute" && Array.isArray(params?.commands)
+          ? (params.commands as unknown[]).length
+          : collectNodeRefs(params || {}).length;
+      if (isWriteCommand(command, params || {}) && touched >= 10) {
+        pushEvent({ type: "bulk_write", ts: Date.now(), command, count: touched } as never);
+        figma.ui.postMessage({ type: "evidence-marker", command, count: touched });
+      }
 
       // Piggyback designer activity that happened since the last command
       const events = drainEvents();
@@ -324,6 +359,7 @@ watchCurrentPage();
 figma.on("currentpagechange", () => {
   pushEvent({ type: "page_change", ts: Date.now(), pageName: figma.currentPage.name });
   watchCurrentPage();
+  refreshGuardsUI(); // page list may have changed (create/rename/delete)
 });
 
 figma.on("close", () => {

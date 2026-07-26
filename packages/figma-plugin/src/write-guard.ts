@@ -38,28 +38,75 @@ export function collectNodeRefs(params: Record<string, unknown>): string[] {
 }
 
 // ─── Approval gate ──────────────────────────────────────────────────
+// One dial, four stops, each including the previous:
+//   open — nothing asks (branch workflows)
+//   risk — ghost-making & irreversible ops ask (the default)
+//   bulk — + code execution, big batches, wide fan-outs
+//   all  — every write asks
 
+export type ConfirmLevel = "open" | "risk" | "bulk" | "all";
+/** Legacy persisted setting (pre-0.4); migrated to ConfirmLevel on load. */
 export type ApprovalMode = "off" | "bulk" | "all";
+
+export function migrateConfirmLevel(
+  requireApproval?: ApprovalMode,
+  confirmHighRisk?: boolean
+): ConfirmLevel {
+  if (requireApproval === "all") return "all";
+  if (requireApproval === "bulk") return "bulk";
+  return confirmHighRisk === false ? "open" : "risk";
+}
 
 const ALWAYS_BULK = new Set(["execute_code"]);
 const BULK_THRESHOLD = 10;
 
+// ── Reversibility tax ───────────────────────────────────────────────
+// Some operations are expensive to undo no matter who runs them: deleting
+// variables/styles soft-deletes them into ghosts (bindings keep resolving,
+// invisible in pickers), detach/flatten destroy structure. These prompt even
+// when approvals are OFF — unless the designer flips the high-risk switch
+// (the branch-workflow escape hatch).
+const GHOST_TAX = new Set(["delete_variable", "delete_variable_collection", "delete_style"]);
+const DESTRUCTIVE_TAX = new Set(["detach_instance", "flatten_node"]);
+const DELETE_TAX_THRESHOLD = 10;
+
+export function taxTier(command: string, params: Record<string, unknown>): "ghost" | "irreversible" | null {
+  if (GHOST_TAX.has(command)) return "ghost";
+  if (DESTRUCTIVE_TAX.has(command)) return "irreversible";
+  if (
+    (command === "delete_node" || command === "delete_multiple_nodes") &&
+    collectNodeRefs(params).length >= DELETE_TAX_THRESHOLD
+  ) {
+    return "irreversible";
+  }
+  return null;
+}
+
 /** Human-readable scale of a command, for the approval card */
 export function describeScale(command: string, params: Record<string, unknown>): string {
+  const parts: string[] = [];
+  const tier = taxTier(command, params);
+  if (tier === "ghost") parts.push("ghost-risk");
+  if (tier === "irreversible") parts.push("irreversible");
   if (command === "batch_execute" && Array.isArray(params.commands)) {
-    return `${params.commands.length} commands`;
+    parts.push(`${params.commands.length} commands`);
+  } else {
+    const refs = collectNodeRefs(params);
+    if (refs.length > 0) parts.push(refs.length > 1 ? `${refs.length} nodes` : "1 node");
   }
-  const refs = collectNodeRefs(params);
-  return refs.length > 1 ? `${refs.length} nodes` : refs.length === 1 ? "1 node" : "";
+  return parts.join(" · ");
 }
 
 export function needsApproval(
-  mode: ApprovalMode,
+  level: ConfirmLevel,
   command: string,
   params: Record<string, unknown>
 ): boolean {
-  if (mode === "off" || !isWriteCommand(command, params)) return false;
-  if (mode === "all") return true;
+  if (!isWriteCommand(command, params)) return false;
+  if (level === "open") return false;
+  if (taxTier(command, params) !== null) return true; // risk and above
+  if (level === "risk") return false;
+  if (level === "all") return true;
   // bulk: code execution, big batches, wide fan-outs, and whole-tree fixes
   if (ALWAYS_BULK.has(command)) return true;
   if (command === "scan_token_drift" && params.fix === true) return true;

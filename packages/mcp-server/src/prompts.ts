@@ -13,6 +13,7 @@ import commentDrivenTasks from "../../../docs/skills/comment-driven-tasks.md";
 import designSystemFirst from "../../../docs/skills/design-system-first.md";
 import janitorialCleanup from "../../../docs/skills/janitorial-cleanup.md";
 import memoryAndPrecedents from "../../../docs/skills/memory-and-precedents.md";
+import qaGate from "../../../docs/skills/qa-gate.md";
 
 const SKILLS: Array<[name: string, description: string, text: string]> = [
   [
@@ -64,6 +65,11 @@ const SKILLS: Array<[name: string, description: string, text: string]> = [
     "memory-and-precedents",
     "The file's case law: when to record a designer adjudication as a precedent, when not to, and how memory is maintained. Load in any session that adjudicates or touches a file with existing precedents.",
     memoryAndPrecedents,
+  ],
+  [
+    "qa-gate",
+    "Review-moment full physical: readiness + ghosts + voice + health + tokens composed into one verdicted report with evidence. Load when asked 'is this ready?' or before a library merge.",
+    qaGate,
   ],
 ];
 

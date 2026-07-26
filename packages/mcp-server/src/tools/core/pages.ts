@@ -7,10 +7,10 @@ import { jsonResult, errorResult } from "./helpers.js";
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_pages",
-    "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page.",
+    "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page. Guards: list_guards shows the designer's AI no-go zones; guard/unguard change them — ONLY do that when the designer explicitly asks (guards are theirs; every change shows in their activity feed). Writes into a guarded page are rejected at dispatch.",
     {
-      action: z.enum(["list", "create", "rename", "delete", "set_background"]),
-      pageId: z.string().optional().describe("Target page (rename/delete/set_background)"),
+      action: z.enum(["list", "create", "rename", "delete", "set_background", "list_guards", "guard", "unguard"]),
+      pageId: z.string().optional().describe("Target page (rename/delete/set_background/guard/unguard)"),
       name: z.string().optional().describe("Page name (create/rename)"),
       color: colorSchema.optional().describe("Background color (set_background)"),
     },
@@ -33,6 +33,23 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           case "set_background":
             result = await sendCommand("set_page_background", { pageId, color });
             break;
+          case "list_guards":
+            result = await sendCommand("get_guards", {});
+            break;
+          case "guard":
+          case "unguard": {
+            if (!pageId) throw new Error(`${action} needs pageId`);
+            const state = (await sendCommand("get_guards", {})) as {
+              pages: Array<{ id: string; guarded: boolean }>;
+            };
+            const current = state.pages.filter((p) => p.guarded).map((p) => p.id);
+            const next =
+              action === "guard"
+                ? [...new Set([...current, pageId])]
+                : current.filter((id) => id !== pageId);
+            result = await sendCommand("set_guards", { pages: next });
+            break;
+          }
         }
         return jsonResult(result);
       } catch (error) {

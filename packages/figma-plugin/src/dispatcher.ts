@@ -2,6 +2,14 @@
 
 import { enforceScopeLock } from "./write-guard.js";
 
+// Page-guard enforcement is injected (guards.ts registers itself) to keep
+// dispatcher ↔ handlers imports acyclic.
+type GuardEnforcer = (command: string, params: Record<string, unknown>) => Promise<void>;
+let guardEnforcer: GuardEnforcer | null = null;
+export function setGuardEnforcer(fn: GuardEnforcer): void {
+  guardEnforcer = fn;
+}
+
 type CommandHandler = (params: Record<string, unknown>) => Promise<unknown>;
 
 const handlers = new Map<string, CommandHandler>();
@@ -25,6 +33,7 @@ export async function dispatch(
     throw new Error(`Unknown command: ${command}`);
   }
   await enforceScopeLock(command, params);
+  if (guardEnforcer) await guardEnforcer(command, params);
   return handler(params);
 }
 
