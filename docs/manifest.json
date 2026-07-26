@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.2.8",
+  "version": "0.3.0",
   "tools": [
     {
       "name": "batch_execute",
@@ -768,7 +768,7 @@
     {
       "name": "manage_conventions",
       "category": "design-system",
-      "description": "File-level design conventions — a CLAUDE.md that lives INSIDE this Figma file (shared plugin data, travels with the file). action:get reads it, action:set overwrites it with markdown. get_document_overview auto-includes it, and whatever it says (naming rules, spacing habits, do-not-touch areas, library preferences) should be FOLLOWED like user instructions. When the designer states a durable preference ('always use our green', 'never touch the Archive page'), offer to record it here so every future session — from any AI client — inherits it.",
+      "description": "The file's law: conventions (statutes) + precedents (case law), stored INSIDE this Figma file so they travel with it to every future session from any AI client. action:get returns both — read them BEFORE working and follow them like user instructions. Conventions are a markdown doc (action:set overwrites). Precedents are single adjudications the designer made — record one (action:record_precedent, one sentence, with refs to the tokens/nodes/pages it concerns) whenever the designer rules on something durable ('this deviation is intent, not drift', 'never restructure this table'), and SAY in your reply that you recorded it. Write results automatically surface precedents whose refs they touch.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -776,12 +776,65 @@
             "type": "string",
             "enum": [
               "get",
-              "set"
+              "set",
+              "record_precedent",
+              "list_precedents",
+              "update_precedent",
+              "remove_precedent"
             ]
           },
           "content": {
             "type": "string",
             "description": "set: the full markdown doc (overwrites; max 20k chars)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "decision",
+              "intent",
+              "correction"
+            ],
+            "description": "record/update_precedent: decision (an approval/rejection), intent (a deviation that is deliberate), correction (a do-it-differently ruling). Default intent"
+          },
+          "text": {
+            "type": "string",
+            "description": "record/update_precedent: the adjudication, one sentence, ≤280 chars"
+          },
+          "id": {
+            "type": "string",
+            "description": "update/remove_precedent: precedent id (from list_precedents)"
+          },
+          "refs": {
+            "type": "object",
+            "properties": {
+              "tokens": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Variable IDs this precedent concerns"
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Node IDs this precedent concerns"
+              },
+              "pages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Page IDs this precedent concerns"
+              }
+            },
+            "additionalProperties": false,
+            "description": "What the precedent is anchored to — enables in-band surfacing when writes touch these"
+          },
+          "limit": {
+            "type": "number",
+            "description": "list_precedents: max entries returned (default 50)"
           }
         },
         "required": [
@@ -1861,8 +1914,13 @@
     {
       "name": "janitorial-cleanup",
       "description": "Bulk cleanup recipes: content-based layer renaming, tokenizing hardcoded values, spacing normalization, detached-instance sweeps — with preview-first discipline."
+    },
+    {
+      "name": "memory-and-precedents",
+      "description": "The file's case law: when to record a designer adjudication as a precedent, when not to, and how memory is maintained. Load in any session that adjudicates or touches a file with existing precedents."
     }
   ],
+  "userSkills": "loaded at runtime from ~/.figma-relai/skills/*.md (registered as user:<name>; not part of this contract)",
   "pluginCommands": [
     "get_document_info",
     "get_file_info",
@@ -1931,6 +1989,10 @@
     "scan_token_drift",
     "get_conventions",
     "set_conventions",
+    "record_precedent",
+    "list_precedents",
+    "update_precedent",
+    "remove_precedent",
     "get_local_components",
     "get_instance_overrides",
     "set_instance_overrides",

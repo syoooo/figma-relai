@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- **File memory (precedents).** Every file can now carry its own case law: single adjudications the designer made ("this deviation is intent, not drift"), stored in shared plugin data so they travel with the file to every future session from any AI client. `manage_conventions` grew four actions (`record_precedent` / `list_precedents` / `update_precedent` / `remove_precedent`), and `action:get` returns conventions and recent precedents in one call.
+- **In-band surfacing.** Write results automatically carry precedents whose refs (variables, nodes, pages) the command touched — the file's private law arrives the moment it matters, same delivery lane as pitfall hints.
+- **Approval gate, more legible + connected to memory.** The approval card now leads with the agent's stated intent (agents that give no description are called out), and an optional reason field turns your approve/reject into a recorded decision precedent.
+- **Panel: MEMORY row.** One quiet line (count + view); the modal shows every precedent with delete, plus a manual "note a precedent" input. The record is yours — the panel is where you audit and prune it.
+- **User-authored skills.** `~/.figma-relai/skills/*.md` (frontmatter: name/description, optional layer/provenance) load as MCP prompts with a `user:` prefix. `figma-relai doctor` gained a skills check; the manifest stays deterministic (machine-local skills excluded).
+- New built-in skill `memory-and-precedents` (when to record, when not to, maintenance) — ten skills total.
+
 ## 0.2.8
 
 - Plugin panel: activity-feed status marks are drawn icons instead of text glyphs, and the footer decos became the amber+cream docking mark — the plugin now carries the same identity as the website.
