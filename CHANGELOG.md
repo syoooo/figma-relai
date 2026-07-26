@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1
+
+- **Two-tone wordmark.** The cream square from the mark now docks into the "a" of the panel wordmark — panel, site logo, og card and Community cover all carry the same identity.
+- **Plainer words in the panel.** The confirmation hint counts layers, not nodes, in all three languages.
+- **The file speaks, in the docs too.** The memory-and-precedents skill opens with the four-act shape of a surfaced precedent (said once → kept → touched → your words call a halt); the QA gate names precedent-protected deviations "waived by precedent" instead of re-flagging them.
+- **README rewritten in all three languages.** "The file carries the law" is now its own section with a precedent strip; the architecture diagram's tool count is fixed (30 → 32); registration/vocabulary aligned with the site. No tool or logic changes in this release.
+
 ## 0.4.0
 
 - **AI no-go zones (page guards).** Guard whole pages in the panel (or via `manage_pages` guard/unguard — agents may only do that when the designer asks). Writes into a guarded page are rejected at dispatch with a clear, named error; batch_execute's nested commands are covered too.
