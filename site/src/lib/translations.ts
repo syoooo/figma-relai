@@ -1,6 +1,6 @@
 import type { Language } from './i18n';
 
-export const VERSION = 'v0.2.8';
+export const VERSION = 'v0.3.0';
 
 export const translations = {
   en: {
@@ -27,8 +27,8 @@ export const translations = {
           rows: ['comment › @relai round every button corner to 8', 'manage_comments · thread claimed', 'set_properties · 12 nodes ✓', 'reply posted · thread resolved ✓'] },
         { title: 'Your selection is context', body: 'Select a layer and say “this one too.” Selection and page changes flow back as events, so you point instead of describing paths.',
           rows: ['you › (selects Card / Pricing)', 'you › same treatment as the last one', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
-        { title: 'It reads the manual first', body: 'Nine workflow documents ship with the server as MCP prompts — token strategy, component conventions, audits, bulk cleanup, comment-driven work — so the AI arrives briefed. And the whole tool contract is a machine-readable manifest, regenerated from the running code on every build.',
-          rows: ['9 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+        { title: 'It reads the manual first', body: 'Ten workflow documents ship with the server as MCP prompts — token strategy, component conventions, audits, bulk cleanup, comment-driven work, file memory & precedents — so the AI arrives briefed. Your own skills load too, from ~/.figma-relai/skills. And the whole tool contract is a machine-readable manifest, regenerated from the running code on every build.',
+          rows: ['10 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
       ]
     },
     ledger: {
@@ -96,6 +96,7 @@ export const translations = {
         { q: 'Do I need a paid Figma plan?', a: 'No. Writes go through a Figma plugin rather than the paid REST API, so Relai works on every Figma plan.' },
         { q: 'Which AI clients does it work with?', a: 'Claude Code, Cursor, Codex — any MCP client. You register Relai once as an MCP server and talk to the model you already use.' },
         { q: 'Where do my file contents go?', a: 'Nowhere new. The relay runs on your machine; file contents move only between Figma, your machine, and the AI client you already trust.' },
+        { q: 'What does the file remember — and can I delete it?', a: 'Since 0.3 a file can carry precedents: rulings you made, recorded only when you or the agent explicitly records one. The panel\u2019s Memory row lists every entry; delete any of them there. Nothing is recorded silently.' },
         { q: 'Is there anything to copy between windows?', a: 'No. Pairing is automatic. The join_room tool exists for one rare case only: two Figma files running the plugin at the same time.' },
         { q: 'Can I stop the AI from running code?', a: 'Yes. execute_figma runs JavaScript against the Figma Plugin API as an escape hatch — it is arbitrary code execution, and the docs say so plainly. If you would rather the AI never ran code, turn it off with the plugin’s “Allow code execution” toggle.' },
         { q: 'How does it know what my design uses?', a: 'get_design_system inventories the file and the libraries it uses, so the AI builds from your existing components and tokens instead of redrawing near-copies.' }
@@ -135,8 +136,8 @@ export const translations = {
           rows: ['comment › @relaiボタンの角丸を全部8に', 'manage_comments · thread claimed', 'set_properties · 12 nodes ✓', 'reply posted · thread resolved ✓'] },
         { title: '選択が、そのまま文脈になる', body: 'レイヤーを選んで「これも同じように」。選択やページの移動はイベントとしてAI側に流れるので、パスを説明する代わりに、指させます。',
           rows: ['you › （Card / Pricingを選択）', 'you › さっきと同じように', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
-        { title: '働く前に、手引きを読んでいる', body: 'トークン戦略、コンポーネント規約、監査、一括整理、コメント運用 — 9本のワークフロー文書がMCPプロンプトとしてサーバーに同梱され、AIは下調べ済みで現場に来ます。ツール契約の全体も機械可読のmanifestとして、ビルドごとに実行コードから再生成されます。',
-          rows: ['9 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+        { title: '働く前に、手引きを読んでいる', body: 'トークン戦略、コンポーネント規約、監査、一括整理、コメント運用、ファイルの記憶と判例 — 10本のワークフロー文書がMCPプロンプトとしてサーバーに同梱され、AIは下調べ済みで現場に来ます。自作スキルも~/.figma-relai/skillsから読み込めます。ツール契約の全体も機械可読のmanifestとして、ビルドごとに実行コードから再生成されます。',
+          rows: ['10 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
       ]
     },
     ledger: {
@@ -204,6 +205,7 @@ export const translations = {
         { q: '有料のFigmaプランは必要ですか？', a: '不要です。書き込みは有料REST APIではなくFigmaプラグインを経由するため、すべてのFigmaプランで利用できます。' },
         { q: 'どのAIクライアントで動作しますか？', a: 'Claude Code、Cursor、Codexなど、あらゆるMCPクライアントで動作します。RelaiをMCPサーバーとして一度登録するだけです。' },
         { q: 'ファイルの内容はどこかに送られますか？', a: '新しい宛先はありません。リレーはローカルで動き、ファイルの内容はFigma、あなたのマシン、そして普段から信頼しているAIクライアントの間にとどまります。' },
+        { q: 'ファイルは何を記憶しますか？消せますか？', a: '0.3から、ファイルは判例——あなたが下した裁定——を持てます。記録されるのは、あなたかAIが明示的に記録したときだけ。パネルのMEMORY行に全件が並び、いつでも削除できます。黙って記録されるものはありません。' },
         { q: 'ウィンドウ間で何かをコピーする必要は？', a: 'ありません。ペアリングは自動です。join_roomツールは、同時に2つのFigmaファイルでプラグインを動かすまれなケース専用です。' },
         { q: 'AIにコードを実行させないことはできますか？', a: 'はい。execute_figmaはFigma Plugin APIを直接扱うエスケープハッチで、任意コード実行であることをドキュメントにも明記しています。望まない場合は「Allow code execution」をオフにしてください。' },
         { q: 'デザインの利用状況はどう理解しますか？', a: 'get_design_systemがファイルと使用中ライブラリを棚卸しし、AIは既存のコンポーネントとトークンから構築します。' }
@@ -243,8 +245,8 @@ export const translations = {
           rows: ['comment › @relai把所有按钮圆角统一为8', 'manage_comments · thread claimed', 'set_properties · 12 nodes ✓', 'reply posted · thread resolved ✓'] },
         { title: '选区就是上下文', body: '选中图层，说一句「这个也一样」。选区和页面切换会作为事件流回AI——你指给它看，不用描述路径。',
           rows: ['you › （选中Card / Pricing）', 'you › 和刚才一样处理', 'get_selection_context · 1 node', 'set_properties · verified ✓'] },
-        { title: '开工之前，先读手册', body: 'Token策略、组件规范、审计流程、批量整理、评论协作 —— 9份工作流文档作为MCP prompts内置在服务器里，AI是备过课才进场的。整套工具契约也是机器可读的manifest，每次构建都从运行代码重新生成。',
-          rows: ['9 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
+        { title: '开工之前，先读手册', body: 'Token策略、组件规范、审计流程、批量整理、评论协作、文件记忆与判例 —— 10份工作流文档作为MCP prompts内置在服务器里，AI是备过课才进场的。你自作的skill也能从~/.figma-relai/skills装载。整套工具契约也是机器可读的manifest，每次构建都从运行代码重新生成。',
+          rows: ['10 skills · shipped as MCP prompts', 'npx figma-relai manifest', '→ every tool · every pitfall · never drifts'] }
       ]
     },
     ledger: {
@@ -312,6 +314,7 @@ export const translations = {
         { q: '需要付费的Figma计划吗？', a: '不需要。写入操作通过Figma插件而不是付费REST API完成，因此Relai适用于每种Figma计划。' },
         { q: '支持哪些AI客户端？', a: 'Claude Code、Cursor、Codex —— 任意MCP客户端。只需将Relai注册一次为MCP服务器。' },
         { q: '我的文件内容会流向哪里？', a: '不会有新的去向。中继在本地运行，文件内容只在Figma、你的机器和你已经信任的AI客户端之间流动。' },
+        { q: '文件会记住什么？能删吗？', a: '从0.3起，文件可以携带判例——你下过的裁决，只在你或AI明确记录时才会写入。面板的MEMORY行列出全部条目，随时可删。没有任何东西会被悄悄记录。' },
         { q: '需要在窗口之间复制内容吗？', a: '不需要。配对自动完成。join_room工具只用于一种少见情况：两个Figma文件同时运行插件。' },
         { q: '可以阻止AI执行代码吗？', a: '可以。execute_figma是直接调用Figma Plugin API的应急出口 —— 文档明确说明这是任意代码执行。不希望的话，在插件中关闭「Allow code execution」即可。' },
         { q: '它如何了解我的设计？', a: 'get_design_system会盘点文件及其使用的库，让AI基于已有组件和Token构建。' }
