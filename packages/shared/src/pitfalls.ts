@@ -140,6 +140,31 @@ export const PITFALLS: Pitfall[] = [
     hint: "",
     doc: "**Binding writes inside instances silently revert — with two escape hatches.** `setBoundVariable` on a node nested inside an INSTANCE succeeds without error, then reverts (instance roots placed directly in a main ARE writable; anything deeper is not). What does persist: reassigning the whole `fills`/`strokes` array (variable-bound paints ride inside), and range-level `setRangeBoundVariable` on text. Verify after writing; never trust the call alone.",
   },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**A bound `strokeWeight` renders nothing while `strokes` is empty, and wrappers don't hug stroke thickness.** A LINE's visible weight lives entirely in its stroke paint; the frame around it keeps its own raw height/width, so the panel shows an unbound number with empty Fill/Stroke — looking broken when it isn't. Inspect the LINE child's stroke bindings, not the wrapper; and bind the wrapper's thickness-axis dimension to the same variable so nothing stays raw.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**`setBoundVariable(\"strokeWeight\", …)` is a silent no-op on FRAME-family nodes.** Frames and components bind stroke weight per side — `strokeTopWeight` / `strokeRightWeight` / `strokeBottomWeight` / `strokeLeftWeight`; the uniform `strokeWeight` field only binds on stroke-geometry nodes like LINE. No error is thrown, the binding just never appears — read back `boundVariables` after writing.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**Cloning a variant escapes its component set — onto whatever page the user is viewing.** `variant.clone()` parents the copy to `figma.currentPage` as a standalone COMPONENT (not into the set) — plain nodes inside components clone to the current page too. Every `componentPropertyReferences` pointing at set-level properties is silently severed, and native SLOT children are demoted to plain FRAMEs (slot-ness needs set context). Recover by `componentSet.appendChild(clone)`, re-assigning ALL references (`visible`, `slotContentId`, …) — a SLOT can be restored by cloning a surviving SLOT node from a sibling variant (SLOT clones keep their type) and relinking `componentPropertyReferences.slotContentId`. Audit every set-scoped feature after adoption; none of it comes back on its own.",
+  },
+  {
+    pattern: "Component set.*existing errors",
+    hint: "The set has mismatched or duplicate variant names — every variant must carry the same axes with unique values. Rename stragglers to unique same-axis values (e.g. a temporary legacy-* value) to heal the set, then migrate instances and delete the leftovers.",
+    doc: "**Uneven variant renames/deletes poison the whole component set.** If variants end up with mismatched axis segments (some carry `axis=value`, others don't) or duplicate names, the set enters an error state where `componentPropertyDefinitions` AND every instance's `variantProperties`/`setProperties` throw (`Component set has existing errors`). Escape: rename stragglers so all variants share the same axes with unique values (temporary `legacy-*` values work), which heals the set — then migrate and delete.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**`setProperties` DOES work on instances nested inside other instances** — it records as an override on the outer instance. Only variable-binding writes (`setBoundVariable`) silently revert inside instance internals. Don't skip nested instances when migrating variant or boolean properties; skip them only for binding writes.",
+  },
 ];
 
 // First matching pitfall's hint, or null. Doc-only entries never match.

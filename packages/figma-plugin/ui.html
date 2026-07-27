@@ -366,6 +366,10 @@
       display: block; color: var(--err); font-size: 9px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
+    .feed-entry .prog-msg {
+      display: block; color: var(--amber-dim); font-size: 9px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
 
     /* ── Settings toggles ───────────────────────────────── */
     .setting-row {
@@ -452,6 +456,7 @@
     .mem-del:hover { color: var(--err); }
     .mem-del svg { display: inline-block; vertical-align: -1px; }
     .mem-empty { color: var(--faint); font-size: 10px; padding: 4px 0; }
+    #memList, #guardsList { overflow-y: auto; min-height: 0; }
     .mem-input {
       width: 100%; margin-top: var(--sp-8);
       background: var(--bg); border: 1px dashed var(--line); color: var(--text);
@@ -506,20 +511,6 @@
       border: 1px solid var(--line);
       color: var(--muted);
     }
-
-    /* ── Progress ───────────────────────────────────────── */
-    .progress-container { margin: var(--sp-8) 0; display: none; }
-    .progress-bar {
-      height: 3px; background: var(--line);
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%; background: var(--amber);
-      box-shadow: 0 0 8px var(--amber-glow);
-      width: 100%; transform: scaleX(0); transform-origin: left;
-      transition: transform var(--dur-med) var(--ease-out);
-    }
-    .progress-text { margin-top: var(--sp-4); font-size: 9px; color: var(--muted); }
 
     /* ── Sections & footer ──────────────────────────────── */
     .connected-section { display: none; }
@@ -672,12 +663,6 @@
         </div>
         <div id="guardsList"></div>
       </div>
-    </div>
-
-    <!-- Progress -->
-    <div id="progressContainer" class="progress-container">
-      <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
-      <div id="progressText" class="progress-text"></div>
     </div>
 
     <!-- Approval gate: the agent wants to write; the designer decides -->
@@ -1380,6 +1365,8 @@
       var st = e.el.querySelector('.st');
       st.className = 'st ' + (ok ? 'ok' : 'err');
       st.innerHTML = ok ? ICON_OK : ICON_ERR;
+      var pm = e.el.querySelector('.prog-msg');
+      if (pm) pm.parentNode.removeChild(pm);
       e.el.querySelector('.dur').textContent = ((Date.now() - e.t0) / 1000).toFixed(1) + 's';
       if (!ok && errMsg) {
         var m = document.createElement('span');
@@ -1635,13 +1622,22 @@
       }
 
       if (msg.type === 'command_progress') {
-        var container = document.getElementById('progressContainer');
-        var fill = document.getElementById('progressFill');
-        var text = document.getElementById('progressText');
-
-        container.style.display = 'block';
-        fill.style.transform = 'scaleX(' + Math.max(0, Math.min(1, msg.progress / 100)) + ')';
-        text.textContent = msg.message || (msg.progress + '%');
+        // Progress lives on the running entry in the activity feed:
+        // percent in the duration slot, message as a sub-line under the command
+        var pe = entries[msg.commandId];
+        if (pe && pe.status === 'running') {
+          pe.el.querySelector('.dur').textContent =
+            Math.max(0, Math.min(100, Math.round(msg.progress || 0))) + '%';
+          if (msg.message) {
+            var pm = pe.el.querySelector('.prog-msg');
+            if (!pm) {
+              pm = document.createElement('span');
+              pm.className = 'prog-msg';
+              pe.el.querySelector('.cmd').appendChild(pm);
+            }
+            pm.textContent = msg.message;
+          }
+        }
 
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -1650,10 +1646,6 @@
             room: roomName,
             message: { data: msg }
           }));
-        }
-
-        if (msg.status === 'completed' || msg.status === 'error') {
-          setTimeout(function () { container.style.display = 'none'; }, 3000);
         }
       }
     };
