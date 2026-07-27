@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0
+
+The law gets a home. One designer usually runs one product; its files share the same rules — and Figma silently discards file-carried law on every branch→main merge. This release answers both.
+
+- **Kits** (`manage_rulesets`, the 33rd tool). Save a file's rules under a name; other files follow it. A followed file that opens with its law wiped heals — one click, or automatically with the kit's auto-restore switch on. Drift never resolves itself: update (kit→file) and publish (file→kit) both wait for you. Promote a single precedent into the kit (↑ in the MEMORY list) and every follower inherits it. Export/import as a markdown package. Choosing is exclusive and visible: a radio list with "follow none" as a first-class option, the followed kit unfolding in place.
+- **The file speaks in moments, not vocabulary.** Three cards signed `FILE ›`, built like the approval card: "My rules are gone — put them back from “gin”?" · "My rules differ from “gin” now." · "I have no rules yet. Follow “gin”?" One question at a time, in your words, using the kit's name instead of concepts. The panel's steady state teaches nothing and needs nothing learned.
+- **Session history.** Every write lands in a per-machine timeline (last 500): grouped by session, click a row to jump to the layer, bulk operations flagged. "What did the agent touch that day" survives past the live feed.
+- **Rule proposals.** When the agent reads an enforceable sentence in your conventions ("never touch the Cover page"), it can propose the promotion — a card with the quoted reason; the guard turns on only when you accept, and the acceptance is recorded as a precedent.
+- **Panel reorganized by who the information belongs to.** Session plumbing became two quiet pills (RELAY · AGENT); the file card carries the file's name and its law, with the rules' origin as a label on the RULES row (`RULES  gin · view`); the room moved next to Disconnect. Empty rules now show "add" with guidance instead of hiding the row. A gentle check-up reminder appears when the last full audit is over a week old.
+- **CJK input fix:** the IME's conversion-Enter no longer triggers save in the kit and precedent inputs.
+- Skills teach the new machinery in-band; `manage_variables action:snapshot` pairs with kits for before/after accounting.
+
 ## 0.4.2
 
 Everything in this release was harvested from one long day of real design-system surgery — each fix is a scar with a story.

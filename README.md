@@ -83,6 +83,8 @@ file       precedent attached — "…is on purpose" · the edit backs off
 
 The panel's Memory row lists every entry; delete any of them any time. Nothing is recorded silently.
 
+**Kits.** One designer usually runs one product, and its files share the same law. Save this file’s rules under a name and other files can follow it. Figma drops file-carried law on branch merges; a followed kit puts it back — one click, or automatically if you flip that kit’s auto-restore on.
+
 **AI no-go zones** fence off whole pages — brand masters, legal, the one that is already pixel-perfect. Writes into a guarded page are rejected before they run, with the reason on the receipt, and only you edit the guard list.
 
 **Confirmation** is one level with four stops — OPEN · RISK · BULK · ALL. At RISK, the default, only dangerous operations ask (deleting variables or styles, detach, flatten); everything else keeps moving. Set it in the panel; agents can't move it.
@@ -98,7 +100,7 @@ The plugin is the designer's side of the deal: a live activity feed of everythin
 ```
 AI (any MCP client)
   ↕ stdio
-MCP server            32 tools · analysis · verification
+MCP server            33 tools · analysis · verification
   (embedded relay)    WebSocket room hub on 127.0.0.1:9055
   ↕ WebSocket
 Figma plugin          executes Plugin API calls
@@ -118,7 +120,7 @@ Ports are fixed by Figma's plugin sandbox: the manifest allowlists `ws://localho
 | Read | `get_node_data` (summary / tree / full / css / variables) |
 | Create & edit | `create_node` · `set_properties` · `set_text` · `edit_structure` |
 | Components | `manage_components` |
-| Design system | `get_design_system` · `manage_variables` · `manage_styles` · `import_from_library` · `manage_conventions` |
+| Design system | `get_design_system` · `manage_variables` · `manage_styles` · `import_from_library` · `manage_conventions` · `manage_rulesets` |
 | Document | `manage_pages` · `navigate` |
 | Assets | `export_asset` · `add_image` |
 | Annotations | `annotate` |

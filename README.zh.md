@@ -83,6 +83,8 @@ file       precedent attached — "…is on purpose" · the edit backs off
 
 面板的 MEMORY 行列出全部条目，随时可删。没有任何东西会被悄悄记录。
 
+**Kit。**一个设计师通常照看一个产品，它的文件们共享同一套规矩。把这个文件的规矩存成一个有名字的 kit，其他文件就能跟随它。Figma 在分支合并时会丢掉文件携带的规矩；跟随中的 kit 会把它放回来——点一下，或者把那套 kit 的自动恢复拨开，连点都不用。
+
 **AI 禁区**整页圈起来——品牌母版、法务页、已经像素级完美的那一页。写入被圈的页面会在碰到画布之前被拒，原因写在回执里，而守卫名单只有你能改。
 
 **确认**是一个四档的级别——OPEN · RISK · BULK · ALL。默认的 RISK 档只有危险操作才会问（删变量或样式、detach、flatten），其余照常放行。档位在面板里定，agent 动不了。
@@ -98,7 +100,7 @@ file       precedent attached — "…is on purpose" · the edit backs off
 ```
 AI (any MCP client)
   ↕ stdio
-MCP server            32 tools · analysis · verification
+MCP server            33 tools · analysis · verification
   (embedded relay)    WebSocket room hub on 127.0.0.1:9055
   ↕ WebSocket
 Figma plugin          executes Plugin API calls
@@ -118,7 +120,7 @@ Figma plugin          executes Plugin API calls
 | 读取 | `get_node_data`（summary / tree / full / css / variables） |
 | 创建与编辑 | `create_node` · `set_properties` · `set_text` · `edit_structure` |
 | 组件 | `manage_components` |
-| 设计系统 | `get_design_system` · `manage_variables` · `manage_styles` · `import_from_library` · `manage_conventions` |
+| 设计系统 | `get_design_system` · `manage_variables` · `manage_styles` · `import_from_library` · `manage_conventions` · `manage_rulesets` |
 | 文档 | `manage_pages` · `navigate` |
 | 资产 | `export_asset` · `add_image` |
 | 注释 | `annotate` |

@@ -83,6 +83,8 @@ file       precedent attached — "…is on purpose" · the edit backs off
 
 パネルの MEMORY 行に全件が並び、いつでも削除できます。黙って記録されるものはありません。
 
+**キット。**ひとりのデザイナーはたいてい一つのプロダクトを見ていて、そのファイルたちは同じ規約を共有します。このファイルの規約に名前を付けてキットとして保存すれば、他のファイルがフォローできます。Figma はブランチのマージでファイル持ちの規約を落としますが、フォロー中のキットがそれを戻します。ワンクリックで、あるいはそのキットの自動復元をオンにしておけば自動で。
+
 **立入禁止(NO-GO)**はページごと囲います。ブランドのマスター、法務、もうピクセル単位で完成しているあのページ。囲ったページへの書き込みは実行の手前で拒否され、理由が記録に残ります。囲いを編集できるのはデザイナーだけです。
 
 **確認**は 4 段階のレベルです(OPEN · RISK · BULK · ALL)。既定の RISK では、危険な操作だけが確認を求めます(変数/スタイルの削除、detach、flatten)。それ以外は止まりません。パネルから決めるもの。AI には動かせません。
@@ -98,7 +100,7 @@ file       precedent attached — "…is on purpose" · the edit backs off
 ```
 AI (any MCP client)
   ↕ stdio
-MCP server            32 tools · analysis · verification
+MCP server            33 tools · analysis · verification
   (embedded relay)    WebSocket room hub on 127.0.0.1:9055
   ↕ WebSocket
 Figma plugin          executes Plugin API calls
@@ -118,7 +120,7 @@ Figma plugin          executes Plugin API calls
 | 読み取り | `get_node_data`(summary / tree / full / css / variables) |
 | 作成・編集 | `create_node` · `set_properties` · `set_text` · `edit_structure` |
 | コンポーネント | `manage_components` |
-| デザインシステム | `get_design_system` · `manage_variables` · `manage_styles` · `import_from_library` · `manage_conventions` |
+| デザインシステム | `get_design_system` · `manage_variables` · `manage_styles` · `import_from_library` · `manage_conventions` · `manage_rulesets` |
 | ドキュメント | `manage_pages` · `navigate` |
 | アセット | `export_asset` · `add_image` |
 | 注釈 | `annotate` |
