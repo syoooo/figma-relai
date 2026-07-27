@@ -42,7 +42,7 @@ export const translations = {
         { label: 'MEMORY', text: 'Precedents you rule — attached to any edit that touches what they reference.' },
         { label: 'NO-GO', text: 'Pages you fence off — writes rejected before they run, with the reason on the receipt.' }
       ],
-      inherit: 'All three are carried by the file — any MCP client, anyone who opens it, inherits them. The confirmation level is set by you, in the panel; agents can’t move it.',
+      inherit: 'All three travel with the file — any MCP client, anyone who opens it, inherits them. Save them as a kit, and every file on your machine can use the same law.',
       loop: {
         center: 'ONE RULING',
         s1: 'YOU SAY IT', t1: '“this gap is on purpose”',
@@ -98,6 +98,7 @@ export const translations = {
       items: [
         { q: 'Where do my file contents go?', a: 'Nowhere new. The relay runs on your machine; file contents move only between Figma, your machine, and the AI client you already trust.' },
         { q: 'What does the file remember — and can I delete it?', a: 'Since 0.3 a file can carry precedents: rulings you made, recorded only when you or the agent explicitly records one. The panel’s Memory row lists every entry; delete any of them there. Nothing is recorded silently.' },
+        { q: 'Where do kits live?', a: 'On your machine, nowhere else. A kit is a named copy of a file’s rules, stored locally by the plugin — no server, no sync. Moving machines is one export and one import: a kit travels as a single markdown file.' },
         { q: 'Can I fence off pages the AI must never touch?', a: 'Yes — AI no-go zones, per page, in the panel. Writes into a guarded page are rejected before they run, with a clear error. And the confirmation dial has four stops — OPEN · RISK · BULK · ALL: at RISK (the default), only the dangerous operations ask — deleting variables or styles, detach, flatten — and everything else keeps moving. Dial to OPEN when you’d rather not be asked at all.' },
         { q: 'Is there anything to copy between windows?', a: 'No. Pairing is automatic. The `join_room` tool exists for one rare case only: two Figma files running the plugin at the same time.' },
         { q: 'Can I stop the AI from running code?', a: 'Yes. `execute_figma` runs JavaScript against the Figma Plugin API as an escape hatch — it is arbitrary code execution, and the docs say so plainly. If you would rather the AI never ran code, turn it off with the plugin’s “Allow code execution” toggle.' },
@@ -185,7 +186,7 @@ export const translations = {
         { label: 'MEMORY', text: '下した判例。参照先に触れる編集に、その場で添付されます。' },
         { label: 'NO-GO', text: '囲っておくページ。書き込みは実行の手前で拒否され、理由は記録に残ります。' }
       ],
-      inherit: '三つとも、ファイル自身が持ち歩きます。どのMCPクライアントでも、ファイルを開いた誰にでも、そのまま継承されます。確認のレベルはパネルから決めるもの。AIには動かせません。',
+      inherit: '三つとも、ファイルが持ち歩きます。どのMCPクライアントで誰が開いても、そのまま継承。名前を付けてキットにしておけば、他のファイルでも同じ規約が使えます。',
       loop: {
         center: 'ひとつの判断',
         s1: 'まず、言う', t1: '「ここの余白はわざと」',
@@ -241,6 +242,7 @@ export const translations = {
       items: [
         { q: 'ファイルの内容はどこかに送られますか？', a: '新しい宛先はありません。リレーはローカルで動き、ファイルの内容はFigma、手元のマシン、そして普段から信頼しているAIクライアントの間にとどまります。' },
         { q: 'ファイルは何を記憶しますか？消せますか？', a: '0.3から、ファイルは判例（下した判断の記録）を持てます。記録されるのは、デザイナーかAIがはっきりと記録したときだけ。パネルのMEMORY行に全件が並び、いつでも削除できます。黙って記録されるものはありません。' },
+        { q: 'キットはどこに保存されますか？', a: 'あなたのマシンの中だけです。キットはファイルの規約に名前を付けた複製で、プラグインがローカルに保存します。サーバーも同期もありません。マシンの引っ越しは書き出しと読み込みが一回ずつ。キットは一枚のMarkdownとして持ち運べます。' },
         { q: 'AIに触らせたくないページを守れますか？', a: 'はい。パネルでページ単位の立入禁止（NO-GO）を設定でき、対象ページへの書き込みは実行の手前で明確なエラーとして拒否されます。確認は4段階のダイヤル（OPEN · RISK · BULK · ALL）に統合されています。既定のRISKでは、破壊的操作（変数/スタイル削除・detach・flatten）だけが確認を求め、それ以外は止まりません。確認なしで進めたいときはOPENへ。' },
         { q: 'ウィンドウ間で何かをコピーする必要は？', a: 'ありません。ペアリングは自動です。`join_room`ツールは、同時に2つのFigmaファイルでプラグインを動かすまれなケース専用です。' },
         { q: 'AIにコードを実行させないことはできますか？', a: 'はい。`execute_figma`はFigma Plugin APIを直接扱う最後の手段で、任意コード実行であることをドキュメントにも明記しています。望まない場合は「Allow code execution」をオフにしてください。' },
@@ -328,7 +330,7 @@ export const translations = {
         { label: 'MEMORY', text: '你定下的判例 —— 任何碰到它指的地方的编辑,结果里当场附上。' },
         { label: 'NO-GO', text: '你圈出的禁区页 —— 写入在碰到画布之前就被拒,原因写在回执里。' }
       ],
-      inherit: '三样都由文件自己携带 —— 任何MCP客户端、任何打开文件的人,原样继承。确认档位由你在面板里定,agent动不了。',
+      inherit: '三样都由文件自己携带 —— 谁用哪个MCP客户端打开,都原样继承。存成kit,别的文件也用同一套规矩。',
       loop: {
         center: '一次拍板',
         s1: '你说一句', t1: '「这个留白是故意的」',
@@ -384,6 +386,7 @@ export const translations = {
       items: [
         { q: '我的文件内容会流向哪里？', a: '不会有新的去向。中继在本地运行，文件内容只在Figma、你的机器和你已经信任的AI客户端之间流动。' },
         { q: '文件会记住什么？能删吗？', a: '从0.3起，文件可以携带判例——你下过的判断，只在你或AI明确记录时才会写入。面板的MEMORY行列出全部条目，随时可删。没有任何东西会被悄悄记录。' },
+        { q: 'kit存在哪里？', a: '只在你自己的机器上。kit是文件规矩的一份有名字的副本，由插件存在本地——没有服务器，没有同步。换机器就是导出、导入各一次：kit随身就是一份Markdown文件。' },
         { q: '能划出AI不准碰的页面吗？', a: '能——面板里按页设置「AI禁区」，写入禁区页会在碰到画布之前被明确拒绝。确认被统一成四档刻度盘（OPEN · RISK · BULK · ALL）：默认的RISK档只拦高危操作（删变量/样式、detach、flatten），其余照常放行；不想被问的时候，拨到OPEN。' },
         { q: '需要在窗口之间复制内容吗？', a: '不需要。配对自动完成。`join_room`工具只用于一种少见情况：两个Figma文件同时运行插件。' },
         { q: '可以阻止AI执行代码吗？', a: '可以。`execute_figma`是直接调用Figma Plugin API的应急出口 —— 文档明确说明这是任意代码执行。不希望的话，在插件中关闭「Allow code execution」即可。' },
