@@ -90,7 +90,11 @@ async function main() {
   });
 
   // Register the join_room tool
-  registerRoomTool(server, (room) => connection.joinRoom(room));
+  registerRoomTool(
+    server,
+    (room) => connection.joinRoom(room),
+    () => connection.listRooms()
+  );
 
   // Register designer-activity polling + the AI's own audit trail
   registerEventsTool(server, () => connection.consumeEvents(), getSessionLog);

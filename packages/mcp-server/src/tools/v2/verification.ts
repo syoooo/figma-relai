@@ -80,9 +80,10 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
     "Run design quality rules on a node: token coverage, auto-layout usage, naming conventions, and accessibility basics. Use after modifications or during design audits. Returns pass/fail for each rule with fix suggestions.",
     {
       nodeId: z.string().optional().describe("Root node to validate (default: current selection)"),
+      platform: z.enum(["desktop", "mobile"]).optional().describe("Target-size profile for the touch rule: desktop 24px (default), mobile 44px"),
     },
     { readOnlyHint: true },
-    async ({ nodeId }) => {
+    async ({ nodeId, platform }) => {
       try {
         let targetId: string;
         if (nodeId) {
@@ -192,21 +193,26 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           // Older plugin build — skip silently
         }
 
-        // Rule 4: Touch target minimum size (for interactive elements)
-        if (nodeInfo.type === "INSTANCE" || nodeInfo.name?.toLowerCase().includes("button")) {
+        // Rule 4: Interactive target minimum size (WCAG 2.5.8: 24px desktop,
+        // 44px mobile). Containers are not targets — a PAGE named "Button"
+        // has no size and must not fail with a 0×0 reading.
+        const isContainerNode =
+          nodeInfo.type === "PAGE" || nodeInfo.type === "SECTION" || nodeInfo.type === "DOCUMENT";
+        if (!isContainerNode && (nodeInfo.type === "INSTANCE" || nodeInfo.name?.toLowerCase().includes("button"))) {
+          const minTarget = platform === "mobile" ? 44 : 24;
           const w = nodeInfo.width ?? 0;
           const h = nodeInfo.height ?? 0;
-          const adequate = w >= 44 && h >= 44;
+          const adequate = w >= minTarget && h >= minTarget;
           results.push({
             rule: "touch_target_size",
             passed: adequate,
             severity: "warning",
             message: adequate
-              ? `Touch target: ${Math.round(w)}×${Math.round(h)}px (OK)`
-              : `Touch target: ${Math.round(w)}×${Math.round(h)}px (minimum 44×44px)`,
+              ? `Target size: ${Math.round(w)}×${Math.round(h)}px (OK, minimum ${minTarget}px)`
+              : `Target size: ${Math.round(w)}×${Math.round(h)}px (minimum ${minTarget}×${minTarget}px — WCAG 2.5.8${minTarget >= 44 ? ", mobile" : ""})`,
             nodeId: targetId,
             fix: !adequate
-              ? { tool: "update_node", reason: "Increase size to meet touch target minimum", args: { nodeId: targetId } }
+              ? { tool: "update_node", reason: "Increase size to meet the target-size minimum", args: { nodeId: targetId } }
               : undefined,
           });
         }

@@ -8,6 +8,7 @@ import { jsonResult, errorResult } from "./helpers.js";
 const ACTIONS: Record<string, [string, string[]]> = {
   list_collections: ["get_variable_collections", []],
   list: ["get_variables", ["collectionId"]],
+  snapshot: ["snapshot_variables", []],
   create_collection: ["create_variable_collection", ["name", "modes"]],
   update_collection: ["update_variable_collection", ["collectionId", "name", "hiddenFromPublishing"]],
   delete_collection: ["delete_variable_collection", ["collectionId"]],
@@ -31,7 +32,7 @@ const ACTIONS: Record<string, [string, string[]]> = {
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_variables",
-    "Design-token variables: list_collections / list (variables in a collection) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
+    "Design-token variables: list_collections / list (variables in a collection) / snapshot (compact whole-file inventory — every collection and variable name/type in one call; take one before branch merges or bulk edits, diff after) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
     {
       action: z.enum(Object.keys(ACTIONS) as [string, ...string[]]),
       collectionId: z.string().optional(),

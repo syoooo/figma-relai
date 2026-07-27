@@ -86,6 +86,7 @@ export const FIGMA_COMMANDS = [
   "audit_voice_drift",
   "audit_readiness",
   "audit_ghosts",
+  "snapshot_variables",
   // Components
   "get_local_components",
   "get_instance_overrides",

@@ -60,19 +60,34 @@ interface ToolModuleLike {
 // for disambiguation when several Figma files run the plugin at once.
 export function registerRoomTool(
   server: McpServer,
-  joinRoom: (room: string) => Promise<void>
+  joinRoom: (room: string) => Promise<void>,
+  listRooms: () => Promise<Array<{ room: string; hasPlugin: boolean; fileName?: string }>>
 ): void {
   server.tool(
     "join_room",
-    "Connect to a specific Figma plugin instance by room name. Usually unnecessary — pairing is automatic when one plugin is connected. Use only when an error reports multiple plugins/rooms; the room name is shown in each plugin's UI.",
+    "Connect to a specific Figma plugin instance. Usually unnecessary — pairing is automatic when one plugin is connected. Call with no arguments to LIST the connected plugins (room + file name) instead of typing the room by hand, then call again with the room you want.",
     {
-      room: z.string().describe("Room name shown in the Figma plugin"),
+      room: z.string().optional().describe("Room name shown in the Figma plugin. Omit to list connected rooms."),
     },
     async ({ room }) => {
       try {
         if (!room) {
+          const rooms = (await listRooms()).filter((r) => r.hasPlugin);
+          if (rooms.length === 0) {
+            return {
+              content: [{ type: "text" as const, text: "No Figma plugin is connected. Open the Relai plugin in Figma (it connects automatically), then try again." }],
+            };
+          }
+          const lines = rooms.map(
+            (r) => `- ${r.room}${r.fileName ? ` — "${r.fileName}"` : ""}`
+          );
           return {
-            content: [{ type: "text" as const, text: "Please provide a room name." }],
+            content: [{
+              type: "text" as const,
+              text: rooms.length === 1
+                ? `One plugin connected (auto-pairing will use it):\n${lines[0]}`
+                : `${rooms.length} plugins connected — call join_room with the room of the file you want:\n${lines.join("\n")}`,
+            }],
           };
         }
         await joinRoom(room);

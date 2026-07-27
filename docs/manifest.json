@@ -75,18 +75,15 @@
     {
       "name": "join_room",
       "category": "advanced",
-      "description": "Connect to a specific Figma plugin instance by room name. Usually unnecessary — pairing is automatic when one plugin is connected. Use only when an error reports multiple plugins/rooms; the room name is shown in each plugin's UI.",
+      "description": "Connect to a specific Figma plugin instance. Usually unnecessary — pairing is automatic when one plugin is connected. Call with no arguments to LIST the connected plugins (room + file name) instead of typing the room by hand, then call again with the room you want.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "room": {
             "type": "string",
-            "description": "Room name shown in the Figma plugin"
+            "description": "Room name shown in the Figma plugin. Omit to list connected rooms."
           }
         },
-        "required": [
-          "room"
-        ],
         "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
@@ -121,7 +118,15 @@
             "items": {
               "type": "string"
             },
-            "description": "voice/ghosts: pages to scan (default: current page)"
+            "description": "voice/ghosts: pages to scan (default: current page; ghosts auto-chunks any count)"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "desktop",
+              "mobile"
+            ],
+            "description": "accessibility: target-size profile — desktop 24px (default), mobile 44px"
           }
         },
         "required": [
@@ -1032,7 +1037,7 @@
     {
       "name": "manage_variables",
       "category": "design-system",
-      "description": "Design-token variables: list_collections / list (variables in a collection) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
+      "description": "Design-token variables: list_collections / list (variables in a collection) / snapshot (compact whole-file inventory — every collection and variable name/type in one call; take one before branch merges or bulk edits, diff after) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1041,6 +1046,7 @@
             "enum": [
               "list_collections",
               "list",
+              "snapshot",
               "create_collection",
               "update_collection",
               "delete_collection",
@@ -1835,6 +1841,14 @@
           "nodeId": {
             "type": "string",
             "description": "Root node to validate (default: current selection)"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "desktop",
+              "mobile"
+            ],
+            "description": "Target-size profile for the touch rule: desktop 24px (default), mobile 44px"
           }
         },
         "additionalProperties": false,
@@ -2016,6 +2030,7 @@
     "audit_voice_drift",
     "audit_readiness",
     "audit_ghosts",
+    "snapshot_variables",
     "get_local_components",
     "get_instance_overrides",
     "set_instance_overrides",

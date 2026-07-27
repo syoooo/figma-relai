@@ -11,6 +11,31 @@ registerHandler("get_variable_collections", async () => {
   }));
 });
 
+// Compact whole-file inventory: every collection and every variable's
+// name/type in one pass. Cheap enough to snapshot before risky operations
+// (branch merges, bulk edits) and diff afterwards — names are the contract.
+registerHandler("snapshot_variables", async () => {
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
+  const variables = await figma.variables.getLocalVariablesAsync();
+  const colName = new Map(collections.map((c) => [c.id, c.name]));
+  return {
+    takenAt: Date.now(),
+    collections: collections.map((c) => ({
+      id: c.id,
+      name: c.name,
+      modes: c.modes.map((m) => m.name),
+      variableCount: c.variableIds.length,
+    })),
+    variables: variables.map((v) => ({
+      id: v.id,
+      name: v.name,
+      collection: colName.get(v.variableCollectionId) ?? v.variableCollectionId,
+      type: v.resolvedType,
+    })),
+    total: variables.length,
+  };
+});
+
 registerHandler("get_variables", async (params) => {
   const collectionId = params.collectionId as string;
   const collection = await figma.variables.getVariableCollectionByIdAsync(collectionId);

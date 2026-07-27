@@ -31,7 +31,7 @@ const ASPECT_TOOL: Record<string, string> = {
 };
 
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
-  type ToolHandler = (args: { nodeId?: string }) => Promise<CallToolResult>;
+  type ToolHandler = (args: { nodeId?: string; platform?: "desktop" | "mobile" }) => Promise<CallToolResult>;
   const aspectHandlers = new Map<string, ToolHandler>();
 
   const interceptor = new Proxy(server, {
@@ -55,10 +55,11 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
     {
       aspect: z.enum(["color", "layout", "components", "accessibility", "tokens", "overall", "voice", "readiness", "ghosts"]),
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
-      pageIds: z.array(z.string()).optional().describe("voice/ghosts: pages to scan (default: current page)"),
+      pageIds: z.array(z.string()).optional().describe("voice/ghosts: pages to scan (default: current page; ghosts auto-chunks any count)"),
+      platform: z.enum(["desktop", "mobile"]).optional().describe("accessibility: target-size profile — desktop 24px (default), mobile 44px"),
     },
     { readOnlyHint: true },
-    async ({ aspect, nodeId, pageIds }) => {
+    async ({ aspect, nodeId, pageIds, platform }) => {
       if (aspect === "overall") {
         return runOverallAudit(aspectHandlers, nodeId);
       }
@@ -76,7 +77,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       }
       const handler = aspectHandlers.get(ASPECT_TOOL[aspect]);
       if (!handler) throw new Error(`Unknown aspect: ${aspect}`);
-      return handler({ nodeId });
+      return handler({ nodeId, platform });
     }
   );
 }
@@ -122,15 +123,60 @@ async function runReadiness(sendCommand: SendCommandFn): Promise<CallToolResult>
 }
 
 // Ghost census: stale variable references (the live-list criterion).
+// The plugin scans at most 10 pages per command, so larger requests are
+// chunked here and the results merged — one tool call covers any file.
+interface GhostScan {
+  pages?: string[];
+  ghostRefs?: number;
+  ghostCount?: number;
+  danglingRefs?: number;
+  refsScanned?: number;
+  nodesScanned?: number;
+  remoteRefs?: number;
+  ghosts?: Array<{ id: string; name?: string; refCount: number; sampleNodes: string[] }>;
+  criterion?: string;
+}
+
 async function runGhosts(sendCommand: SendCommandFn, pageIds?: string[]): Promise<CallToolResult> {
-  const data = (await sendCommand("audit_ghosts", { pageIds }, 300000)) as {
-    pages?: string[];
-    ghostRefs?: number;
-    ghostCount?: number;
-    danglingRefs?: number;
-    refsScanned?: number;
-    nodesScanned?: number;
-  };
+  const chunks: Array<string[] | undefined> = [];
+  if (pageIds && pageIds.length > 10) {
+    for (let i = 0; i < pageIds.length; i += 10) chunks.push(pageIds.slice(i, i + 10));
+  } else {
+    chunks.push(pageIds);
+  }
+
+  let data: GhostScan;
+  if (chunks.length === 1) {
+    data = (await sendCommand("audit_ghosts", { pageIds: chunks[0] }, 300000)) as GhostScan;
+  } else {
+    const merged: Required<Omit<GhostScan, "criterion">> & { criterion?: string } = {
+      pages: [], ghostRefs: 0, ghostCount: 0, danglingRefs: 0,
+      refsScanned: 0, nodesScanned: 0, remoteRefs: 0, ghosts: [],
+    };
+    const byId = new Map<string, { id: string; name?: string; refCount: number; sampleNodes: string[] }>();
+    for (const chunk of chunks) {
+      const part = (await sendCommand("audit_ghosts", { pageIds: chunk }, 300000)) as GhostScan;
+      merged.pages.push(...(part.pages ?? []));
+      merged.ghostRefs += part.ghostRefs ?? 0;
+      merged.danglingRefs += part.danglingRefs ?? 0;
+      merged.refsScanned += part.refsScanned ?? 0;
+      merged.nodesScanned += part.nodesScanned ?? 0;
+      merged.remoteRefs += part.remoteRefs ?? 0;
+      merged.criterion = part.criterion ?? merged.criterion;
+      for (const g of part.ghosts ?? []) {
+        const entry = byId.get(g.id);
+        if (entry) {
+          entry.refCount += g.refCount;
+          entry.sampleNodes = entry.sampleNodes.concat(g.sampleNodes).slice(0, 3);
+        } else {
+          byId.set(g.id, { ...g });
+        }
+      }
+    }
+    merged.ghosts = [...byId.values()].sort((a, b) => b.refCount - a.refCount).slice(0, 30);
+    merged.ghostCount = byId.size;
+    data = merged;
+  }
   const ghosts = data.ghostRefs ?? 0;
   return standardResult({
     summary:
@@ -514,12 +560,13 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
   // ─── analyze_accessibility ──────────────────────────────────────
   server.tool(
     "analyze_accessibility",
-    "Check accessibility: text contrast ratios against backgrounds, touch target sizes. Use to ensure designs meet WCAG guidelines. Follow with update_node to fix contrast or sizing issues.",
+    "Check accessibility: text contrast ratios against backgrounds, interactive target sizes (WCAG 2.5.8: 24px desktop default, 44px with platform:mobile). Use to ensure designs meet WCAG guidelines. Follow with update_node to fix contrast or sizing issues.",
     {
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
+      platform: z.enum(["desktop", "mobile"]).optional().describe("Target-size profile: desktop 24px (default), mobile 44px"),
     },
     { readOnlyHint: true },
-    async ({ nodeId }) => {
+    async ({ nodeId, platform }) => {
       try {
         let targetId: string;
         if (nodeId) {
@@ -536,7 +583,7 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
         }
 
         const issues: AccessibilityIssue[] = [];
-        checkAccessibility(nodeInfo, null, issues);
+        checkAccessibility(nodeInfo, null, issues, platform === "mobile" ? 44 : 24);
 
         const data: AccessibilityData = {
           issueCount: issues.length,
@@ -791,16 +838,18 @@ function analyzeLayoutNode(node: any, issues: LayoutIssue[], _counters: { totalF
   }
 }
 
-function checkAccessibility(node: any, parentBg: any, issues: AccessibilityIssue[]) {
-  // Check touch target sizes for interactive elements
-  if (node.type === "INSTANCE" || node.name?.toLowerCase().includes("button")) {
+function checkAccessibility(node: any, parentBg: any, issues: AccessibilityIssue[], minTarget = 24) {
+  // Check target sizes for interactive elements. Containers (pages, sections)
+  // are not targets — a page named "Button" must not trip this rule.
+  const isContainer = node.type === "PAGE" || node.type === "SECTION" || node.type === "DOCUMENT";
+  if (!isContainer && (node.type === "INSTANCE" || node.name?.toLowerCase().includes("button"))) {
     const w = node.width ?? node.absoluteBoundingBox?.width ?? 0;
     const h = node.height ?? node.absoluteBoundingBox?.height ?? 0;
-    if ((w > 0 && w < 44) || (h > 0 && h < 44)) {
+    if ((w > 0 && w < minTarget) || (h > 0 && h < minTarget)) {
       issues.push({
         nodeId: node.id,
         nodeName: node.name,
-        issue: `Touch target too small: ${Math.round(w)}×${Math.round(h)}px (minimum 44×44px)`,
+        issue: `Target too small: ${Math.round(w)}×${Math.round(h)}px (minimum ${minTarget}×${minTarget}px — WCAG 2.5.8${minTarget >= 44 ? ", mobile" : ""})`,
       });
     }
   }
@@ -832,7 +881,9 @@ function checkAccessibility(node: any, parentBg: any, issues: AccessibilityIssue
           fontSize !== null && (fontSize >= 24 || (fontSize >= 18.66 && fontWeight >= 700));
         const required = isLarge ? 3 : 4.5;
         const ratio = calculateContrastRatio(effective, parentBg.color);
-        if (ratio < required) {
+        // Compare on the displayed precision so a 4.46 ratio never prints the
+        // absurd "4.5:1 (minimum 4.5:1)" failure
+        if (Math.round(ratio * 10) / 10 < required) {
           issues.push({
             nodeId: node.id,
             nodeName: node.name,

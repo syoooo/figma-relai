@@ -33,9 +33,13 @@ export interface Manifest {
 
 export async function buildManifest(version: string): Promise<Manifest> {
   const server = createServer();
-  registerRoomTool(server, async () => {
-    throw new Error("manifest introspection — no relay");
-  });
+  registerRoomTool(
+    server,
+    async () => {
+      throw new Error("manifest introspection — no relay");
+    },
+    async () => []
+  );
   registerEventsTool(server, () => [], () => []);
   registerPrompts(server);
   registerAllTools(server, async () => {

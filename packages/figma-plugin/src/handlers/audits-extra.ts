@@ -88,8 +88,10 @@ function computeFingerprint(pages: PageNode[]): VoiceFingerprint {
         if (typeof fs === "number") bump(fontSize, fs);
       }
 
+      // Sections carry a default hairline border that says nothing about the
+      // design's voice — exclude them from the stroke signature
       const strokes = n.strokes;
-      if (Array.isArray(strokes) && strokes.length > 0) {
+      if (Array.isArray(strokes) && strokes.length > 0 && n.type !== "SECTION") {
         const sw = n.strokeWeight;
         if (typeof sw === "number" && sw > 0) bump(strokeW, sw);
       }
