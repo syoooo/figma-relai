@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "tools": [
     {
       "name": "batch_execute",
@@ -850,6 +850,69 @@
           "limit": {
             "type": "number",
             "description": "list_precedents: max entries returned (default 50)"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false,
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      }
+    },
+    {
+      "name": "manage_rulesets",
+      "category": "design-system",
+      "description": "Kits (rulesets) — named common-ancestor law the plugin keeps on the designer's machine, spanning every file it opens (one designer usually runs one product; its files share the same law). The panel shows this as the KIT row in the connection cluster — when speaking to the designer, call it a kit, not a ruleset. A file LINKS to one ruleset; the file's own carried conventions stay the working copy. Figma DISCARDS file-carried law on branch→main merges — a linked ruleset is the recovery: status shows 'file-empty' after a merge, restore (or the set's autoRestore switch) re-seeds it. Actions: list / status (this file's state: in-sync, file-empty, drifted…) / save (name + conventions, or fromFile:true to capture this file's law) / link (optionally restore:true) / unlink / restore (ruleset→file, also seeds promoted precedents) / push (file→ruleset — the file's law becomes the ancestor) / promote (id — copy one precedent into the linked ruleset so every linked file inherits it) / delete / export (markdown package with provenance frontmatter) / import (markdown). Pass only the fields the action needs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "save",
+              "delete",
+              "link",
+              "unlink",
+              "status",
+              "restore",
+              "push",
+              "promote",
+              "export",
+              "import"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Ruleset name (save/link/delete/export; import fallback)"
+          },
+          "conventions": {
+            "type": "string",
+            "description": "save: full conventions markdown (or use fromFile)"
+          },
+          "fromFile": {
+            "type": "boolean",
+            "description": "save: capture this file's current conventions"
+          },
+          "autoRestore": {
+            "type": "boolean",
+            "description": "save: restore without asking when a linked file's law is found wiped"
+          },
+          "provenance": {
+            "type": "string",
+            "description": "save: where this law comes from (author/repo)"
+          },
+          "restore": {
+            "type": "boolean",
+            "description": "link: immediately restore the ruleset into the file"
+          },
+          "id": {
+            "type": "string",
+            "description": "promote: precedent id (list_precedents shows them)"
+          },
+          "markdown": {
+            "type": "string",
+            "description": "import: a ruleset package exported earlier"
           }
         },
         "required": [
@@ -2031,6 +2094,19 @@
     "audit_readiness",
     "audit_ghosts",
     "snapshot_variables",
+    "list_rulesets",
+    "save_ruleset",
+    "delete_ruleset",
+    "link_ruleset",
+    "unlink_ruleset",
+    "ruleset_status",
+    "restore_from_ruleset",
+    "push_to_ruleset",
+    "promote_precedent",
+    "export_ruleset",
+    "import_ruleset",
+    "list_write_log",
+    "propose_rule",
     "get_local_components",
     "get_instance_overrides",
     "set_instance_overrides",

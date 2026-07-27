@@ -28,6 +28,9 @@ import "./handlers/execute-code.js";
 import "./handlers/memory.js";
 import "./handlers/guards.js";
 import "./handlers/audits-extra.js";
+import "./handlers/rulesets.js";
+import "./handlers/timeline.js";
+import "./handlers/proposals.js";
 
 import { dispatch, hasHandler, cancelCommand, clearCancelled } from "./dispatcher.js";
 import { beginCommand, endCommand, pushEvent, drainEvents } from "./event-buffer.js";
@@ -49,8 +52,14 @@ import {
   recordPrecedent,
   removePrecedentById,
 } from "./handlers/memory.js";
-import { guardsStatePayload, refreshGuardsUI, setGuardedPages } from "./handlers/guards.js";
+import { guardsStatePayload, refreshGuardsUI, setGuardedPages, readGuards } from "./handlers/guards.js";
 import { collectNodeRefs, isWriteCommand } from "./write-guard.js";
+import { reconcileOnLoad, rulesetStatus, postRulesetState } from "./handlers/rulesets.js";
+import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timeline.js";
+import { pendingProposals } from "./handlers/proposals.js";
+
+// Commands that count as a full check-up for the gentle reminder
+const CHECKUP_COMMANDS = new Set(["audit_readiness", "audit_ghosts"]);
 
 // Show the plugin UI
 figma.showUI(__html__, { width: 380, height: 850, themeColors: true });
@@ -85,8 +94,18 @@ async function loadSettings(): Promise<RelaiSettings> {
 }
 
 // Send persisted settings to the UI so it can restore the room + auto-connect
-loadSettings().then((settings) => {
+loadSettings().then(async (settings) => {
   currentSettings = settings;
+  // Heal the merge wound first: a linked file whose law was wiped gets it
+  // back automatically when the ruleset's auto switch is on.
+  let rulesetHealed: string | null = null;
+  try {
+    const recon = await reconcileOnLoad();
+    if (recon.healed) rulesetHealed = recon.name;
+  } catch {
+    // Reconciliation must never block the panel from opening
+  }
+  const lastCheckup = await getLastCheckup();
   figma.ui.postMessage({
     type: "init-settings",
     settings,
@@ -95,7 +114,11 @@ loadSettings().then((settings) => {
     conventionsContent: figma.root.getSharedPluginData("relai", "conventions"),
     memory: readMemory(),
     guards: guardsStatePayload(),
+    rulesetStatus: await rulesetStatus(),
+    rulesetHealed,
+    lastCheckup,
   });
+  void postRulesetState();
 });
 
 // ── Approval gate ───────────────────────────────────────────────────
@@ -209,6 +232,73 @@ figma.ui.onmessage = async (msg: any) => {
     return;
   }
 
+  if (msg.type === "ruleset-op") {
+    // Panel ruleset actions route through the same handlers agents use.
+    try {
+      const op = msg.op as string;
+      const name = typeof msg.name === "string" ? msg.name : undefined;
+      if (op === "save-from-file") await dispatch("save_ruleset", { name, fromFile: true });
+      else if (op === "link") await dispatch("link_ruleset", { name, restore: msg.restore === true });
+      else if (op === "unlink") await dispatch("unlink_ruleset", {});
+      else if (op === "restore") await dispatch("restore_from_ruleset", {});
+      else if (op === "push") await dispatch("push_to_ruleset", {});
+      else if (op === "delete") await dispatch("delete_ruleset", { name });
+      else if (op === "set-auto") await dispatch("save_ruleset", { name, autoRestore: msg.autoRestore === true });
+      else if (op === "export") {
+        const out = (await dispatch("export_ruleset", { name })) as { name: string; markdown: string };
+        figma.ui.postMessage({ type: "ruleset-export", name: out.name, markdown: out.markdown });
+      } else if (op === "import") {
+        await dispatch("import_ruleset", { markdown: msg.markdown });
+      }
+    } catch (error) {
+      figma.notify(error instanceof Error ? error.message : String(error), { error: true });
+      void postRulesetState();
+    }
+    return;
+  }
+
+  if (msg.type === "memory-promote") {
+    try {
+      const out = (await dispatch("promote_precedent", { id: msg.id })) as { ruleset: string };
+      figma.notify(`Promoted into ruleset "${out.ruleset}"`);
+    } catch (error) {
+      figma.notify(error instanceof Error ? error.message : String(error), { error: true });
+    }
+    return;
+  }
+
+  if (msg.type === "history-fetch") {
+    try {
+      const out = await dispatch("list_write_log", { limit: 200 });
+      figma.ui.postMessage({ type: "history-state", ...(out as Record<string, unknown>) });
+    } catch {
+      figma.ui.postMessage({ type: "history-state", entries: [], total: 0 });
+    }
+    return;
+  }
+
+  if (msg.type === "proposal-response") {
+    const proposal = pendingProposals.get(msg.id as string);
+    pendingProposals.delete(msg.id as string);
+    if (proposal && msg.accepted === true) {
+      const current = readGuards().pages;
+      setGuardedPages([...new Set([...current, ...proposal.pages.map((p) => p.id)])]);
+      const names = proposal.pages.map((p) => p.name).join(", ");
+      try {
+        await recordPrecedent({
+          kind: "decision",
+          text: `enabled page guard for ${names} — ${proposal.reason}`,
+          refs: { pages: proposal.pages.map((p) => p.id) },
+          source: "manual",
+        });
+      } catch {
+        // The guard itself is on; a full memory must not undo the accept
+      }
+      figma.notify(`No-go zone enabled: ${names}`);
+    }
+    return;
+  }
+
   if (msg.type === "scope-lock") {
     if (msg.on) {
       const sel = figma.currentPage.selection;
@@ -299,6 +389,12 @@ figma.ui.onmessage = async (msg: any) => {
         figma.ui.postMessage({ type: "evidence-marker", command, count: touched });
       }
 
+      // Session timeline: every write lands in the per-machine ring buffer
+      if (isWriteCommand(command, params || {})) {
+        void appendWriteLog(command, collectNodeRefs(params || {}), true, touched);
+      }
+      if (CHECKUP_COMMANDS.has(command)) void stampCheckup();
+
       // Piggyback designer activity that happened since the last command
       const events = drainEvents();
       figma.ui.postMessage({
@@ -322,6 +418,9 @@ figma.ui.onmessage = async (msg: any) => {
         }
       }
       clearCancelled(params?.commandId as string | undefined);
+      if (isWriteCommand(command, params || {})) {
+        void appendWriteLog(command, collectNodeRefs(params || {}), false);
+      }
       figma.ui.postMessage({
         type: "command-error",
         id,

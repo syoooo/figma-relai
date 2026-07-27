@@ -23,6 +23,10 @@
 
       --mono: "SF Mono", "Menlo", "Cascadia Code", "Consolas", "Noto Sans Mono", monospace;
 
+      --dur-fast: 0.14s;
+      --dur-med: 0.22s;
+      --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
       --sp-2: 2px; --sp-4: 4px; --sp-6: 6px; --sp-8: 8px;
       --sp-12: 12px; --sp-16: 16px; --sp-20: 20px; --sp-24: 24px;
     }
@@ -43,7 +47,7 @@
       position: relative;
     }
 
-    /* CRT scanlines — the one deliberate flourish; barely-there */
+    /* CRT scanlines — barely-there */
     body::after {
       content: "";
       position: fixed; inset: 0;
@@ -58,6 +62,11 @@
     }
 
     @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+    @keyframes pop {
+      0% { transform: scale(0.92); opacity: 0; }
+      60% { transform: scale(1.02); opacity: 1; }
+      100% { transform: scale(1); }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::after, *::before { animation: none !important; transition: none !important; }
     }
@@ -104,6 +113,14 @@
     }
     .rule::before { content: ""; width: 12px; border-top: 1px solid var(--line); }
     .rule::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
+    /* Actions sit AFTER the dashed filler, at the right edge, visibly clickable */
+    .rule .feed-head-extra { order: 2; margin-left: 0 !important; }
+    .feed-head-extra .view-link {
+      color: var(--faint);
+      text-decoration: underline dotted; text-underline-offset: 2px;
+      cursor: pointer;
+    }
+    .feed-head-extra .view-link:hover { color: var(--amber); }
     .rule .chev { color: var(--faint); font-size: 8px; transition: transform var(--dur-fast) var(--ease-out); }
     .rule.clickable { cursor: pointer; }
     .rule.clickable:hover { color: var(--text); }
@@ -158,6 +175,7 @@
       overflow: auto; white-space: pre-wrap; user-select: text;
       font-size: 10px; line-height: 1.6; color: var(--text);
     }
+    .conv-from { font-size: 9.5px; color: var(--muted); margin-left: var(--sp-2); }
 
     /* ── Panels ─────────────────────────────────────────── */
     .panel {
@@ -165,6 +183,7 @@
       border: 1px solid var(--line);
       padding: var(--sp-12);
       position: relative;
+      isolation: isolate;
     }
     .panel + .panel { margin-top: var(--sp-8); }
     /* Blueprint corner registration marks (top-left / bottom-right) */
@@ -179,6 +198,41 @@
     }
     .panel::before { top: -6px; left: -4px; }
     .panel::after { bottom: -6px; right: -4px; }
+
+    /* Status pills — bordered chips with a lamp dot */
+    .chips { display: flex; gap: var(--sp-6); align-items: center; margin-bottom: var(--sp-8); }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      border: 1px solid var(--line);
+      padding: 1px 8px;
+      font-size: 9px; letter-spacing: 0.1em;
+      color: var(--muted);
+      background: var(--panel);
+    }
+    .chip .val { display: inline-flex; align-items: center; gap: 5px; }
+    .chip .val.ok { color: var(--ok); }
+    .chip:has(.val.ok) { border-color: rgba(88, 224, 122, 0.4); }
+    .chip .val.muted { color: var(--faint); }
+
+    /* Kit byline inside the file card: the law's lineage note */
+    .kit-line {
+      display: flex; align-items: center; gap: var(--sp-6);
+      font-size: 10px; color: var(--muted);
+      cursor: pointer;
+      margin: -2px 0 var(--sp-6);
+    }
+    .kit-line:hover .view-link { color: var(--amber); }
+
+    /* Session footer: the room and its exit live together, in the footer zone */
+    .session-foot {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--sp-8);
+      margin-top: var(--sp-20);
+      padding-top: var(--sp-8);
+      border-top: 1px solid var(--line-soft);
+    }
+    .session-foot .link-btn { display: inline-block; width: auto; margin: 0; padding: var(--sp-4) 0; }
+    .session-foot .room-line { margin-top: 0; }
 
     .file-display {
       font-size: 15px; font-weight: 700;
@@ -419,7 +473,8 @@
       border-color: var(--amber-dim);
       margin-top: var(--sp-8);
     }
-    .approval-card.show { display: block; }
+    .approval-card.show { display: block; animation: pop var(--dur-med) var(--ease-out); }
+    .modal-overlay.open .modal-box { animation: pop var(--dur-fast) var(--ease-out); }
     .approval-title {
       font-size: 8px; font-weight: 700; letter-spacing: 0.18em;
       color: var(--amber);
@@ -456,7 +511,61 @@
     .mem-del:hover { color: var(--err); }
     .mem-del svg { display: inline-block; vertical-align: -1px; }
     .mem-empty { color: var(--faint); font-size: 10px; padding: 4px 0; }
-    #memList, #guardsList { overflow-y: auto; min-height: 0; }
+    #memList, #guardsList, #rulesetList, #histList { overflow-y: auto; min-height: 0; }
+
+    /* ── Kits: radio list (choose one, or none) + detail for the followed ── */
+    .rs-entry {
+      display: flex; align-items: center; gap: var(--sp-8);
+      padding: 5px 0; border-bottom: 1px solid var(--line-soft); font-size: 10px;
+      cursor: pointer;
+    }
+    .rs-entry:hover .rs-name { color: var(--amber); }
+    .rs-radio {
+      width: 8px; height: 8px; border-radius: 50%;
+      border: 1px solid var(--muted);
+      flex-shrink: 0;
+    }
+    .rs-entry.followed .rs-radio { border-color: var(--amber); background: var(--amber); box-shadow: 0 0 5px var(--amber-glow); }
+    .rs-name { color: var(--text); }
+    .rs-entry.followed .rs-name { color: var(--amber); }
+    .rs-entry.none-row .rs-name { color: var(--muted); }
+    .rs-meta { color: var(--faint); font-size: 9px; flex: 1; text-align: right; }
+    .rs-del {
+      color: var(--faint); font-size: 9px; cursor: pointer; flex-shrink: 0;
+      border-bottom: 1px dotted transparent;
+    }
+    .rs-del:hover { color: var(--err); border-bottom-color: var(--err); }
+    /* Expansion under the followed row — reads as that row unfolding */
+    .rs-entry.followed:not(.none-row) { border-bottom: none; }
+    .rs-expand {
+      padding: 0 0 var(--sp-6) 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .rs-expand .setting-row { padding: var(--sp-2) 0; }
+    .rs-acts { display: flex; gap: var(--sp-12); padding: var(--sp-4) 0; font-size: 10px; }
+    .rs-acts .act { color: var(--muted); cursor: pointer; border-bottom: 1px dotted var(--faint); }
+    .rs-acts .act:hover { color: var(--amber); border-bottom-color: var(--amber-dim); }
+    .rs-acts .act.warn { color: var(--amber); border-bottom-color: var(--amber-dim); }
+    .rs-foot { padding-top: var(--sp-6); font-size: 9px; }
+    .checkup-hint { font-size: 9px; color: var(--faint); padding: 2px 0 0; }
+
+    /* ── Session history ────────────────────────────────── */
+    .hist-session {
+      display: flex; align-items: baseline; gap: var(--sp-6);
+      padding: 6px 0 2px; color: var(--muted); font-size: 9px;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .hist-session .dots { flex: 1; border-bottom: 1px dotted var(--line); height: 0.9em; }
+    .hist-entry {
+      display: flex; align-items: baseline; gap: var(--sp-8);
+      padding: 2px 0; font-size: 10px;
+    }
+    .hist-entry .t { color: var(--faint); font-size: 9px; flex-shrink: 0; }
+    .hist-entry .cmd { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hist-entry .cmd.link { cursor: pointer; border-bottom: 1px dotted var(--faint); }
+    .hist-entry .cmd.link:hover { color: var(--amber); border-bottom-color: var(--amber); }
+    .hist-entry .mark { color: var(--amber-dim); font-size: 9px; flex-shrink: 0; margin-left: auto; }
+    .hist-entry .mark.err { color: var(--err); }
     .mem-input {
       width: 100%; margin-top: var(--sp-8);
       background: var(--bg); border: 1px dashed var(--line); color: var(--text);
@@ -534,7 +643,6 @@
       <svg width="72" height="24" viewBox="0 0 110 36" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M102.934 35V10H109.143V35H102.934ZM106.018 7.25C105.045 7.25 104.212 6.91667 103.518 6.25C102.851 5.55555 102.518 4.72222 102.518 3.75C102.518 2.77778 102.851 1.95833 103.518 1.29167C104.212 0.597222 105.045 0.25 106.018 0.25C106.99 0.25 107.809 0.597222 108.476 1.29167C109.17 1.95833 109.518 2.77778 109.518 3.75C109.518 4.72222 109.17 5.55555 108.476 6.25C107.809 6.91667 106.99 7.25 106.018 7.25Z" fill="#FFB000"/>
         <path d="M81.6992 35.4583C78.7825 35.4583 76.4908 34.75 74.8242 33.3333C73.1853 31.9167 72.3658 30.0417 72.3658 27.7083C72.3658 25.2639 73.1992 23.375 74.8658 22.0417C76.5603 20.7083 78.9908 20.0417 82.1575 20.0417H89.7825V19.0417C89.7825 15.9861 88.0047 14.4583 84.4492 14.4583C81.4492 14.4583 79.6297 15.5417 78.9908 17.7083H72.7825C73.2825 15.0417 74.5325 13.0139 76.5325 11.625C78.5603 10.2083 81.1992 9.5 84.4492 9.5C88.1158 9.5 90.9075 10.3333 92.8242 12C94.7408 13.6389 95.6992 16.0417 95.6992 19.2083V28.7917H98.6575V35H92.2825V31H90.5325C89.6714 32.4167 88.5047 33.5139 87.0325 34.2917C85.5881 35.0694 83.8103 35.4583 81.6992 35.4583ZM82.6158 30.6667C83.977 30.6667 85.1992 30.4167 86.2825 29.9167C87.3658 29.3889 88.2131 28.6944 88.8242 27.8333C89.4631 26.9444 89.7825 25.9583 89.7825 24.875V24.2917H82.4908C79.6853 24.2917 78.2825 25.3333 78.2825 27.4167C78.2825 28.4444 78.6575 29.25 79.4075 29.8333C80.1853 30.3889 81.2547 30.6667 82.6158 30.6667Z" fill="#FFB000"/>
-        <rect x="92.2825" y="28.7917" width="6.375" height="6.2083" fill="#E8E2D0"/>
         <path d="M62.0885 35V0H68.2968V35H62.0885Z" fill="#E8E2D0"/>
         <path d="M45.8515 35.5C43.157 35.5 40.8237 34.9722 38.8515 33.9167C36.8793 32.8333 35.3515 31.3194 34.2681 29.375C33.2126 27.4028 32.6848 25.0833 32.6848 22.4167C32.6848 19.75 33.2126 17.4583 34.2681 15.5417C35.3237 13.5972 36.8237 12.1111 38.7681 11.0833C40.7126 10.0278 42.9904 9.5 45.6015 9.5C48.157 9.5 50.3515 10 52.1848 11C54.0181 11.9722 55.4348 13.3889 56.4348 15.25C57.4348 17.0833 57.9348 19.2639 57.9348 21.7917V23.9583H38.6848C38.907 26.0694 39.6293 27.6944 40.8515 28.8333C42.1015 29.9444 43.7543 30.5 45.8098 30.5C47.3376 30.5 48.5737 30.2222 49.5181 29.6667C50.4904 29.0833 51.1709 28.2222 51.5598 27.0833H57.8098C57.2265 29.7222 55.8793 31.7917 53.7681 33.2917C51.6848 34.7639 49.0459 35.5 45.8515 35.5ZM38.8098 19.75H51.9765C51.7265 18.0278 51.0598 16.7222 49.9765 15.8333C48.8931 14.9167 47.4348 14.4583 45.6015 14.4583C43.7959 14.4583 42.3098 14.9167 41.1431 15.8333C39.9765 16.75 39.1987 18.0556 38.8098 19.75Z" fill="#E8E2D0"/>
         <path d="M0 35V1.25H17.0833C20.6389 1.25 23.4167 2.06944 25.4167 3.70833C27.4444 5.31945 28.4583 7.56945 28.4583 10.4583C28.4583 12.1806 28.0556 13.6667 27.25 14.9167C26.4722 16.1667 25.3333 17.0972 23.8333 17.7083V17.875C25.3056 17.875 26.4444 18.2778 27.25 19.0833C28.0556 19.8611 28.4583 21.0139 28.4583 22.5417V35H22.125V21.8333H6.375V35H0ZM6.375 16.4167H16.625C18.4028 16.4167 19.7778 16 20.75 15.1667C21.7222 14.3056 22.2083 13.1111 22.2083 11.5833C22.2083 10.0278 21.7222 8.83333 20.75 8C19.7778 7.13889 18.4028 6.70833 16.625 6.70833H6.375V16.4167Z" fill="#E8E2D0"/>
@@ -594,22 +702,19 @@
   <!-- ===== CONNECTED SECTION ===== -->
   <div class="connected-section" id="connectedSection">
 
-    <div class="panel">
+    <!-- Session plumbing: two pills, quiet when green -->
+    <div class="chips">
+      <span class="chip">RELAY <span class="val ok" id="relayVal"><span class="lamp on"></span> <span id="relayText" data-i18n="relay_link">LINK</span></span></span>
+      <span class="chip">AGENT <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText" data-i18n="ai_waiting">WAITING</span></span></span>
+    </div>
+
+    <!-- The file card: this file, its lineage, its law -->
+    <div class="panel file-card">
       <div class="file-display" id="connectedFile"></div>
-      <div class="leader-row">
-        <span class="key">RELAY</span>
-        <span class="dots"></span>
-        <span class="val ok" id="relayVal"><span class="lamp on"></span> <span id="relayText" data-i18n="relay_link">LINK</span></span>
-      </div>
-      <div class="leader-row">
-        <span class="key">AGENT</span>
-        <span class="dots"></span>
-        <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText" data-i18n="ai_waiting">WAITING</span></span>
-      </div>
-      <div class="leader-row conv-row" id="convRow" style="display:none" onclick="openConvModal()">
+      <div class="leader-row conv-row" id="convRow" onclick="openConvModal()">
         <span class="key">RULES</span>
         <span class="dots"></span>
-        <span class="val muted"><span class="view-link" data-i18n="conventions_view">view</span></span>
+        <span class="val muted" id="convRowVal"><span class="view-link">view</span></span>
       </div>
       <div class="leader-row conv-row" id="memRow" onclick="openMemModal()">
         <span class="key">MEMORY</span>
@@ -621,11 +726,7 @@
         <span class="dots"></span>
         <span class="val muted"><span id="guardsCount">0</span> · <span class="view-link" data-i18n="guards_edit">edit</span></span>
       </div>
-      <div class="room-line" id="roomLine" onclick="copyConnectedRoom()">
-        <span class="room-key" data-i18n="room_label">Room</span>
-        <span class="room-value" id="connectedRoom"></span>
-        <span class="copy-label" data-i18n="copy">copy</span>
-      </div>
+      <div class="checkup-hint" id="checkupHint" style="display:none"></div>
     </div>
 
     <!-- Conventions modal: read-only view of the file's rules -->
@@ -633,7 +734,9 @@
       <div class="panel modal-box">
         <div class="modal-head">
           <span class="key">RULES</span>
+          <span class="conv-from" id="convFrom"></span>
           <span class="dots"></span>
+          <button class="modal-close" onclick="closeConvModal(); openRulesetModal()" aria-label="kit settings">&#9881;</button>
           <button class="modal-close" onclick="closeConvModal()" aria-label="close">&#10005;</button>
         </div>
         <div class="conv-text" id="convText"></div>
@@ -665,6 +768,37 @@
       </div>
     </div>
 
+    <!-- Kit modal: the file's connection to its law source (named, cross-file) -->
+    <div class="modal-overlay" id="rulesetModal" onclick="if (event.target === this) closeRulesetModal()">
+      <div class="panel modal-box">
+        <div class="modal-head">
+          <span class="key">KITS</span>
+          <span class="dots"></span>
+          <button class="modal-close" onclick="closeRulesetModal()" aria-label="close">&#10005;</button>
+        </div>
+        <div id="rulesetList"></div>
+        <div class="rule"><span data-i18n="kit_new">new</span></div>
+        <div class="rs-acts">
+          <span class="act" id="rsNewLink" onclick="rsShowSaveInput()" data-i18n="kit_new_link">+ save this file&#x27;s rules</span>
+          <span class="act" onclick="document.getElementById('rsImportFile').click()" data-i18n="ruleset_import">+ import a file…</span>
+        </div>
+        <input class="mem-input" id="rsSaveInput" style="display:none" data-i18n-ph="ruleset_save_ph" placeholder="name, Enter" onkeydown="onRsSaveKey(event)">
+        <input type="file" id="rsImportFile" accept=".md,.txt,text/markdown" style="display:none" onchange="onRsImportFile(event)">
+      </div>
+    </div>
+
+    <!-- History modal: the per-machine write timeline -->
+    <div class="modal-overlay" id="histModal" onclick="if (event.target === this) closeHistModal()">
+      <div class="panel modal-box">
+        <div class="modal-head">
+          <span class="key">SESSIONS</span>
+          <span class="dots"></span>
+          <button class="modal-close" onclick="closeHistModal()" aria-label="close">&#10005;</button>
+        </div>
+        <div id="histList"><div class="mem-empty" data-i18n="hist_empty">no writes recorded yet</div></div>
+      </div>
+    </div>
+
     <!-- Approval gate: the agent wants to write; the designer decides -->
     <div class="panel approval-card" id="approvalCard">
       <div class="approval-title" data-i18n="approval_title">AGENT REQUESTS</div>
@@ -677,8 +811,26 @@
       </div>
     </div>
 
+    <!-- Moment cards: the file speaks when its law needs a decision -->
+    <div class="panel approval-card" id="momentCard">
+      <div class="approval-title">FILE &rsaquo;</div>
+      <div class="approval-intent" id="momentBody"></div>
+      <div class="approval-actions" id="momentActions"></div>
+    </div>
+
+    <!-- Rule proposal: the agent suggests promoting prose law to enforcement -->
+    <div class="panel approval-card" id="proposalCard">
+      <div class="approval-title" data-i18n="proposal_title">AGENT PROPOSES</div>
+      <div class="approval-intent" id="proposalReason"></div>
+      <div class="approval-cmd"><code id="proposalPages"></code></div>
+      <div class="approval-actions">
+        <button class="btn" onclick="answerProposal(true)" data-i18n="proposal_enable">Enable no-go</button>
+        <button class="btn deny" onclick="answerProposal(false)" data-i18n="proposal_dismiss">Dismiss</button>
+      </div>
+    </div>
+
     <!-- Activity feed -->
-    <div class="rule"><span data-i18n="activity">Activity</span><span class="feed-head-extra" style="margin-left:auto"><button class="stop-btn" id="stopBtn" onclick="stopAll()">&#9632; <span data-i18n="stop">STOP</span></button></span></div>
+    <div class="rule"><span data-i18n="activity">Activity</span><span class="feed-head-extra" style="margin-left:auto"><span class="view-link" onclick="openHistModal()" data-i18n="history">history</span><button class="stop-btn" id="stopBtn" onclick="stopAll()">&#9632; <span data-i18n="stop">STOP</span></button></span></div>
     <div class="feed" id="feed">
       <div class="feed-empty" id="feedEmpty"><span data-i18n="feed_empty">awaiting commands</span> <span class="cursor">▊</span></div>
     </div>
@@ -721,7 +873,7 @@
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> create (1)</summary><div class="cat-tools"><span class="tool-tag">create_node</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> edit (3)</summary><div class="cat-tools"><span class="tool-tag">set_properties</span><span class="tool-tag">edit_structure</span><span class="tool-tag">set_text</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> components (1)</summary><div class="cat-tools"><span class="tool-tag">manage_components</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> design-system (5)</summary><div class="cat-tools"><span class="tool-tag">manage_variables</span><span class="tool-tag">manage_styles</span><span class="tool-tag">import_from_library</span><span class="tool-tag">get_design_system</span><span class="tool-tag">manage_conventions</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> design-system (6)</summary><div class="cat-tools"><span class="tool-tag">manage_variables</span><span class="tool-tag">manage_styles</span><span class="tool-tag">import_from_library</span><span class="tool-tag">get_design_system</span><span class="tool-tag">manage_conventions</span><span class="tool-tag">manage_rulesets</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> document (2)</summary><div class="cat-tools"><span class="tool-tag">manage_pages</span><span class="tool-tag">navigate</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> assets (2)</summary><div class="cat-tools"><span class="tool-tag">export_asset</span><span class="tool-tag">add_image</span></div></details>
         <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> annotations (1)</summary><div class="cat-tools"><span class="tool-tag">annotate</span></div></details>
@@ -730,11 +882,18 @@
     </div>
 
     <!-- Disconnect -->
-    <button class="link-btn" onclick="disconnect()" data-i18n="disconnect">Disconnect</button>
+    <div class="session-foot">
+      <div class="room-line" id="roomLine" onclick="copyConnectedRoom()">
+        <span class="room-key" data-i18n="room_label">Room</span>
+        <span class="room-value" id="connectedRoom"></span>
+        <span class="copy-label" data-i18n="copy">copy</span>
+      </div>
+      <button class="link-btn" onclick="disconnect()" data-i18n="disconnect">Disconnect</button>
+    </div>
   </div>
 
   <!-- Footer -->
-  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.4.2 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
+  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.5.0 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
 
   <script>
     // ---------- i18n ----------
@@ -781,6 +940,22 @@
         lock_empty: 'select something first, then toggle',
         lock_on_prefix: 'locked to: ',
         conventions_view: 'view',
+        rules_add: 'add',
+        rules_empty_hint: 'No rules here yet. Ask your agent to write this file’s conventions (manage_conventions) — or follow a kit and update from it.',
+        moment_wound: 'My rules are gone — put them back from “{kit}”?',
+        moment_wound_yes: 'Restore',
+        moment_drift: 'My rules differ from “{kit}” now.',
+        moment_drift_pull: 'Update from {kit}',
+        moment_first: 'I have no rules yet. Follow “{kit}”?',
+        moment_first_yes: 'Follow',
+        moment_later: 'Not now',
+        kit_none: 'follow none',
+        kit_following: 'following “{kit}”',
+        kit_auto: 'auto-restore',
+        kit_new: 'new',
+        kit_new_link: '+ save this file’s rules',
+        conv_from_kit: 'from kit “{kit}”',
+        conv_no_kit: 'no kit followed',
         approval_no_intent: '(agent gave no description of what this does)',
         approval_reason_ph: 'reason → saved to file memory (optional)',
         memory_add_ph: '+ note a precedent… (Enter)',
@@ -792,7 +967,33 @@
         guards_empty: 'no pages yet',
         evidence_bulk: 'bulk write',
         tools_title: 'Toolset',
-        disconnect: 'Disconnect'
+        disconnect: 'Disconnect',
+        ruleset_manage: 'manage',
+        ruleset_empty: 'no kits yet — type a name below to save this file’s rules as the first one',
+        ruleset_save_ph: 'name, Enter',
+        ruleset_import: '+ import a file…',
+        ruleset_export: 'export',
+        ruleset_link: 'follow',
+        ruleset_unlink: 'unfollow',
+        ruleset_delete: 'delete',
+        ruleset_sure: 'sure?',
+        ruleset_restore: 'update this file from the kit',
+        ruleset_push: 'publish this file’s rules to the kit',
+        ruleset_auto_on: 'auto-restore on',
+        ruleset_auto_off: 'auto-restore off',
+        ruleset_state_none: 'none',
+        ruleset_state_insync: 'in sync',
+        ruleset_state_fileempty: 'rules missing',
+        ruleset_state_drifted: 'rules differ',
+        ruleset_state_missing: 'kit not on this machine',
+        ruleset_healed: 'rules restored from kit',
+        history: 'history',
+        hist_empty: 'no writes recorded yet',
+        checkup_hint: 'last full check-up {d} days ago — ask your agent for one',
+        proposal_title: 'AGENT PROPOSES',
+        proposal_enable: 'Enable no-go',
+        proposal_dismiss: 'Dismiss',
+        promote_title: 'promote into the linked ruleset'
       },
       ja: {
         status_label: 'STATUS',
@@ -836,6 +1037,22 @@
         lock_empty: '先にオブジェクトを選択してください',
         lock_on_prefix: 'ロック中: ',
         conventions_view: '表示',
+        rules_add: '追加',
+        rules_empty_hint: 'まだ規約がありません。エージェントに書いてもらうか（manage_conventions）、キットをフォローして更新してください。',
+        moment_wound: '規約が消えています。「{kit}」から戻しますか?',
+        moment_wound_yes: '復元',
+        moment_drift: 'この規約は「{kit}」と違っています。',
+        moment_drift_pull: '「{kit}」から更新',
+        moment_first: 'まだ規約がありません。「{kit}」をフォローしますか?',
+        moment_first_yes: 'フォロー',
+        moment_later: '後で',
+        kit_none: 'フォローしない',
+        kit_following: 'フォロー中「{kit}」',
+        kit_auto: '自動復元',
+        kit_new: '追加',
+        kit_new_link: '+ このファイルの規約から',
+        conv_from_kit: 'キット「{kit}」から',
+        conv_no_kit: 'キット未フォロー',
         approval_no_intent: '（エージェントは目的を説明していません）',
         approval_reason_ph: '理由 → ファイルの記憶に残す（任意）',
         memory_add_ph: '+ 判例をひとこと…（Enter で保存）',
@@ -847,7 +1064,33 @@
         guards_empty: 'ページがありません',
         evidence_bulk: '一括書き込み',
         tools_title: 'ツール一覧',
-        disconnect: '切断'
+        disconnect: '切断',
+        ruleset_manage: '管理',
+        ruleset_empty: 'キットはまだありません — 下に名前を入れて、このファイルの規約を最初のひとつとして保存できます',
+        ruleset_save_ph: '名前を入れて Enter',
+        ruleset_import: '+ ファイルを読み込む…',
+        ruleset_export: '書き出す',
+        ruleset_link: 'フォロー',
+        ruleset_unlink: '解除',
+        ruleset_delete: '削除',
+        ruleset_sure: '本当に?',
+        ruleset_restore: 'キットからこのファイルを更新',
+        ruleset_push: 'このファイルの規約をキットへ公開',
+        ruleset_auto_on: '自動復元 オン',
+        ruleset_auto_off: '自動復元 オフ',
+        ruleset_state_none: '未フォロー',
+        ruleset_state_insync: '同期済み',
+        ruleset_state_fileempty: '規約が消えています',
+        ruleset_state_drifted: '規約に差分',
+        ruleset_state_missing: 'このマシンにありません',
+        ruleset_healed: 'キットから復元済み',
+        history: '履歴',
+        hist_empty: 'まだ記録がありません',
+        checkup_hint: '前回の総点検から{d}日 — エージェントに一声どうぞ',
+        proposal_title: 'エージェントの提案',
+        proposal_enable: '立入禁止にする',
+        proposal_dismiss: '見送る',
+        promote_title: 'リンク中のルールセットへ昇格'
       },
       zh: {
         status_label: 'STATUS',
@@ -891,6 +1134,22 @@
         lock_empty: '请先选中内容再开启',
         lock_on_prefix: '已锁定: ',
         conventions_view: '查看',
+        rules_add: '添加',
+        rules_empty_hint: '还没有规矩。让 agent 帮你写（manage_conventions），或跟随一个 kit 再更新进来。',
+        moment_wound: '我的规矩丢了——从「{kit}」放回来？',
+        moment_wound_yes: '恢复',
+        moment_drift: '我的规矩和「{kit}」不一样了。',
+        moment_drift_pull: '从 {kit} 更新',
+        moment_first: '我还没有规矩。跟随「{kit}」吗？',
+        moment_first_yes: '跟随',
+        moment_later: '先不',
+        kit_none: '不跟随',
+        kit_following: '跟随中「{kit}」',
+        kit_auto: '自动恢复',
+        kit_new: '新建',
+        kit_new_link: '+ 存入这个文件的规矩',
+        conv_from_kit: '来自 kit「{kit}」',
+        conv_no_kit: '未跟随 kit',
         approval_no_intent: '（agent 没有说明这次要做什么）',
         approval_reason_ph: '理由 → 记入文件记忆（可选）',
         memory_add_ph: '+ 记一笔…（Enter 保存）',
@@ -902,7 +1161,33 @@
         guards_empty: '暂无页面',
         evidence_bulk: '批量写入',
         tools_title: '工具列表',
-        disconnect: '断开'
+        disconnect: '断开',
+        ruleset_manage: '管理',
+        ruleset_empty: '还没有 kit — 在下面输入名字，把这个文件的规矩存成第一套',
+        ruleset_save_ph: '输入名字回车',
+        ruleset_import: '+ 导入文件…',
+        ruleset_export: '导出',
+        ruleset_link: '跟随',
+        ruleset_unlink: '解除',
+        ruleset_delete: '删除',
+        ruleset_sure: '确定？',
+        ruleset_restore: '从 kit 更新这个文件',
+        ruleset_push: '把这个文件的规矩发布到 kit',
+        ruleset_auto_on: '自动恢复 开',
+        ruleset_auto_off: '自动恢复 关',
+        ruleset_state_none: '未跟随',
+        ruleset_state_insync: '已同步',
+        ruleset_state_fileempty: '规矩丢了',
+        ruleset_state_drifted: '规矩有差异',
+        ruleset_state_missing: '这台机器上没有',
+        ruleset_healed: '已从 kit 恢复',
+        history: '历史',
+        hist_empty: '还没有记录',
+        checkup_hint: '距上次全面体检已 {d} 天 — 让 agent 跑一次吧',
+        proposal_title: 'AGENT 提议',
+        proposal_enable: '设为禁区',
+        proposal_dismiss: '不用了',
+        promote_title: '升格进已链接的规则集'
       }
     };
     var LOCALES = ['en', 'ja', 'zh'];
@@ -934,6 +1219,8 @@
     function setLang(l) {
       locale = l;
       applyI18n();
+      renderConvRow();
+      renderRulesetRow();
       saveSettings({ locale: locale });
     }
 
@@ -1147,6 +1434,14 @@
         var x = document.createElement('span');
         x.className = 'mem-text';
         x.textContent = e.text;
+        var up = document.createElement('button');
+        up.className = 'mem-del';
+        up.textContent = '↑';
+        up.title = t('promote_title');
+        up.setAttribute('aria-label', 'promote precedent to ruleset');
+        up.onclick = function () {
+          parent.postMessage({ pluginMessage: { type: 'memory-promote', id: e.id } }, '*');
+        };
         var del = document.createElement('button');
         del.className = 'mem-del';
         del.innerHTML = MEM_DEL_SVG;
@@ -1157,13 +1452,14 @@
         row.appendChild(d);
         row.appendChild(k);
         row.appendChild(x);
+        row.appendChild(up);
         row.appendChild(del);
         list.appendChild(row);
       });
     }
 
     function onMemInputKey(ev) {
-      if (ev.key !== 'Enter') return;
+      if (ev.key !== 'Enter' || ev.isComposing || ev.keyCode === 229) return;
       var input = document.getElementById('memInput');
       var text = (input.value || '').trim();
       if (!text) return;
@@ -1180,9 +1476,46 @@
 
     var conventionsContent = '';
 
+    function renderConvRow() {
+      var v = document.getElementById('convRowVal');
+      if (!v) return;
+      var s = rsStatusData;
+      var linked = s && s.linked && s.state !== 'none' && s.state !== 'unlinked';
+      v.className = 'val ' + (linked && s.state !== 'in-sync' ? (s.state === 'missing-set' ? 'err' : 'warn') : 'muted');
+      v.textContent = '';
+      if (linked) v.appendChild(document.createTextNode(s.linked + ' · '));
+      var link = document.createElement('span');
+      link.className = 'view-link';
+      link.textContent = conventionsContent ? t('conventions_view') : t('rules_add');
+      v.appendChild(link);
+    }
+
+    function rsShowSaveInput() {
+      var input = document.getElementById('rsSaveInput');
+      document.getElementById('rsNewLink').style.display = 'none';
+      input.style.display = '';
+      input.focus();
+    }
+
+    function fillConvModal() {
+      var el = document.getElementById('convText');
+      if (conventionsContent) {
+        el.textContent = conventionsContent;
+        el.style.color = '';
+      } else {
+        el.textContent = t('rules_empty_hint');
+        el.style.color = 'var(--muted)';
+      }
+      var from = document.getElementById('convFrom');
+      if (from) {
+        var s = rsStatusData;
+        var linked = s && s.linked && s.state !== 'none' && s.state !== 'unlinked';
+        from.textContent = linked ? t('conv_from_kit').replace('{kit}', s.linked) : '';
+      }
+    }
+
     function openConvModal() {
-      if (!conventionsContent) return;
-      document.getElementById('convText').textContent = conventionsContent;
+      fillConvModal();
       document.getElementById('convModal').classList.add('open');
     }
 
@@ -1191,8 +1524,362 @@
     }
 
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeConvModal();
+      if (e.key === 'Escape') { closeConvModal(); closeRulesetModal(); closeHistModal(); }
     });
+
+    // ---------- Rulesets (common-ancestor law, this machine) ----------
+    var rsStatusData = null;
+    var rsList = [];
+    var rsDeleteArmed = null;
+
+    function rsPost(op, extra) {
+      var m = { type: 'ruleset-op', op: op };
+      if (extra) { for (var k in extra) m[k] = extra[k]; }
+      parent.postMessage({ pluginMessage: m }, '*');
+    }
+
+    function rsStateLabel(state) {
+      if (state === 'in-sync') return t('ruleset_state_insync');
+      if (state === 'file-empty') return t('ruleset_state_fileempty');
+      if (state === 'drifted') return t('ruleset_state_drifted');
+      if (state === 'missing-set') return t('ruleset_state_missing');
+      return t('ruleset_state_none');
+    }
+
+    function renderRulesetRow() {
+      var val = document.getElementById('rulesetVal');
+      if (!val) return;
+      var s = rsStatusData;
+      val.textContent = '';
+      if (!s || s.state === 'none' || s.state === 'unlinked') {
+        val.className = 'val muted';
+        var link = document.createElement('span');
+        link.className = 'view-link';
+        link.textContent = t('ruleset_manage');
+        val.appendChild(link);
+        return;
+      }
+      // The displayed name IS the followed kit; color speaks only when something is wrong
+      val.className = s.state === 'in-sync' ? 'val muted' : s.state === 'missing-set' ? 'val err' : 'val warn';
+      val.appendChild(document.createTextNode(s.linked + ' · '));
+      var view = document.createElement('span');
+      view.className = 'view-link';
+      view.textContent = t('conventions_view');
+      val.appendChild(view);
+    }
+
+    function rsAct(label, fn, extraClass) {
+      var a = document.createElement('span');
+      a.className = 'rs-act' + (extraClass || '');
+      a.textContent = label;
+      a.onclick = fn;
+      return a;
+    }
+
+    function renderRulesetModal() {
+      var list = document.getElementById('rulesetList');
+      if (!list) return;
+      list.textContent = '';
+      var s = rsStatusData;
+      var followed = s && s.linked ? s.linked : null;
+
+      if (rsList.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'mem-empty';
+        empty.textContent = t('ruleset_empty');
+        list.appendChild(empty);
+        return;
+      }
+
+      // The choice is exclusive — and "none" is a legitimate choice
+      var noneRow = document.createElement('div');
+      noneRow.className = 'rs-entry none-row' + (followed ? '' : ' followed');
+      var noneRadio = document.createElement('span');
+      noneRadio.className = 'rs-radio';
+      var noneName = document.createElement('span');
+      noneName.className = 'rs-name';
+      noneName.textContent = t('kit_none');
+      noneRow.appendChild(noneRadio);
+      noneRow.appendChild(noneName);
+      noneRow.onclick = function () { if (followed) rsPost('unlink'); };
+      list.appendChild(noneRow);
+
+      rsList.forEach(function (r) {
+        var isFollowed = followed === r.name;
+        var row = document.createElement('div');
+        row.className = 'rs-entry' + (isFollowed ? ' followed' : '');
+        var radio = document.createElement('span');
+        radio.className = 'rs-radio';
+        var name = document.createElement('span');
+        name.className = 'rs-name';
+        name.textContent = r.name;
+        var meta = document.createElement('span');
+        meta.className = 'rs-meta';
+        meta.textContent = r.chars + ' chars \u00b7 ' + r.seeds + ' seeds';
+        row.appendChild(radio);
+        row.appendChild(name);
+        row.appendChild(meta);
+        row.onclick = function () {
+          if (!isFollowed) rsPost('link', { name: r.name, restore: !conventionsContent });
+        };
+        list.appendChild(row);
+
+        // The followed row unfolds: state trouble, its setting, its operations
+        if (isFollowed && s) {
+          var ex = document.createElement('div');
+          ex.className = 'rs-expand';
+
+          if (s.state === 'file-empty' || s.state === 'drifted' || s.state === 'missing-set') {
+            var problem = document.createElement('div');
+            problem.className = 'rs-acts';
+            var word = document.createElement('span');
+            word.style.color = s.state === 'missing-set' ? 'var(--err)' : 'var(--amber)';
+            word.textContent = rsStateLabel(s.state);
+            problem.appendChild(word);
+            if (s.state === 'file-empty' || s.state === 'drifted') {
+              var pull = document.createElement('span');
+              pull.className = 'act warn';
+              pull.textContent = t('ruleset_restore');
+              pull.onclick = function () { rsPost('restore'); };
+              problem.appendChild(pull);
+            }
+            if (s.state === 'drifted') {
+              var push = document.createElement('span');
+              push.className = 'act';
+              push.textContent = t('ruleset_push');
+              push.onclick = function () { rsPost('push'); };
+              problem.appendChild(push);
+            }
+            ex.appendChild(problem);
+          }
+
+          var setting = document.createElement('div');
+          setting.className = 'setting-row';
+          var setLbl = document.createElement('span');
+          setLbl.className = 'label';
+          setLbl.textContent = t('kit_auto');
+          var sw = document.createElement('label');
+          sw.className = 'switch';
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = !!s.autoRestore;
+          cb.onchange = function () { rsPost('set-auto', { name: r.name, autoRestore: cb.checked }); };
+          var track = document.createElement('span');
+          track.className = 'track';
+          sw.appendChild(cb);
+          sw.appendChild(track);
+          setting.appendChild(setLbl);
+          setting.appendChild(sw);
+          ex.appendChild(setting);
+
+          var ops = document.createElement('div');
+          ops.className = 'rs-acts';
+          var exp = document.createElement('span');
+          exp.className = 'act';
+          exp.textContent = t('ruleset_export');
+          exp.onclick = function () { rsPost('export', { name: r.name }); };
+          ops.appendChild(exp);
+          var del = document.createElement('span');
+          del.className = 'act';
+          del.style.color = rsDeleteArmed === r.name ? 'var(--err)' : '';
+          del.textContent = rsDeleteArmed === r.name ? t('ruleset_sure') : t('ruleset_delete');
+          del.onclick = function () {
+            if (rsDeleteArmed === r.name) {
+              rsDeleteArmed = null;
+              rsPost('delete', { name: r.name });
+            } else {
+              rsDeleteArmed = r.name;
+              renderRulesetModal();
+              setTimeout(function () {
+                if (rsDeleteArmed === r.name) { rsDeleteArmed = null; renderRulesetModal(); }
+              }, 3000);
+            }
+          };
+          ops.appendChild(del);
+          ex.appendChild(ops);
+
+          list.appendChild(ex);
+        }
+      });
+    }
+
+    function openRulesetModal() {
+      renderRulesetModal();
+      document.getElementById('rulesetModal').classList.add('open');
+    }
+    function closeRulesetModal() {
+      document.getElementById('rulesetModal').classList.remove('open');
+    }
+
+    function onRsSaveKey(ev) {
+      if (ev.key !== 'Enter' || ev.isComposing || ev.keyCode === 229) return;
+      var input = document.getElementById('rsSaveInput');
+      var name = (input.value || '').trim();
+      if (!name) return;
+      rsPost('save-from-file', { name: name });
+      input.value = '';
+      input.style.display = 'none';
+      document.getElementById('rsNewLink').style.display = '';
+    }
+
+    function onRsImportFile(ev) {
+      var f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () { rsPost('import', { markdown: String(reader.result || '') }); };
+      reader.readAsText(f);
+      ev.target.value = '';
+    }
+
+    function downloadRuleset(name, markdown) {
+      var blob = new Blob([markdown], { type: 'text/markdown' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'ruleset-' + name.replace(/[^a-zA-Z0-9_-]+/g, '-') + '.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+    }
+
+    // ---------- Check-up hint ----------
+    function renderCheckup(last) {
+      var el = document.getElementById('checkupHint');
+      if (!el) return;
+      if (!last) { el.style.display = 'none'; return; }
+      var days = Math.floor((Date.now() - last) / 86400000);
+      if (days < 7) { el.style.display = 'none'; return; }
+      el.textContent = t('checkup_hint').replace('{d}', String(days));
+      el.style.display = '';
+    }
+
+    // ---------- Session history (per-machine write timeline) ----------
+    function openHistModal() {
+      parent.postMessage({ pluginMessage: { type: 'history-fetch' } }, '*');
+      document.getElementById('histModal').classList.add('open');
+    }
+    function closeHistModal() {
+      document.getElementById('histModal').classList.remove('open');
+    }
+
+    function renderHistory(entries) {
+      var list = document.getElementById('histList');
+      if (!list) return;
+      list.textContent = '';
+      if (!entries || entries.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'mem-empty';
+        empty.textContent = t('hist_empty');
+        list.appendChild(empty);
+        return;
+      }
+      var p2 = function (n) { return ('0' + n).slice(-2); };
+      var lastSid = null;
+      entries.forEach(function (e) {
+        if (e.sid !== lastSid) {
+          lastSid = e.sid;
+          var head = document.createElement('div');
+          head.className = 'hist-session';
+          var d = new Date(e.ts);
+          var label = document.createElement('span');
+          label.textContent = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' · ' + (e.file || '');
+          var dots = document.createElement('span');
+          dots.className = 'dots';
+          head.appendChild(label);
+          head.appendChild(dots);
+          list.appendChild(head);
+        }
+        var row = document.createElement('div');
+        row.className = 'hist-entry';
+        var tm = document.createElement('span');
+        tm.className = 't';
+        var dd = new Date(e.ts);
+        tm.textContent = p2(dd.getHours()) + ':' + p2(dd.getMinutes());
+        var cmd = document.createElement('span');
+        cmd.className = 'cmd' + (e.nodes && e.nodes.length ? ' link' : '');
+        cmd.textContent = e.cmd;
+        if (e.nodes && e.nodes.length) {
+          cmd.onclick = function () {
+            parent.postMessage({ pluginMessage: { type: 'focus-node', nodeId: e.nodes[0] } }, '*');
+          };
+        }
+        var mark = document.createElement('span');
+        mark.className = 'mark' + (e.ok ? '' : ' err');
+        mark.textContent = e.ok ? (e.n ? '⚑' + e.n : '') : '✗';
+        row.appendChild(tm);
+        row.appendChild(cmd);
+        row.appendChild(mark);
+        list.appendChild(row);
+      });
+    }
+
+    // ---------- Rule proposals (prose law → enforcement, by nod only) ----------
+    var proposalQueue = [];
+    function showNextProposal() {
+      var card = document.getElementById('proposalCard');
+      if (proposalQueue.length === 0) { card.classList.remove('show'); return; }
+      var p = proposalQueue[0];
+      document.getElementById('proposalReason').textContent = p.reason;
+      document.getElementById('proposalPages').textContent = p.pages.map(function (x) { return x.name; }).join(', ');
+      card.classList.add('show');
+    }
+    function answerProposal(accepted) {
+      var p = proposalQueue.shift();
+      if (p) {
+        parent.postMessage({ pluginMessage: { type: 'proposal-response', id: p.id, accepted: accepted } }, '*');
+      }
+      showNextProposal();
+    }
+
+    // ---------- Moment cards (the file speaks; one question at a time) ----------
+    var momentAnswered = { wound: false, drift: false, first: false };
+
+    function hideMomentCard() {
+      document.getElementById('momentCard').classList.remove('show');
+    }
+
+    function showMomentCard(body, actions) {
+      document.getElementById('momentBody').textContent = body;
+      var box = document.getElementById('momentActions');
+      box.textContent = '';
+      actions.forEach(function (a) {
+        var b = document.createElement('button');
+        b.className = 'btn' + (a.quiet ? ' deny' : '');
+        b.textContent = a.label;
+        b.onclick = a.fn;
+        box.appendChild(b);
+      });
+      document.getElementById('momentCard').classList.add('show');
+    }
+
+    function evalMoments() {
+      var s = rsStatusData;
+      if (!s) { hideMomentCard(); return; }
+      var fill = function (key, kit) { return t(key).replace(/\{kit\}/g, kit); };
+      if (s.state === 'file-empty' && !s.autoRestore && !momentAnswered.wound) {
+        showMomentCard(fill('moment_wound', s.linked), [
+          { label: t('moment_wound_yes'), fn: function () { momentAnswered.wound = true; rsPost('restore'); hideMomentCard(); } },
+          { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.wound = true; hideMomentCard(); } }
+        ]);
+        return;
+      }
+      if (s.state === 'drifted' && !momentAnswered.drift) {
+        showMomentCard(fill('moment_drift', s.linked), [
+          { label: fill('moment_drift_pull', s.linked), fn: function () { momentAnswered.drift = true; rsPost('restore'); hideMomentCard(); } },
+          { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.drift = true; hideMomentCard(); } }
+        ]);
+        return;
+      }
+      if (s.state === 'unlinked' && s.fileChars === 0 && rsList.length > 0 && !momentAnswered.first) {
+        var kit = rsList.slice().sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); })[0];
+        showMomentCard(fill('moment_first', kit.name), [
+          { label: t('moment_first_yes'), fn: function () { momentAnswered.first = true; rsPost('link', { name: kit.name, restore: true }); hideMomentCard(); } },
+          { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.first = true; hideMomentCard(); } }
+        ]);
+        return;
+      }
+      hideMomentCard();
+    }
 
     function onScopeLockToggle() {
       parent.postMessage(
@@ -1542,11 +2229,13 @@
           confirmLevel = 'open';
         }
         renderApprovalSeg();
-        document.getElementById('convRow').style.display = msg.hasConventions ? '' : 'none';
         conventionsContent = msg.conventionsContent || '';
+        renderConvRow();
         memoryEntries = msg.memory || [];
         renderMemory();
         if (msg.guards) { guardPages = msg.guards.pages || []; renderGuards(); }
+        if (msg.rulesetStatus) { rsStatusData = msg.rulesetStatus; renderRulesetRow(); }
+        renderCheckup(msg.lastCheckup);
         if (s.autoConnect !== false) connect();
         return;
       }
@@ -1569,9 +2258,35 @@
       }
 
       if (msg.type === 'conventions-state') {
-        document.getElementById('convRow').style.display = msg.present ? '' : 'none';
         conventionsContent = msg.content || '';
-        if (!msg.present) closeConvModal();
+        renderConvRow();
+        if (document.getElementById('convModal').classList.contains('open')) fillConvModal();
+        return;
+      }
+
+      if (msg.type === 'ruleset-state') {
+        rsStatusData = msg.status || null;
+        rsList = msg.rulesets || [];
+        rsDeleteArmed = null;
+        renderConvRow();
+        renderRulesetModal();
+        evalMoments();
+        return;
+      }
+
+      if (msg.type === 'ruleset-export') {
+        downloadRuleset(msg.name, msg.markdown);
+        return;
+      }
+
+      if (msg.type === 'history-state') {
+        renderHistory(msg.entries || []);
+        return;
+      }
+
+      if (msg.type === 'rule-proposal') {
+        proposalQueue.push({ id: msg.id, reason: msg.reason, pages: msg.pages || [] });
+        showNextProposal();
         return;
       }
 

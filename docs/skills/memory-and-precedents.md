@@ -34,12 +34,20 @@ One precedent = one sentence (≤280 chars), written so a future session with ze
 
 ## Promote rulings into enforcement
 
-When conventions or repeated precedents describe something ENFORCEABLE, propose the promotion in chat — never enact it silently:
+When conventions or repeated precedents describe something ENFORCEABLE, propose the promotion — never enact it silently:
 
-- "Never touch page X" (in conventions or a repeated ruling) → offer: "要把 X 设为 AI 禁区吗?(manage_pages action:guard)" — set it only after the designer agrees.
+- "Never touch page X" (in conventions or a repeated ruling) → send a panel proposal: `propose_rule` (via batch_execute) with `kind: "page_guard"`, the `pageIds`, and a `reason` that QUOTES the sentence it comes from. The designer gets a card and decides there; do not wait for the verdict and do not guard on your own. Mention in your reply that you proposed it.
 - Repeated identical adjudications ("this is intent" three times on the same token family) → offer to consolidate them into one conventions line, then remove the superseded precedents.
 
 Guards belong to the designer: never guard/unguard on your own judgment, and mention any guard change in your reply.
+
+## Kits — the law's common ancestor
+
+A designer who runs one product keeps its shared law as a **kit** (`manage_rulesets`; the panel's KIT row) — named, stored by the plugin on their machine, spanning every file. The file's carried law stays the working copy; the kit is the ancestor it descends from. When speaking to the designer, say kit.
+
+This matters because **Figma discards file-carried law on branch→main merges**. At session start, if `manage_rulesets action:status` says `file-empty`, the law was wiped: say so, and restore it (`action:restore`) with the designer's consent — or note it happened automatically when the set's autoRestore is on. Other states: `drifted` means file and ancestor differ — the designer chooses pull (`restore`) or promote the file's version (`push`); never resolve drift on your own.
+
+When the designer rules something clearly product-wide (not one-file-local), offer to promote that precedent into the linked kit (`action:promote` with the precedent id) so every linked file inherits it on restore.
 
 ## Reporting style as trust matures
 

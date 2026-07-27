@@ -21,6 +21,7 @@ import * as read from "./core/read.js";
 import * as execute from "./core/execute.js";
 import * as comments from "./core/comments.js";
 import * as designSystem from "./core/design-system.js";
+import * as rulesets from "./core/rulesets.js";
 import * as batch from "./batch.js";
 
 // v2 semantic layer: context, analysis, verification
@@ -42,6 +43,7 @@ const moduleCategories: [ToolModuleLike, string][] = [
   [styles, "design-system"],
   [library, "design-system"],
   [designSystem, "design-system"],
+  [rulesets, "design-system"],
   [pages, "document"],
   [navigate, "document"],
   [assets, "assets"],
