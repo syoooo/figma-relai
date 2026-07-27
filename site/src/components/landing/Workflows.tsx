@@ -14,12 +14,12 @@ export function Workflows() {
           <Kicker>{copy.eyebrow}</Kicker>
           <h2 className="mt-3 font-heading text-[1.7rem] font-semibold leading-tight tracking-tight md:text-[2.2rem]">{copy.title}</h2>
         </div>
-        <div className="mt-12 grid gap-10 md:grid-cols-2 md:gap-x-10 lg:gap-x-14">
+        <div className="mt-12 grid gap-px overflow-hidden border border-border bg-border md:grid-cols-2">
           {copy.items.map((item) => (
-            <article key={item.title} className="flex flex-col">
+            <article key={item.title} className="flex flex-col bg-background p-6 md:p-8">
               <h3 className="font-heading text-lg font-semibold tracking-tight">{item.title}</h3>
               <p className="t-prose mt-2.5 text-sm text-muted-foreground">{item.body}</p>
-              <div className="mt-5">
+              <div className="mt-auto pt-5">
                 <Strip label={item.tag} rows={item.rows} />
               </div>
             </article>

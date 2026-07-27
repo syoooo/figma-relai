@@ -200,7 +200,7 @@ export const translations = {
       items: [
         { title: 'デザインを理解する', line: '構造、トークン、レイアウトをスクリーンショット付きで。推測ではなく、確認。', ask: 'この画面、どう組み立てられてる？', result: 'get_design_context · structure · tokens · 1 screenshot' },
         { title: '一括編集', line: 'リネーム、再バインド、余白の一斉調整。数千レイヤーを、一度の会話で。', ask: 'アイコンを全部アイコンパック変数につなぎ直して', result: 'batch_execute · 4,306 instances · one round-trip' },
-        { title: 'チェック', line: 'レイヤー単位の確認も、重み付きの0〜100点も。任せる準備の採点や、幽霊参照の棚卸しまで。', ask: 'このページ、レビューに出せる状態？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
+        { title: 'チェック', line: 'レイヤー単位の確認も、重み付きの0〜100点も。任せる準備の採点や、消した変数を今も指す参照の数え上げまで。', ask: 'このページ、レビューに出せる状態？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
         { title: 'デザインシステム', line: '変数、スタイル、バリアント、ライブラリ導入。描き直しではなく、手元のコンポーネントから。', ask: 'ブランド差分のパディングトークンを開いて配線して', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
       ]
     },
@@ -343,7 +343,7 @@ export const translations = {
       items: [
         { title: '理解设计', line: '结构、Token、布局 —— 附截图,是看过,不是猜的。', ask: '这个界面是怎么搭起来的？', result: 'get_design_context · structure · tokens · 1 screenshot' },
         { title: '批量编辑', line: '改名、重绑、间距清扫 —— 数千个图层,一次对话。', ask: '把所有图标重新绑定到图标包变量', result: 'batch_execute · 4,306 instances · one round-trip' },
-        { title: '设计审计', line: '逐层检查,或一个加权0–100分 —— 外加就绪度与幽灵普查。', ask: '这一页能送评审了吗？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
+        { title: '设计审计', line: '逐层检查,或一个加权0–100分 —— 再算一算:文件准备好交给AI没有,哪些引用还指着已删的变量。', ask: '这一页能送评审了吗？', result: 'analyze_design · token coverage 97.8% · WCAG contrast' },
         { title: '设计系统', line: '变量、样式、变体、库导入 —— 从你的组件出发,不是照着画一个像的。', ask: '开一个分品牌的内边距Token并接好线', result: 'create_variable · aliased ×3 brand modes · scoped · bound' }
       ]
     },
