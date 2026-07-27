@@ -8,14 +8,13 @@
 // law's home, not its only backup — export/import covers moving machines.
 
 import { registerHandler } from "../dispatcher.js";
-import { readMemory } from "./memory.js";
+import { readMemory, writeMemory } from "./memory.js";
 import type { PrecedentEntry } from "../memory-core.js";
 
 const RS_KEY = "relai.rulesets";
 const LINK_NS = "relai";
 const LINK_KEY = "rulesetLink";
 const CONVENTIONS_KEY = "conventions";
-const MEMORY_KEY = "memory";
 const MAX_RULESETS = 30;
 const MAX_CONVENTIONS = 20000;
 
@@ -75,7 +74,7 @@ function fileConventions(): string {
 
 export type RulesetState =
   | "none" // no rulesets exist at all
-  | "unlinked" // rulesets exist, this file follows none
+  | "unlinked" // rulesets exist, this file uses none
   | "in-sync"
   | "file-empty" // linked, but the file's law is gone (the merge wound)
   | "drifted" // linked, file law differs from the ancestor
@@ -139,15 +138,18 @@ export async function restoreFromRuleset(): Promise<{
     const known = new Set(existing.map((e) => e.id));
     const fresh = set.seedPrecedents.filter((e) => !known.has(e.id));
     if (fresh.length) {
-      figma.root.setSharedPluginData(
-        LINK_NS,
-        MEMORY_KEY,
-        JSON.stringify([...fresh, ...existing])
-      );
+      // Through writeMemory so the precedent index and the panel both refresh
+      writeMemory([...fresh, ...existing]);
       seeded = fresh.length;
     }
   }
   writeLink({ name: set.name, lastSyncHash: contentHash(set.conventions) });
+  // The panel's rules row reads two messages — the file's law changed, so send both
+  figma.ui.postMessage({
+    type: "conventions-state",
+    present: set.conventions.length > 0,
+    content: set.conventions,
+  });
   postRulesetState();
   return { restored: set.name, conventionsChars: set.conventions.length, precedentsSeeded: seeded };
 }

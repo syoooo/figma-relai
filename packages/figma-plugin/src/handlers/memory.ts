@@ -35,7 +35,7 @@ export function readMemory(): PrecedentEntry[] {
 
 let indexCache: PrecedentIndex | null = null;
 
-function writeMemory(entries: PrecedentEntry[]): void {
+export function writeMemory(entries: PrecedentEntry[]): void {
   figma.root.setSharedPluginData(MEMORY_NS, MEMORY_KEY, entries.length ? JSON.stringify(entries) : "");
   indexCache = null;
   postMemoryState(entries);

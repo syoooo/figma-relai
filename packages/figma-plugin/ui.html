@@ -513,7 +513,7 @@
     .mem-empty { color: var(--faint); font-size: 10px; padding: 4px 0; }
     #memList, #guardsList, #rulesetList, #histList { overflow-y: auto; min-height: 0; }
 
-    /* ── Kits: radio list (choose one, or none) + detail for the followed ── */
+    /* ── Kits: radio list (choose one, or none) + detail for the one in use ── */
     .rs-entry {
       display: flex; align-items: center; gap: var(--sp-8);
       padding: 5px 0; border-bottom: 1px solid var(--line-soft); font-size: 10px;
@@ -525,9 +525,9 @@
       border: 1px solid var(--muted);
       flex-shrink: 0;
     }
-    .rs-entry.followed .rs-radio { border-color: var(--amber); background: var(--amber); box-shadow: 0 0 5px var(--amber-glow); }
+    .rs-entry.in-use .rs-radio { border-color: var(--amber); background: var(--amber); box-shadow: 0 0 5px var(--amber-glow); }
     .rs-name { color: var(--text); }
-    .rs-entry.followed .rs-name { color: var(--amber); }
+    .rs-entry.in-use .rs-name { color: var(--amber); }
     .rs-entry.none-row .rs-name { color: var(--muted); }
     .rs-meta { color: var(--faint); font-size: 9px; flex: 1; text-align: right; }
     .rs-del {
@@ -535,8 +535,8 @@
       border-bottom: 1px dotted transparent;
     }
     .rs-del:hover { color: var(--err); border-bottom-color: var(--err); }
-    /* Expansion under the followed row — reads as that row unfolding */
-    .rs-entry.followed:not(.none-row) { border-bottom: none; }
+    /* Expansion under the in-use row — reads as that row unfolding */
+    .rs-entry.in-use:not(.none-row) { border-bottom: none; }
     .rs-expand {
       padding: 0 0 var(--sp-6) 16px;
       border-bottom: 1px solid var(--line-soft);
@@ -893,7 +893,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.5.0 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
+  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.5.1 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
 
   <script>
     // ---------- i18n ----------
@@ -941,21 +941,21 @@
         lock_on_prefix: 'locked to: ',
         conventions_view: 'view',
         rules_add: 'add',
-        rules_empty_hint: 'No rules here yet. Ask your agent to write this file’s conventions (manage_conventions) — or follow a kit and update from it.',
+        rules_empty_hint: 'No rules here yet. Ask your agent to write this file’s conventions (manage_conventions) — or use a kit and update from it.',
         moment_wound: 'My rules are gone — put them back from “{kit}”?',
         moment_wound_yes: 'Restore',
         moment_drift: 'My rules differ from “{kit}” now.',
         moment_drift_pull: 'Update from {kit}',
-        moment_first: 'I have no rules yet. Follow “{kit}”?',
-        moment_first_yes: 'Follow',
+        moment_first: 'I have no rules yet. Use “{kit}”?',
+        moment_first_yes: 'Use it',
+        moment_kit_gone: 'Kit “{kit}” was deleted. My rules are my own — they stay.',
+        moment_ok: 'Got it',
         moment_later: 'Not now',
-        kit_none: 'follow none',
-        kit_following: 'following “{kit}”',
+        kit_none: 'use none',
         kit_auto: 'auto-restore',
         kit_new: 'new',
         kit_new_link: '+ save this file’s rules',
         conv_from_kit: 'from kit “{kit}”',
-        conv_no_kit: 'no kit followed',
         approval_no_intent: '(agent gave no description of what this does)',
         approval_reason_ph: 'reason → saved to file memory (optional)',
         memory_add_ph: '+ note a precedent… (Enter)',
@@ -968,32 +968,24 @@
         evidence_bulk: 'bulk write',
         tools_title: 'Toolset',
         disconnect: 'Disconnect',
-        ruleset_manage: 'manage',
         ruleset_empty: 'no kits yet — type a name below to save this file’s rules as the first one',
         ruleset_save_ph: 'name, Enter',
         ruleset_import: '+ import a file…',
         ruleset_export: 'export',
-        ruleset_link: 'follow',
-        ruleset_unlink: 'unfollow',
         ruleset_delete: 'delete',
         ruleset_sure: 'sure?',
         ruleset_restore: 'update this file from the kit',
         ruleset_push: 'publish this file’s rules to the kit',
-        ruleset_auto_on: 'auto-restore on',
-        ruleset_auto_off: 'auto-restore off',
-        ruleset_state_none: 'none',
-        ruleset_state_insync: 'in sync',
         ruleset_state_fileempty: 'rules missing',
         ruleset_state_drifted: 'rules differ',
         ruleset_state_missing: 'kit not on this machine',
-        ruleset_healed: 'rules restored from kit',
         history: 'history',
         hist_empty: 'no writes recorded yet',
         checkup_hint: 'last full check-up {d} days ago — ask your agent for one',
         proposal_title: 'AGENT PROPOSES',
         proposal_enable: 'Enable no-go',
         proposal_dismiss: 'Dismiss',
-        promote_title: 'promote into the linked ruleset'
+        promote_title: 'promote into the kit'
       },
       ja: {
         status_label: 'STATUS',
@@ -1038,21 +1030,21 @@
         lock_on_prefix: 'ロック中: ',
         conventions_view: '表示',
         rules_add: '追加',
-        rules_empty_hint: 'まだ規約がありません。エージェントに書いてもらうか（manage_conventions）、キットをフォローして更新してください。',
+        rules_empty_hint: 'まだ規約がありません。エージェントに書いてもらうか（manage_conventions）、キットから取り込んでください。',
         moment_wound: '規約が消えています。「{kit}」から戻しますか?',
         moment_wound_yes: '復元',
         moment_drift: 'この規約は「{kit}」と違っています。',
         moment_drift_pull: '「{kit}」から更新',
-        moment_first: 'まだ規約がありません。「{kit}」をフォローしますか?',
-        moment_first_yes: 'フォロー',
+        moment_first: 'まだ規約がありません。「{kit}」を使いますか?',
+        moment_first_yes: '使う',
+        moment_kit_gone: 'キット「{kit}」を削除しました。規約はファイル自身のものなので、そのまま残ります。',
+        moment_ok: 'わかった',
         moment_later: '後で',
-        kit_none: 'フォローしない',
-        kit_following: 'フォロー中「{kit}」',
+        kit_none: '使わない',
         kit_auto: '自動復元',
         kit_new: '追加',
         kit_new_link: '+ このファイルの規約から',
         conv_from_kit: 'キット「{kit}」から',
-        conv_no_kit: 'キット未フォロー',
         approval_no_intent: '（エージェントは目的を説明していません）',
         approval_reason_ph: '理由 → ファイルの記憶に残す（任意）',
         memory_add_ph: '+ 判例をひとこと…（Enter で保存）',
@@ -1065,32 +1057,24 @@
         evidence_bulk: '一括書き込み',
         tools_title: 'ツール一覧',
         disconnect: '切断',
-        ruleset_manage: '管理',
         ruleset_empty: 'キットはまだありません — 下に名前を入れて、このファイルの規約を最初のひとつとして保存できます',
         ruleset_save_ph: '名前を入れて Enter',
         ruleset_import: '+ ファイルを読み込む…',
         ruleset_export: '書き出す',
-        ruleset_link: 'フォロー',
-        ruleset_unlink: '解除',
         ruleset_delete: '削除',
         ruleset_sure: '本当に?',
         ruleset_restore: 'キットからこのファイルを更新',
         ruleset_push: 'このファイルの規約をキットへ公開',
-        ruleset_auto_on: '自動復元 オン',
-        ruleset_auto_off: '自動復元 オフ',
-        ruleset_state_none: '未フォロー',
-        ruleset_state_insync: '同期済み',
         ruleset_state_fileempty: '規約が消えています',
         ruleset_state_drifted: '規約に差分',
         ruleset_state_missing: 'このマシンにありません',
-        ruleset_healed: 'キットから復元済み',
         history: '履歴',
         hist_empty: 'まだ記録がありません',
         checkup_hint: '前回の総点検から{d}日 — エージェントに一声どうぞ',
         proposal_title: 'エージェントの提案',
         proposal_enable: '立入禁止にする',
         proposal_dismiss: '見送る',
-        promote_title: 'リンク中のルールセットへ昇格'
+        promote_title: 'キットへ昇格'
       },
       zh: {
         status_label: 'STATUS',
@@ -1135,21 +1119,21 @@
         lock_on_prefix: '已锁定: ',
         conventions_view: '查看',
         rules_add: '添加',
-        rules_empty_hint: '还没有规矩。让 agent 帮你写（manage_conventions），或跟随一个 kit 再更新进来。',
+        rules_empty_hint: '还没有规矩。让 agent 帮你写（manage_conventions），或选一个 kit 更新进来。',
         moment_wound: '我的规矩丢了——从「{kit}」放回来？',
         moment_wound_yes: '恢复',
         moment_drift: '我的规矩和「{kit}」不一样了。',
         moment_drift_pull: '从 {kit} 更新',
-        moment_first: '我还没有规矩。跟随「{kit}」吗？',
-        moment_first_yes: '跟随',
+        moment_first: '我还没有规矩。用「{kit}」吗？',
+        moment_first_yes: '使用',
+        moment_kit_gone: 'kit「{kit}」删掉了。规矩是文件自己的，还留着。',
+        moment_ok: '知道了',
         moment_later: '先不',
-        kit_none: '不跟随',
-        kit_following: '跟随中「{kit}」',
+        kit_none: '不使用',
         kit_auto: '自动恢复',
         kit_new: '新建',
         kit_new_link: '+ 存入这个文件的规矩',
         conv_from_kit: '来自 kit「{kit}」',
-        conv_no_kit: '未跟随 kit',
         approval_no_intent: '（agent 没有说明这次要做什么）',
         approval_reason_ph: '理由 → 记入文件记忆（可选）',
         memory_add_ph: '+ 记一笔…（Enter 保存）',
@@ -1162,32 +1146,24 @@
         evidence_bulk: '批量写入',
         tools_title: '工具列表',
         disconnect: '断开',
-        ruleset_manage: '管理',
         ruleset_empty: '还没有 kit — 在下面输入名字，把这个文件的规矩存成第一套',
         ruleset_save_ph: '输入名字回车',
         ruleset_import: '+ 导入文件…',
         ruleset_export: '导出',
-        ruleset_link: '跟随',
-        ruleset_unlink: '解除',
         ruleset_delete: '删除',
         ruleset_sure: '确定？',
         ruleset_restore: '从 kit 更新这个文件',
         ruleset_push: '把这个文件的规矩发布到 kit',
-        ruleset_auto_on: '自动恢复 开',
-        ruleset_auto_off: '自动恢复 关',
-        ruleset_state_none: '未跟随',
-        ruleset_state_insync: '已同步',
         ruleset_state_fileempty: '规矩丢了',
         ruleset_state_drifted: '规矩有差异',
         ruleset_state_missing: '这台机器上没有',
-        ruleset_healed: '已从 kit 恢复',
         history: '历史',
         hist_empty: '还没有记录',
         checkup_hint: '距上次全面体检已 {d} 天 — 让 agent 跑一次吧',
         proposal_title: 'AGENT 提议',
         proposal_enable: '设为禁区',
         proposal_dismiss: '不用了',
-        promote_title: '升格进已链接的规则集'
+        promote_title: '升格进 kit'
       }
     };
     var LOCALES = ['en', 'ja', 'zh'];
@@ -1539,33 +1515,10 @@
     }
 
     function rsStateLabel(state) {
-      if (state === 'in-sync') return t('ruleset_state_insync');
+      // Only trouble states surface a word — normal is silent
       if (state === 'file-empty') return t('ruleset_state_fileempty');
       if (state === 'drifted') return t('ruleset_state_drifted');
-      if (state === 'missing-set') return t('ruleset_state_missing');
-      return t('ruleset_state_none');
-    }
-
-    function renderRulesetRow() {
-      var val = document.getElementById('rulesetVal');
-      if (!val) return;
-      var s = rsStatusData;
-      val.textContent = '';
-      if (!s || s.state === 'none' || s.state === 'unlinked') {
-        val.className = 'val muted';
-        var link = document.createElement('span');
-        link.className = 'view-link';
-        link.textContent = t('ruleset_manage');
-        val.appendChild(link);
-        return;
-      }
-      // The displayed name IS the followed kit; color speaks only when something is wrong
-      val.className = s.state === 'in-sync' ? 'val muted' : s.state === 'missing-set' ? 'val err' : 'val warn';
-      val.appendChild(document.createTextNode(s.linked + ' · '));
-      var view = document.createElement('span');
-      view.className = 'view-link';
-      view.textContent = t('conventions_view');
-      val.appendChild(view);
+      return t('ruleset_state_missing');
     }
 
     function rsAct(label, fn, extraClass) {
@@ -1581,7 +1534,7 @@
       if (!list) return;
       list.textContent = '';
       var s = rsStatusData;
-      var followed = s && s.linked ? s.linked : null;
+      var inUse = s && s.linked ? s.linked : null;
 
       if (rsList.length === 0) {
         var empty = document.createElement('div');
@@ -1593,7 +1546,7 @@
 
       // The choice is exclusive — and "none" is a legitimate choice
       var noneRow = document.createElement('div');
-      noneRow.className = 'rs-entry none-row' + (followed ? '' : ' followed');
+      noneRow.className = 'rs-entry none-row' + (inUse ? '' : ' in-use');
       var noneRadio = document.createElement('span');
       noneRadio.className = 'rs-radio';
       var noneName = document.createElement('span');
@@ -1601,13 +1554,13 @@
       noneName.textContent = t('kit_none');
       noneRow.appendChild(noneRadio);
       noneRow.appendChild(noneName);
-      noneRow.onclick = function () { if (followed) rsPost('unlink'); };
+      noneRow.onclick = function () { if (inUse) rsPost('unlink'); };
       list.appendChild(noneRow);
 
       rsList.forEach(function (r) {
-        var isFollowed = followed === r.name;
+        var isInUse = inUse === r.name;
         var row = document.createElement('div');
-        row.className = 'rs-entry' + (isFollowed ? ' followed' : '');
+        row.className = 'rs-entry' + (isInUse ? ' in-use' : '');
         var radio = document.createElement('span');
         radio.className = 'rs-radio';
         var name = document.createElement('span');
@@ -1620,12 +1573,12 @@
         row.appendChild(name);
         row.appendChild(meta);
         row.onclick = function () {
-          if (!isFollowed) rsPost('link', { name: r.name, restore: !conventionsContent });
+          if (!isInUse) rsPost('link', { name: r.name, restore: !conventionsContent });
         };
         list.appendChild(row);
 
-        // The followed row unfolds: state trouble, its setting, its operations
-        if (isFollowed && s) {
+        // The in-use row unfolds: state trouble, its setting, its operations
+        if (isInUse && s) {
           var ex = document.createElement('div');
           ex.className = 'rs-expand';
 
@@ -1833,6 +1786,7 @@
 
     // ---------- Moment cards (the file speaks; one question at a time) ----------
     var momentAnswered = { wound: false, drift: false, first: false };
+    var kitGoneName = null;
 
     function hideMomentCard() {
       document.getElementById('momentCard').classList.remove('show');
@@ -1856,6 +1810,12 @@
       var s = rsStatusData;
       if (!s) { hideMomentCard(); return; }
       var fill = function (key, kit) { return t(key).replace(/\{kit\}/g, kit); };
+      if (kitGoneName) {
+        showMomentCard(fill('moment_kit_gone', kitGoneName), [
+          { label: t('moment_ok'), fn: function () { kitGoneName = null; hideMomentCard(); } }
+        ]);
+        return;
+      }
       if (s.state === 'file-empty' && !s.autoRestore && !momentAnswered.wound) {
         showMomentCard(fill('moment_wound', s.linked), [
           { label: t('moment_wound_yes'), fn: function () { momentAnswered.wound = true; rsPost('restore'); hideMomentCard(); } },
@@ -2234,7 +2194,7 @@
         memoryEntries = msg.memory || [];
         renderMemory();
         if (msg.guards) { guardPages = msg.guards.pages || []; renderGuards(); }
-        if (msg.rulesetStatus) { rsStatusData = msg.rulesetStatus; renderRulesetRow(); }
+        if (msg.rulesetStatus) { rsStatusData = msg.rulesetStatus; renderConvRow(); }
         renderCheckup(msg.lastCheckup);
         if (s.autoConnect !== false) connect();
         return;
@@ -2265,9 +2225,19 @@
       }
 
       if (msg.type === 'ruleset-state') {
+        var prevRs = rsStatusData;
+        var prevList = rsList;
         rsStatusData = msg.status || null;
         rsList = msg.rulesets || [];
         rsDeleteArmed = null;
+        // The kit this file used just vanished while its rules stay behind —
+        // say so once, or the silent name-drop reads as a stale panel
+        if (prevRs && prevRs.linked && rsStatusData && !rsStatusData.linked &&
+            rsStatusData.fileChars > 0 &&
+            prevList.some(function (r) { return r.name === prevRs.linked; }) &&
+            !rsList.some(function (r) { return r.name === prevRs.linked; })) {
+          kitGoneName = prevRs.linked;
+        }
         renderConvRow();
         renderRulesetModal();
         evalMoments();

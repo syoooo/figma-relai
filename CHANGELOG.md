@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.1
+
+One afternoon of real kit use, three corrections.
+
+- **The rules row tracks the law live.** Restoring from a kit filled the file but left the row saying "add"; an agent rewriting the conventions never moved the drift state. Every law change now refreshes both halves of the row — content and kit status — and the drawer's restore-on-link guard reads fresh truth instead of a stale cache. Seeded precedents also flow through the memory write path now, so the MEMORY list and the recall index update on restore.
+- **Deleting the kit in use says one sentence.** The rules stay — they are the file's own — but the panel used to drop the kit's name without a word, which read as a stuck display. A `FILE ›` card now marks the moment: "Kit “gin” was deleted. My rules are my own — they stay."
+- **"Follow" retired.** A kit is not a feed — you use one, or none. The radio list, the first-run question and the READMEs now say *use* (使う/使用); ten dead vocabulary keys, including the never-shown "in sync", left with it.
+
 ## 0.5.0
 
 The law gets a home. One designer usually runs one product; its files share the same rules — and Figma silently discards file-carried law on every branch→main merge. This release answers both.

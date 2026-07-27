@@ -83,7 +83,7 @@ file       precedent attached — "…is on purpose" · the edit backs off
 
 The panel's Memory row lists every entry; delete any of them any time. Nothing is recorded silently.
 
-**Kits.** One designer usually runs one product, and its files share the same law. Save this file’s rules under a name and other files can follow it. Figma drops file-carried law on branch merges; a followed kit puts it back — one click, or automatically if you flip that kit’s auto-restore on.
+**Kits.** One designer usually runs one product, and its files share the same law. Save this file’s rules under a name and other files can use it. Figma drops file-carried law on branch merges; the kit puts it back — one click, or automatically if you flip that kit’s auto-restore on.
 
 **AI no-go zones** fence off whole pages — brand masters, legal, the one that is already pixel-perfect. Writes into a guarded page are rejected before they run, with the reason on the receipt, and only you edit the guard list.
 
