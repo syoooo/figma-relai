@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.2
+
+Everything in this release was harvested from one long day of real design-system surgery — each fix is a scar with a story.
+
+- **`join_room` with no arguments lists the connected plugins** (room + file name). The relay always knew; now you never have to read a room name off the panel and type it by hand.
+- **Target sizes follow WCAG 2.5.8.** The interactive-target rule now defaults to the 24px AA minimum (desktop); pass `platform: "mobile"` for the 44px profile — on `analyze_design`, `analyze_accessibility` and `validate_design_rules`. Pages, sections and documents are exempt: a page named "Button" no longer fails at 0×0.
+- **Contrast verdicts compare at display precision.** A 4.46:1 ratio no longer prints the absurd "4.5:1 (minimum 4.5:1)" failure.
+- **Ghost census covers whole files in one call.** `analyze_design aspect:ghosts` auto-chunks any number of pages server-side and merges the results; the plugin keeps its 10-page safety cap.
+- **`manage_variables action:snapshot`** — a compact inventory of every collection and variable (name + type) in one call. Take one before a branch merge or bulk edit, diff after; born from a merge where 15 new variables could not be traced because no before-list existed.
+- **Voice ignores section borders.** Figma sections carry a default hairline that says nothing about your design — it no longer pollutes the stroke signature.
+- **Progress lives in the activity feed.** Long scans show percent and the current step on the running entry itself; the floating progress bar is gone. Long memory and no-go lists now scroll inside their panels.
+- **Five new pitfalls (#26–30)** from live canvas surgery: bound stroke weights that render nothing, the frame-side four-field binding trap, variant clones escaping their set (severing references and demoting slots), the component-set error deadlock and its escape, and `setProperties` working on nested instances where bindings revert.
+- Site and READMEs: the audit vocabulary in Japanese and Chinese now speaks plainly (no more 幽霊参照/就绪度/声纹 jargon); the SCENES section got its block boundaries back.
+
 ## 0.4.1
 
 - **Two-tone wordmark.** The cream square from the mark now docks into the "a" of the panel wordmark — panel, site logo, og card and Community cover all carry the same identity.

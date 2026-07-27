@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "tools": [
     {
       "name": "batch_execute",
