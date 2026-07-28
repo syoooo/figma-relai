@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Writing the law into a file that follows a kit now says so.** `manage_conventions action:set` checks the kit link afterwards and, when the two have just forked, names the kit and both directions — push sends the file's law up, leaving it keeps the difference local. It never pushes on its own: which way the law travels is the designer's ruling, and the panel's "update" button runs the opposite way and would overwrite what was just written.
+- **Two pitfalls from a component-set text repair** (37 now): text edits inside a component set propagate to every variant — style, decoration and fills alike, at node level and via `setRange*`, with layer names offering no escape — so per-size typography has to be applied before `combineAsVariants` or moved into its own atom; and `leadingTrim` written on a node detaches its text style, stranding the style's typography variables on the node (bind the parent's height to the leading variable instead).
+
 ## 0.5.3
 
 The catalog finds the library by itself, and starts naming components instead of variants.

@@ -90,8 +90,33 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
     async ({ action, content, kind, text, id, refs, limit }) => {
       try {
         switch (action) {
-          case "set":
-            return jsonResult(await sendCommand("set_conventions", { content: content ?? "" }));
+          case "set": {
+            const saved = (await sendCommand("set_conventions", {
+              content: content ?? "",
+            })) as Record<string, unknown>;
+            // Writing the law into a file that follows a kit forks the two. Name the
+            // fork here so the next session doesn't have to remember it — but never
+            // resolve it: which way the law should travel is the designer's ruling.
+            try {
+              const status = (await sendCommand("ruleset_status", {})) as {
+                state?: string;
+                linked?: string;
+              };
+              if (status?.state === "drifted" && status.linked) {
+                return jsonResult({
+                  ...saved,
+                  kit: { linked: status.linked, state: status.state },
+                  recommended_next:
+                    `These rules now differ from the kit "${status.linked}". If they belong to every file that uses it, ` +
+                    `manage_rulesets action:push sends them up (file → kit); if they are this file's own, leave the difference standing. ` +
+                    `Ask the designer — the panel's "update" button runs the other way (kit → file) and would overwrite what was just written.`,
+                });
+              }
+            } catch {
+              // Older plugin builds have no ruleset_status; the write itself still stands.
+            }
+            return jsonResult(saved);
+          }
           case "record_precedent":
             return jsonResult(
               await sendCommand("record_precedent", { kind, text, refs, source: "chat" })

@@ -193,6 +193,16 @@ export const PITFALLS: Pitfall[] = [
   {
     pattern: null,
     hint: "",
+    doc: "**Text edits inside a component SET propagate to every variant.** Applying a text style to one variant's label retypes the matching layer in all of them — same for `textDecoration` and text fills, at node level and via `setRange*` alike. Renaming the layer does not break the link (matching is positional). So a set whose sizes need DIFFERENT text styles cannot be styled in place: apply the styles while the components are still standalone and combine afterwards, or do what the house pattern does and put the per-size typography in its own atom that the parent instantiates. Two more from the same afternoon: `combineAsVariants` drops `textDecoration`, and a decoration written in the same execution as `setTextStyleIdAsync` is clobbered by the style landing — set it in a later call.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**Writing `leadingTrim` on a text node detaches its text style** and strands the style's typography variables as node-level bindings — the node keeps rendering but no longer follows the style. `textDecoration` is safe (the style survives); `leadingTrim` is not. When a cap-trimmed label needs to sit in a full line box (so an icon beside it doesn't hang below the baseline, and toggling the icon doesn't change the height), leave the trim alone and bind the PARENT frame's height to the same leading variable the style uses.",
+  },
+  {
+    pattern: null,
+    hint: "",
     doc: "**Dot-prefixed components are never published**, so their keys 404 on every REST endpoint. Figma hides `.`-prefixed assets from the publish dialog; they exist only nested inside published parents. When resolving a key → file via `/v1/components/{key}`, skip names starting with `.` — and note a component SET's key resolves only at `/v1/component_sets/{key}`, never at `/v1/components/{key}` (and vice versa). Relatedly, `/v1/files/{key}/components` returns the individual VARIANTS (`size=md, state=default`); the components a designer names live in `/component_sets`.",
   },
 ];
