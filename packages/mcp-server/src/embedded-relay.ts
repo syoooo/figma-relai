@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 import { RelayCore } from "@figma-relai/shared";
 import { logger } from "./logger.js";
+import { tokenSource } from "./credentials.js";
 
 export interface EmbeddedRelay {
   close(): void;
@@ -30,6 +31,8 @@ export function startEmbeddedRelay(
       const core = new RelayCore<WebSocket>({
         version,
         log: (msg) => logger.debug(`[relay] ${msg}`),
+        // Presence only — the token itself never leaves this process.
+        features: () => ({ token: tokenSource() !== null }),
       });
       const wss = new WebSocketServer({ server: httpServer });
 

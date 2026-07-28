@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SendCommandFn } from "../../tool-registry.js";
 import { jsonResult, errorResult } from "./helpers.js";
 import { parseFileKey } from "./comments.js";
+import { loadToken } from "../../credentials.js";
 
 // The "look before you draw" tool. Layered honestly around what each API can
 // see: the plugin reports local + used-remote items and enabled-library
@@ -114,10 +115,10 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
 }
 
 async function fetchLibraryCatalog(libraryFileUrl: string): Promise<unknown> {
-  const token = process.env.FIGMA_TOKEN;
+  const token = loadToken();
   if (!token) {
     return {
-      note: "Full library catalogs need a FIGMA_TOKEN env var (personal access token, file read scope). Without it, components the file already uses are still listed above — or keep a 'DS palette' page with one instance of each key component so they show up there.",
+      note: "Full library catalogs need a personal access token (file content read scope): store it once with `npx figma-relai login`, or set FIGMA_TOKEN in the MCP config env. Without it, components the file already uses are still listed above — or keep a 'DS palette' page with one instance of each key component so they show up there.",
     };
   }
   const fileKey = parseFileKey(libraryFileUrl);

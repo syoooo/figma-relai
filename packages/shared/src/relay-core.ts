@@ -25,6 +25,11 @@ export interface RoomSummary {
 export interface RelayCoreOptions {
   version?: string;
   log?: (message: string) => void;
+  /**
+   * Read at answer time, not construction time, so `figma-relai login` shows
+   * up in the panel on the next hello instead of after a restart.
+   */
+  features?: () => { token?: boolean };
 }
 
 export class RelayCore<S extends RelaySocket = RelaySocket> {
@@ -33,10 +38,12 @@ export class RelayCore<S extends RelaySocket = RelaySocket> {
   private staleTimer: ReturnType<typeof setInterval> | null = null;
   private version: string;
   private log: (message: string) => void;
+  private features: (() => { token?: boolean }) | null;
 
   constructor(options: RelayCoreOptions = {}) {
     this.version = options.version ?? "unknown";
     this.log = options.log ?? (() => {});
+    this.features = options.features ?? null;
   }
 
   handleOpen(ws: S): void {
@@ -63,10 +70,23 @@ export class RelayCore<S extends RelaySocket = RelaySocket> {
     }
 
     switch (data.type) {
-      case "hello":
+      case "hello": {
         // Identity probe so clients can verify they reached a Relai relay
-        this.send(ws, { type: "hello", server: "figma-relai", version: this.version });
+        const hello: Record<string, unknown> = {
+          type: "hello",
+          server: "figma-relai",
+          version: this.version,
+        };
+        if (this.features) {
+          try {
+            hello.features = this.features();
+          } catch {
+            // A capability probe must never take the handshake down with it
+          }
+        }
+        this.send(ws, hello);
         return;
+      }
 
       case "join": {
         const room = data.room;

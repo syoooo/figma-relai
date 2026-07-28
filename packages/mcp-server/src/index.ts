@@ -13,7 +13,7 @@ import { loadState, saveState } from "./state.js";
 import { registerPrompts } from "./prompts.js";
 import { recordCommand, getSessionLog } from "./session-log.js";
 
-const VERSION = "0.5.1";
+const VERSION = "0.5.2";
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -35,6 +35,12 @@ if (args.includes("--list-tools")) {
 // `manifest` prints the machine-readable contract, `docs` renders it for
 // humans, `doctor` triages the local environment. All exit before stdio.
 const subcommand = args.find((a) => !a.startsWith("--"));
+if (subcommand === "login" || subcommand === "logout") {
+  const { runLogin, runLogout } = await import("./cli/login.js");
+  const { exitCode, message } = subcommand === "login" ? await runLogin() : runLogout();
+  console.log(message);
+  process.exit(exitCode);
+}
 if (subcommand === "manifest" || subcommand === "docs" || subcommand === "doctor") {
   const { buildManifest } = await import("./cli/manifest.js");
   if (subcommand === "doctor") {
@@ -56,6 +62,20 @@ if (subcommand === "manifest" || subcommand === "docs" || subcommand === "doctor
     );
   }
   process.exit(0);
+}
+// A word we don't know is a mistake, not a request to start a server. Falling
+// through meant `figma-relai lgoin` — or any subcommand newer than the copy npx
+// happened to fetch — booted stdio and sat there in total silence.
+if (subcommand) {
+  process.stderr.write(
+    `Unknown command "${subcommand}" (figma-relai ${VERSION}).\n` +
+      "  login · logout · doctor · docs [tool] · manifest\n" +
+      "  no command at all starts the MCP server over stdio\n\n" +
+      "If your AI client shows this command, npx may be running an older\n" +
+      "published version — try: npx -y figma-relai@latest " +
+      `${subcommand}\n`
+  );
+  process.exit(2);
 }
 
 async function main() {

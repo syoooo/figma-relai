@@ -124,6 +124,31 @@ export async function enforcePageGuards(
   }
 }
 
+/**
+ * Post-hoc guard check for the one path that cannot be intercepted up front.
+ * enforcePageGuards blocks execute_code only when the CURRENT page is guarded
+ * (its params carry no node refs); code that reaches across to another guarded
+ * page slips through. This reports those nodes after the fact, so guards and
+ * the scope lock speak with the same voice instead of one staying silent.
+ */
+export async function guardedNodesAmong(
+  nodeIds: string[]
+): Promise<Array<{ nodeId: string; pageName: string }>> {
+  const guarded = new Set(readGuards().pages);
+  if (guarded.size === 0) return [];
+  const hits: Array<{ nodeId: string; pageName: string }> = [];
+  for (const id of nodeIds.slice(0, 200)) {
+    const pageId = await pageOfNode(id);
+    if (pageId && guarded.has(pageId)) {
+      hits.push({
+        nodeId: id,
+        pageName: figma.root.children.find((p) => p.id === pageId)?.name ?? pageId,
+      });
+    }
+  }
+  return hits;
+}
+
 /** Structure changed (pages added/removed) — panel list must refresh. */
 export function refreshGuardsUI(): void {
   postGuardsState();

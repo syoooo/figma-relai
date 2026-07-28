@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SendCommandFn } from "../../tool-registry.js";
 import { jsonResult, errorResult, textResult } from "./helpers.js";
+import { loadToken } from "../../credentials.js";
 
 // Comments live behind Figma's REST API (the Plugin API cannot see them), so
 // this tool needs a personal access token. Without FIGMA_TOKEN it stays
@@ -58,10 +59,10 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       unresolved: z.boolean().optional().describe("list: only unresolved threads"),
     },
     async ({ action, fileUrl, message, commentId, nodeId, x, y, since, unresolved }) => {
-      const token = process.env.FIGMA_TOKEN;
+      const token = loadToken();
       if (!token) {
         return textResult(
-          "Comments need a Figma personal access token. Generate one at figma.com → Settings → Security → Personal access tokens (enable comment scopes), then add it to the MCP config: \"env\": { \"FIGMA_TOKEN\": \"figd_...\" } and restart. Everything else works without it."
+          "Comments need a Figma personal access token. Generate one at figma.com → Settings → Security → Personal access tokens (enable comment scopes), then store it with `npx figma-relai login` (it is verified and written to ~/.figma-relai/credentials.json, mode 0600). An MCP config \"env\": { \"FIGMA_TOKEN\": \"figd_...\" } still works and takes precedence. Everything else works without it."
         );
       }
 

@@ -3,6 +3,7 @@ import { registerHandler } from "../dispatcher.js";
 import { serializeNode } from "../utils/node-helpers.js";
 import { makeRelai, lintCreatedNodes, type LintTarget } from "../utils/sandbox-helpers.js";
 import { isScopeLocked, isInLockedScope, scopeLockState } from "../write-guard.js";
+import { guardedNodesAmong } from "./guards.js";
 
 // The execute_figma escape hatch: runs AI-authored JavaScript against the
 // Plugin API. Gated by the designer's "Allow code execution" plugin setting.
@@ -136,6 +137,22 @@ registerHandler("execute_code", async (params) => {
         `SCOPE VIOLATION: ${outside.length} node(s) (${outside.slice(0, 5).join(", ")}) are outside "${names.join('", "')}", which the designer restricted edits to. Undo those changes and stay within the locked selection.`
       );
     }
+  }
+
+  // Same blind spot, same remedy: enforcePageGuards catches execute_code only
+  // when the current page is guarded, so code that reaches across to another
+  // no-go zone is reported here rather than passing silently.
+  const guardHits = await guardedNodesAmong([...lintTargets.keys()]);
+  if (guardHits.length > 0) {
+    const pages = [...new Set(guardHits.map((h) => h.pageName))];
+    warnings.push(
+      `GUARD VIOLATION: ${guardHits.length} node(s) (${guardHits
+        .slice(0, 5)
+        .map((h) => h.nodeId)
+        .join(", ")}) live on AI no-go zone(s) "${pages.join(
+        '", "'
+      )}" the designer declared off-limits. Undo those changes and ask before touching that page.`
+    );
   }
 
   return {

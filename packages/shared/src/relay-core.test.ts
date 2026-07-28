@@ -36,6 +36,40 @@ describe("RelayCore", () => {
     ]);
   });
 
+  test("hello carries host capabilities, read fresh on every probe", () => {
+    let hasToken = false;
+    const core = new RelayCore<FakeSocket>({
+      version: "9.9.9",
+      features: () => ({ token: hasToken }),
+    });
+    const ws = connect(core);
+    core.handleMessage(ws, JSON.stringify({ type: "hello" }));
+    expect(ws.ofType("hello")[0]).toEqual({
+      type: "hello",
+      server: "figma-relai",
+      version: "9.9.9",
+      features: { token: false },
+    });
+    // A later `figma-relai login` must show up without restarting the relay
+    hasToken = true;
+    core.handleMessage(ws, JSON.stringify({ type: "hello" }));
+    expect(ws.ofType("hello")[1]).toMatchObject({ features: { token: true } });
+  });
+
+  test("a throwing capability probe still yields a usable hello", () => {
+    const core = new RelayCore<FakeSocket>({
+      version: "9.9.9",
+      features: () => {
+        throw new Error("credentials unreadable");
+      },
+    });
+    const ws = connect(core);
+    core.handleMessage(ws, JSON.stringify({ type: "hello" }));
+    expect(ws.ofType("hello")).toEqual([
+      { type: "hello", server: "figma-relai", version: "9.9.9" },
+    ]);
+  });
+
   test("join responds with the request id so the MCP promise resolves", () => {
     const core = new RelayCore<FakeSocket>();
     const ws = connect(core);

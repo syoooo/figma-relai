@@ -10,7 +10,7 @@ export interface RelaiState {
   updatedAt?: string;
 }
 
-function stateDir(): string {
+export function stateDir(): string {
   return process.env.FIGMA_RELAI_STATE_DIR ?? join(homedir(), ".figma-relai");
 }
 

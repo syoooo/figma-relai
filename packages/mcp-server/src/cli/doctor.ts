@@ -1,9 +1,20 @@
 import WebSocket from "ws";
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { loadState } from "../state.js";
+import { credentialsPath, tokenSource } from "../credentials.js";
 import { loadUserSkills } from "../user-skills.js";
+
+// A credentials file the whole machine can read is worse than no file at all,
+// so doctor reports the mode rather than assuming saveToken won every time.
+function fileMode(path: string): string | null {
+  try {
+    return (statSync(path).mode & 0o777).toString(8).padStart(3, "0");
+  } catch {
+    return null;
+  }
+}
 
 // figma-relai doctor — environment triage in one command. Each check reports
 // ok/warn plus the one-line fix, so "it doesn't work" becomes actionable
@@ -145,16 +156,26 @@ export async function runDoctor(): Promise<CheckResult[]> {
     });
   }
 
-  results.push(
-    process.env.FIGMA_TOKEN
-      ? { check: "token", status: "ok", detail: "FIGMA_TOKEN set — comments unlocked" }
-      : {
-          check: "token",
-          status: "ok",
-          detail: "FIGMA_TOKEN not set — everything works except comments",
-          fix: "Optional: add a personal access token to the MCP config env to unlock manage_comments",
-        }
-  );
+  const source = tokenSource();
+  if (source) {
+    const where = source === "env" ? "FIGMA_TOKEN env" : credentialsPath();
+    const mode = source === "file" ? fileMode(credentialsPath()) : null;
+    results.push({
+      check: "token",
+      status: mode && mode !== "600" ? "warn" : "ok",
+      detail: `Token from ${where}${mode ? ` (mode ${mode})` : ""} — comments and library catalogs unlocked`,
+      ...(mode && mode !== "600"
+        ? { fix: `Tighten it: chmod 600 ${credentialsPath()}` }
+        : {}),
+    });
+  } else {
+    results.push({
+      check: "token",
+      status: "ok",
+      detail: "No token — everything works except manage_comments and full library catalogs",
+      fix: "Optional: npx figma-relai login (or set FIGMA_TOKEN in the MCP config env)",
+    });
+  }
 
   const userSkills = loadUserSkills();
   if (userSkills.skills.length === 0 && userSkills.errors.length === 0) {

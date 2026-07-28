@@ -199,19 +199,29 @@
     .panel::before { top: -6px; left: -4px; }
     .panel::after { bottom: -6px; right: -4px; }
 
-    /* Status pills — bordered chips with a lamp dot */
-    .chips { display: flex; gap: var(--sp-6); align-items: center; margin-bottom: var(--sp-8); }
+    /* Status pills — bordered chips with a lamp dot.
+       Two groups: the session's own plumbing left, the account-level token right. */
+    .chips {
+      display: flex; flex-wrap: wrap; gap: var(--sp-6); align-items: center;
+      margin-bottom: var(--sp-8);
+    }
+    .chip-group { display: flex; gap: var(--sp-6); align-items: center; }
+    /* The token group hugs the right edge — and stays there if the row ever wraps. */
+    .chip-group + .chip-group { margin-left: auto; }
     .chip {
-      display: inline-flex; align-items: center; gap: 5px;
+      display: inline-flex; align-items: center; gap: 4px;
       border: 1px solid var(--line);
-      padding: 1px 8px;
+      padding: 1px 6px;
       font-size: 9px; letter-spacing: 0.1em;
       color: var(--muted);
       background: var(--panel);
     }
+    .chip .ico { display: inline-flex; color: var(--faint); }
+    .chip .ico svg { display: block; }
     .chip .val { display: inline-flex; align-items: center; gap: 5px; }
+    /* A healthy pill says it with the lamp alone — no green border, no word.
+       Three green-outlined chips shouted "fine" louder than anything worth reading. */
     .chip .val.ok { color: var(--ok); }
-    .chip:has(.val.ok) { border-color: rgba(88, 224, 122, 0.4); }
     .chip .val.muted { color: var(--faint); }
 
     /* Kit byline inside the file card: the law's lineage note */
@@ -702,10 +712,15 @@
   <!-- ===== CONNECTED SECTION ===== -->
   <div class="connected-section" id="connectedSection">
 
-    <!-- Session plumbing: two pills, quiet when green -->
+    <!-- Session plumbing left, account-level token right; quiet when green -->
     <div class="chips">
-      <span class="chip">RELAY <span class="val ok" id="relayVal"><span class="lamp on"></span> <span id="relayText" data-i18n="relay_link">LINK</span></span></span>
-      <span class="chip">AGENT <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText" data-i18n="ai_waiting">WAITING</span></span></span>
+      <div class="chip-group">
+        <span class="chip"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M128,84a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,84Zm0,64a20,20,0,1,1,20-20A20,20,0,0,1,128,148Zm77.39,12.7A83.94,83.94,0,0,1,190.61,184a12,12,0,0,1-17.89-16,59.92,59.92,0,0,0,0-80,12,12,0,0,1,17.89-16,84.07,84.07,0,0,1,14.78,88.7ZM83.28,168a12,12,0,0,1-17.89,16,83.94,83.94,0,0,1,0-112A12,12,0,0,1,83.28,88a59.92,59.92,0,0,0,0,80ZM252,128a123.63,123.63,0,0,1-35.43,86.78A12,12,0,1,1,199.43,198a99.88,99.88,0,0,0,0-140,12,12,0,0,1,17.14-16.8A123.63,123.63,0,0,1,252,128ZM56.57,198a12,12,0,0,1-17.14,16.8,123.89,123.89,0,0,1,0-173.56A12,12,0,0,1,56.57,58a99.88,99.88,0,0,0,0,140Z"/></svg></span> RELAY <span class="val ok" id="relayVal"><span class="lamp on"></span> <span id="relayText"></span></span></span>
+        <span class="chip"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M72,104a16,16,0,1,1,16,16A16,16,0,0,1,72,104Zm96,16a16,16,0,1,0-16-16A16,16,0,0,0,168,120Zm68-40V192a36,36,0,0,1-36,36H56a36,36,0,0,1-36-36V80A36,36,0,0,1,56,44h60V16a12,12,0,0,1,24,0V44h60A36,36,0,0,1,236,80Zm-24,0a12,12,0,0,0-12-12H56A12,12,0,0,0,44,80V192a12,12,0,0,0,12,12H200a12,12,0,0,0,12-12Zm-12,82a30,30,0,0,1-30,30H86a30,30,0,0,1,0-60h84A30,30,0,0,1,200,162Zm-80-6v12h16V156ZM86,168H96V156H86a6,6,0,0,0,0,12Zm90-6a6,6,0,0,0-6-6H160v12h10A6,6,0,0,0,176,162Z"/></svg></span> AGENT <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText"></span></span></span>
+      </div>
+      <div class="chip-group">
+        <span class="chip" id="tokenChip" style="display:none" title="" onclick="onTokenChipClick()"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M198.15,96A44,44,0,0,0,168,20H96A44,44,0,0,0,65.85,96a43.9,43.9,0,0,0,1.23,65.12A48,48,0,1,0,148,196V167.17A44,44,0,0,0,198.15,96ZM188,64a20,20,0,0,1-20,20H148V44h20A20,20,0,0,1,188,64ZM76,64A20,20,0,0,1,96,44h28V84H96A20,20,0,0,1,76,64Zm20,84a20,20,0,0,1,0-40h28v40H96Zm28,48a24,24,0,1,1-24-24h24Zm44-48a20,20,0,1,1,20-20A20,20,0,0,1,168,148Z"/></svg></span> ACCESS TOKEN <span class="val muted" id="tokenVal"><span class="lamp off" id="tokenLamp"></span> <span id="tokenText"></span></span></span>
+      </div>
     </div>
 
     <!-- The file card: this file, its lineage, its law -->
@@ -753,6 +768,22 @@
         </div>
         <div id="memList"><div class="mem-empty" data-i18n="memory_empty">no precedents yet — they accumulate as you adjudicate</div></div>
         <input class="mem-input" id="memInput" data-i18n-ph="memory_add_ph" placeholder="+ note a precedent… (Enter)" onkeydown="onMemInputKey(event)">
+      </div>
+    </div>
+
+    <!-- Token modal: what the missing token costs, and the one command that fixes it -->
+    <div class="modal-overlay" id="tokenModal" onclick="if (event.target === this) closeTokenModal()">
+      <div class="panel modal-box">
+        <div class="modal-head">
+          <span class="key">TOKEN</span>
+          <span class="dots"></span>
+          <button class="modal-close" onclick="closeTokenModal()" aria-label="close">&#10005;</button>
+        </div>
+        <div class="conv-text" data-i18n="token_modal_body">No Figma access token. manage_comments and full library catalogs stay locked. Run this in any terminal, then restart your AI session:</div>
+        <div class="cmd-block" id="tokenCmdBlock" onclick="copyLoginCmd()">
+          <code>npx figma-relai login</code>
+          <span class="copy-label" id="tokenCopyLabel" data-i18n="copy">copy</span>
+        </div>
       </div>
     </div>
 
@@ -893,7 +924,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.5.1 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
+  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.5.2 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
 
   <script>
     // ---------- i18n ----------
@@ -917,10 +948,17 @@
         guide_step2: 'This plugin simply dials <code>ws://localhost:9055</code>. Either side can start first; both reconnect automatically.',
         guide_step3: 'Talk to your AI — it discovers this plugin’s room and pairs on its own. Nothing to copy.',
         guide_step4: 'Contributors: clone the repo and run <code>bun setup</code> to point your MCP config at a local build.',
-        relay_link: 'LINK',
         relay_reconnecting: 'RETRY…',
+        relay_hint_up: 'Linked to the relay inside the MCP server.',
+        relay_hint_down: 'The relay is unreachable — retrying.',
         ai_waiting: 'WAITING',
-        ai_connected: 'CONNECTED',
+        agent_hint_on: 'Your AI is in this room, paired with this file.',
+        agent_hint_off: 'No AI in this room yet — waiting for one to pair.',
+        token_absent: 'NONE',
+        token_hint_absent: 'No Figma access token — click for how to add one.',
+        token_hint_ready: 'Figma access token found by the MCP server. Comments and library catalogs are unlocked.',
+        token_modal_body: 'No Figma access token. manage_comments and full library catalogs stay locked. Run this in any terminal, then restart your AI session:',
+        token_copied: 'COPIED',
         activity: 'Activity',
         stop: 'STOP',
         feed_empty: 'awaiting commands',
@@ -1006,10 +1044,17 @@
         guide_step2: 'このプラグインは <code>ws://localhost:9055</code> に接続するだけ。どちらが先に起動しても、双方が自動で再接続します。',
         guide_step3: 'AI に話しかけるだけで、このプラグインのルームを自動で見つけてペアリングします。ルーム名のコピーは不要です。',
         guide_step4: 'コントリビューター向け：リポジトリを clone して <code>bun setup</code> を実行すると、ローカルビルドを指す MCP 設定が書き出されます。',
-        relay_link: 'LINK',
         relay_reconnecting: '再接続…',
+        relay_hint_up: 'MCP サーバー内のリレーに接続しています。',
+        relay_hint_down: 'リレーに届きません — 再接続中です。',
         ai_waiting: '待機中',
-        ai_connected: '接続済み',
+        agent_hint_on: 'AI がこのルームにいて、このファイルとペアリングしています。',
+        agent_hint_off: 'このルームにまだ AI がいません — ペアリング待ちです。',
+        token_absent: 'なし',
+        token_hint_absent: 'Figma アクセストークンが未設定です。クリックで設定方法を表示します。',
+        token_hint_ready: 'MCP サーバーが Figma アクセストークンを認識しています。コメントとライブラリ目録が利用できます。',
+        token_modal_body: 'Figma アクセストークンが未設定です。manage_comments とライブラリ全目録は使えません。以下をターミナルで実行し、AI のセッションを再起動してください：',
+        token_copied: 'コピーしました',
         activity: 'アクティビティ',
         stop: '停止',
         feed_empty: 'コマンド待機中',
@@ -1095,10 +1140,17 @@
         guide_step2: '本插件只做一件事：连接 <code>ws://localhost:9055</code>。谁先启动都可以，双方都会自动重连。',
         guide_step3: '直接对 AI 说话——它会自动发现本插件的房间并配对，无需复制任何内容。',
         guide_step4: '贡献者：clone 仓库后运行 <code>bun setup</code>，会写出指向本地构建的 MCP 配置。',
-        relay_link: 'LINK',
         relay_reconnecting: '重连中…',
+        relay_hint_up: '已连接到 MCP 服务器内置的 relay。',
+        relay_hint_down: 'relay 不可达 — 正在重连。',
         ai_waiting: '等待中',
-        ai_connected: '已连接',
+        agent_hint_on: 'AI 已在这个房间里，与这个文件配对。',
+        agent_hint_off: '这个房间还没有 AI — 等待配对。',
+        token_absent: '未设置',
+        token_hint_absent: '未设置 Figma 访问令牌，点击查看设置方法。',
+        token_hint_ready: 'MCP 服务器已识别到 Figma 访问令牌，评论与库目录均可用。',
+        token_modal_body: '未设置 Figma 访问令牌，manage_comments 与完整库目录不可用。在任意终端执行以下命令，然后重启 AI 会话：',
+        token_copied: '已复制',
         activity: '活动',
         stop: '停止',
         feed_empty: '等待命令',
@@ -1500,7 +1552,7 @@
     }
 
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { closeConvModal(); closeRulesetModal(); closeHistModal(); }
+      if (e.key === 'Escape') { closeConvModal(); closeRulesetModal(); closeHistModal(); closeTokenModal(); }
     });
 
     // ---------- Rulesets (common-ancestor law, this machine) ----------
@@ -1913,38 +1965,91 @@
       hint.style.display = state === 'unreachable' ? 'block' : 'none';
     }
 
+    // The pills stay quiet when green: a healthy lamp says everything a word
+    // would. Only the state that wants something from you spells itself out.
+    function setChipState(chip, val, lamp, ok, lampClass, word, hint) {
+      val.className = 'val ' + (ok ? 'ok' : lampClass === 'warn' ? 'warn' : 'muted');
+      lamp.className = 'lamp ' + lampClass;
+      var text = val.lastElementChild;
+      text.textContent = ok ? '' : word;
+      text.style.display = ok ? 'none' : '';
+      chip.title = hint;
+    }
+
     function renderRelay() {
       var val = document.getElementById('relayVal');
-      var text = document.getElementById('relayText');
-      if (relayUp) {
-        val.className = 'val ok';
-        val.querySelector('.lamp').className = 'lamp on';
-        text.textContent = t('relay_link');
-      } else {
-        val.className = 'val warn';
-        val.querySelector('.lamp').className = 'lamp warn';
-        text.textContent = t('relay_reconnecting');
-      }
+      setChipState(val.parentNode, val, val.querySelector('.lamp'),
+        relayUp, relayUp ? 'on' : 'warn',
+        t('relay_reconnecting'), t(relayUp ? 'relay_hint_up' : 'relay_hint_down'));
     }
 
     function renderAgent() {
+      var live = agentPresent && relayUp;
       var val = document.getElementById('agentVal');
-      var text = document.getElementById('agentText');
-      if (agentPresent && relayUp) {
-        val.className = 'val ok';
-        document.getElementById('agentLamp').className = 'lamp on';
-        text.textContent = t('ai_connected');
-      } else {
-        val.className = 'val muted';
-        document.getElementById('agentLamp').className = 'lamp off';
-        text.textContent = t('ai_waiting');
-      }
+      setChipState(val.parentNode, val, document.getElementById('agentLamp'),
+        live, live ? 'on' : 'off',
+        t('ai_waiting'), t(live ? 'agent_hint_on' : 'agent_hint_off'));
+    }
+
+    // tokenPresent is null until the relay answers hello — a standalone relay
+    // cannot know, so the chip stays hidden rather than claiming "NONE".
+    var tokenPresent = null;
+    var LOGIN_CMD = 'npx figma-relai login';
+
+    function renderToken() {
+      var chip = document.getElementById('tokenChip');
+      if (tokenPresent === null) { chip.style.display = 'none'; return; }
+      chip.style.display = '';
+      setChipState(chip, document.getElementById('tokenVal'), document.getElementById('tokenLamp'),
+        !!tokenPresent, tokenPresent ? 'on' : 'off',
+        t('token_absent'), t(tokenPresent ? 'token_hint_ready' : 'token_hint_absent'));
+      chip.style.cursor = tokenPresent ? 'default' : 'pointer';
+    }
+
+    function onTokenChipClick() {
+      if (tokenPresent === false) openTokenModal();
+    }
+    function openTokenModal() {
+      document.getElementById('tokenModal').classList.add('open');
+    }
+    function closeTokenModal() {
+      document.getElementById('tokenModal').classList.remove('open');
+    }
+
+    // The panel teaches the command; it never carries the secret.
+    function copyLoginCmd() {
+      var block = document.getElementById('tokenCmdBlock');
+      var label = document.getElementById('tokenCopyLabel');
+      var done = function () {
+        block.classList.add('copied');
+        label.textContent = t('token_copied');
+        setTimeout(function () {
+          block.classList.remove('copied');
+          label.textContent = t('copy');
+        }, 1200);
+      };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(LOGIN_CMD).then(done, done);
+          return;
+        }
+      } catch (err) { /* fall through to the textarea path */ }
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = LOGIN_CMD;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch (err2) { /* clipboard unavailable — the tooltip still shows it */ }
+      done();
     }
 
     function refreshStatusTexts() {
       if (document.getElementById('connectedSection').style.display === 'block') {
         renderRelay();
         renderAgent();
+        renderToken();
       } else {
         setSetupStatus(setupState);
       }
@@ -2077,6 +2182,10 @@
         agentPresent = false;
         showConnected();
 
+        // Capability probe — the relay answers with what the server process can
+        // reach (e.g. a Figma access token), never with any secret itself.
+        ws.send(JSON.stringify({ type: 'hello' }));
+
         ws.send(JSON.stringify({
           type: 'join',
           room: roomName,
@@ -2094,6 +2203,12 @@
       ws.onmessage = function (event) {
         try {
           var data = JSON.parse(event.data);
+
+          if (data.type === 'hello' && data.server === 'figma-relai') {
+            tokenPresent = data.features ? !!data.features.token : null;
+            renderToken();
+            return;
+          }
 
           if (data.type === 'presence') {
             if (data.room === roomName) {
@@ -2133,6 +2248,8 @@
           // Keep the connected view; flip the RELAY line to retry state
           relayUp = false;
           agentPresent = false;
+          tokenPresent = null;
+          renderToken();
           renderRelay();
           renderAgent();
         } else {

@@ -22,6 +22,13 @@ export interface WsHelloMessage {
   type: "hello";
   server?: "figma-relai";
   version?: string;
+  /**
+   * What the relay host can do beyond the canvas. Presence — never the value:
+   * `token` says a personal access token is resolvable in the server process,
+   * so the panel can show the capability without the secret crossing the wire.
+   * Absent when the relay runs standalone and cannot know.
+   */
+  features?: { token?: boolean };
 }
 
 // Peer presence broadcast to every room member on join/leave
