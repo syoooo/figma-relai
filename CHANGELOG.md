@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.5.3
+
+The catalog finds the library by itself, and starts naming components instead of variants.
 
 - **The library catalog stopped asking for a URL, and stopped hiding the components that matter.** `get_design_system` now resolves every library this file consumes on its own: a published asset knows its home file (`GET /v1/component_sets/{key}` → `meta.file_key`), and the plugin already hands out keys off nodes in the file, so the loop closes without anyone pasting a link. A token is the only requirement now. Two API rules make the probe work and both cost a real afternoon to learn: `.`-prefixed assets are never published, so their keys 404 everywhere; and a component SET's key resolves only at `/component_sets`, never at `/components`. Worse, `/files/{key}/components` returns the individual VARIANTS — `size=md, state=default` — so the old catalog listed 933 variant rows and not one of the 34 component sets a designer actually names. Sets are now first-class and variants are folded away with a count. This is not cosmetic: a `TextArea` sat published in a design system while the panel below it was hand-built from a stretched `Text Field`, because the file had never placed the real one and nothing could see past what the file already used.
+- **Four scars from a real library migration, now spoken as error hints.** A component property's identity is its `#id` suffix, not its display name — renaming `show label#4525:247` to `hasLabel#4525:247` in the library keeps every instance override alive, and only VARIANT axes, which carry no id, fall back to a default; auditing a migration means snapshotting the axes and leaving the rest alone. `importComponentSetByKeyAsync` hands back the file's LOCAL copy, so a stale component reads as authoritative — ask REST what is actually published. `Plugin runtime aborted` is an out-of-memory from deep-wrapping properties across tens of thousands of nodes, not a timeout, and it now says so instead of looking like a hang. And GRID auto-layout: anchor indices are readonly (`setGridChildPosition`), track-size arrays reject assignment while the counts are writable and each `GridTrackSize` has its own setters.
 
 ## 0.5.2
 
