@@ -61,7 +61,7 @@ Cursor 则把下面这段加进 `.cursor/mcp.json`：
 
 检查。`analyze_design` 检查颜色 Token 覆盖、自动布局质量、组件健康度和无障碍性（WCAG 对比度、触达目标、字号），也能合成一个加权 0–100 的健康分直接放进评审。另有三项盘点：文件为 AI 工作准备到什么程度的打分（附最大缺口）、这个文件惯用的圆角/间距/字号统计、以及还指着已删除变量的引用清点。
 
-设计系统。带模式的变量集合、Token 绑定、共享样式、正确的变体、团队库导入。`get_design_system` 会盘点文件及其使用的库已有的家底，让 AI 从你的组件出发构建，而不是照着画一个像的；`analyze_design` 的 tokens 能找出与现有变量视觉一致的硬编码值，一条 `tokenize` 全部绑定。这些都是带前置条件检查的声明式操作：同样的请求每次行为一致，失败时告诉 AI 下一步该做什么（「先调 set_layout_mode」），而不是甩一段堆栈。
+设计系统。带模式的变量集合、Token 绑定、共享样式、正确的变体、团队库导入。`get_design_system` 会盘点文件及其使用的库已有的家底（有令牌时，连文件还没放过的那部分，整份库目录一起），让 AI 从你的组件出发构建，而不是照着画一个像的；`analyze_design` 的 tokens 能找出与现有变量视觉一致的硬编码值，一条 `tokenize` 全部绑定。这些都是带前置条件检查的声明式操作：同样的请求每次行为一致，失败时告诉 AI 下一步该做什么（「先调 set_layout_mode」），而不是甩一段堆栈。
 
 其余的一切。`execute_figma` 直接对 Figma Plugin API 执行 JavaScript——与官方 MCP 同款的兜底思路——但带着让正确写法成为最短写法的 `relai.*` 辅助库、附在已知报错上的提示、以及揪出静默错误的 lint。不想让 AI 跑代码，就在插件里关掉「Allow code execution」。
 
@@ -133,20 +133,31 @@ Figma plugin          executes Plugin API calls
 
 Figma 自家的 AI 成长得很快——官方 MCP 服务器已能写画布，Figma Design Agent 直接在编辑器里协作。两者都面向付费套餐的完整席位，用量按 AI 额度计费，模型由 Figma 指定。Relai 是那条线另一侧的开源方案：包括免费版在内的所有套餐、你已有的模型和订阅、一切跑在你自己的机器上、控制权握在设计师手里。有席位的话，两边可以愉快共存——都开着就好。
 
-## 可选：评论
+## 可选：一个 Figma 令牌
 
-评论在 Figma 的 REST API 后面，需要个人访问令牌。到 figma.com → Settings → Security 生成（勾选评论相关 scope），然后加进 MCP 配置：
+Figma 的 REST API 后面有两样东西需要个人访问令牌：评论，以及一个库的完整组件目录——那些已经发布、但你的文件从没放过的组件。是哪个库，Relai 自己会找出来，不用你贴 URL。
+
+到 figma.com → Settings → Security → Personal access tokens 生成（file content read scope；要用 `manage_comments` 就再勾上评论相关 scope），然后交出去一次：
+
+```bash
+npx figma-relai login    # 验证、报出是哪个账号，存进 ~/.figma-relai/credentials.json（0600）
+npx figma-relai logout   # 删除
+```
+
+令牌不会作为命令行参数出现——argv 会进 shell 历史，也会出现在这台机器上的每一次 `ps`——所以 `login` 只从隐藏输入或管道（`pbpaste | npx figma-relai login`）里取。MCP 配置里的 `FIGMA_TOKEN` 依旧有效，而且优先于存下来的那份，按项目覆盖仍然可行：
 
 ```json
 { "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"],
   "env": { "FIGMA_TOKEN": "figd_..." } } } }
 ```
 
-令牌只待在你的配置文件里，只发往 `api.figma.com`。其他工具没有它照常工作。有了它，「把评论里的反馈落实一下」才真正可行：读线程、做修改、回帖。它还解锁一种安静的工作流：在画布上留一条 @ 评论当任务，之后让 AI「去看看评论」——它会认领线程、完成工作、在帖子里汇报。
+两条路径都一样：令牌只由 MCP 服务器进程读取，只发往 `api.figma.com`，绝不经中继到达插件——面板上的 ACCESS TOKEN 药丸只说有无，不说值。其他工具没有它照常工作。
+
+有了它，「把评论里的反馈落实一下」才真正可行：读线程、做修改、回帖。它还解锁一种安静的工作流：在画布上留一条 @ 评论当任务，之后让 AI「去看看评论」——它会认领线程、完成工作、在帖子里汇报。
 
 ## 疑难排查
 
-先跑 `npx figma-relai doctor`——一条命令检查 Node、中继端口（以及是否有别的进程占着）、插件在位情况、已存房间和评论令牌，每项附修法。
+先跑 `npx figma-relai doctor`——一条命令检查 Node、中继端口（以及是否有别的进程占着）、插件在位情况、已存房间，以及 Figma 令牌——它从哪儿来、存下来的那份文件权限够不够紧——每项附修法。
 
 **插件显示 NO SERVER。** 端口 9055–9057 上没有 MCP 服务器在听，通常是 AI 客户端没启动或没注册 Relai。面板上直接显示注册命令；插件会持续拨号，服务器一出现就连上。
 

@@ -61,7 +61,7 @@ Bulk edits. "Translate every button label to English" or "recolor this for dark 
 
 Audits. `analyze_design` checks color-token coverage, auto-layout quality, component health, and accessibility (WCAG contrast, touch targets, text sizes) — or all four at once as a weighted 0–100 health score you can put in a review. It also scores agent-readiness (how prepared the file is for AI work, with top gaps), fingerprints the file's voice (its radius/spacing/type signature), and runs a ghost census for references to soft-deleted variables.
 
-Design systems. Variable collections with modes, token binding, shared styles, components with proper variants, team-library imports. `get_design_system` inventories what the file — and the libraries it uses — already has, so the AI builds from your components instead of redrawing near-copies; `analyze_design`'s tokens aspect finds hardcoded values that visually match an existing variable, and one `tokenize` call binds them all. These run as declarative operations with precondition checks, so the same request behaves the same way every time, and a failure tells the AI what to do next ("call set_layout_mode first") instead of dumping a stack trace.
+Design systems. Variable collections with modes, token binding, shared styles, components with proper variants, team-library imports. `get_design_system` inventories what the file — and the libraries it uses — already has (with a token, the library's whole catalog, including components the file has never placed), so the AI builds from your components instead of redrawing near-copies; `analyze_design`'s tokens aspect finds hardcoded values that visually match an existing variable, and one `tokenize` call binds them all. These run as declarative operations with precondition checks, so the same request behaves the same way every time, and a failure tells the AI what to do next ("call set_layout_mode first") instead of dumping a stack trace.
 
 Everything else. `execute_figma` runs JavaScript against the Figma Plugin API directly — the same escape-hatch approach as Figma's official MCP — with a `relai.*` helper library that makes the correct pattern the shortest one, hints attached to known errors, and a lint that flags silent mistakes. If you'd rather the AI never ran code, turn it off with the plugin's "Allow code execution" toggle.
 
@@ -133,20 +133,31 @@ Each tool is self-describing, so the AI sees full parameter docs. The same contr
 
 Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are reserved for full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: every plan including free, whatever model and subscription you already use, everything running on your machine, and the designer holding the controls. If you have the seats, the two coexist happily — run both.
 
-## Optional: comments
+## Optional: a Figma token
 
-Comments live behind Figma's REST API, which needs a personal access token. Generate one at figma.com → Settings → Security (enable comment scopes), then add it to your MCP config:
+Two things live behind Figma's REST API and need a personal access token: comments, and a library's full component catalog — the components published in a library your file has never placed. Which library that is, Relai works out on its own; there is no URL to paste.
+
+Generate a token at figma.com → Settings → Security → Personal access tokens (file content read scope; add the comment scopes if you want `manage_comments`), then hand it over once:
+
+```bash
+npx figma-relai login    # verifies it, names the account back, stores it in ~/.figma-relai/credentials.json (0600)
+npx figma-relai logout   # removes it
+```
+
+The token never arrives as a command argument — argv lands in shell history and in every `ps` on the machine — so `login` takes it from a hidden prompt, or from a pipe (`pbpaste | npx figma-relai login`). Setting `FIGMA_TOKEN` in the MCP config still works and still wins, which keeps a per-project override possible:
 
 ```json
 { "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"],
   "env": { "FIGMA_TOKEN": "figd_..." } } } }
 ```
 
-The token stays in your config file and is sent only to `api.figma.com`. Every other tool works without it. With it, "apply the feedback in the comments" becomes a thing the AI can actually do: read the threads, make the edits, reply. It also unlocks a quiet workflow: leave an @-comment on the canvas as a task, then tell your AI to "check the comments" — it claims the thread, does the work, and reports back on it.
+Either way, the token is read by the MCP server process only and is sent only to `api.figma.com`. It never crosses the relay to the plugin — the panel's ACCESS TOKEN pill reports presence, never the value. Every other tool works without it.
+
+With it, "apply the feedback in the comments" becomes a thing the AI can actually do: read the threads, make the edits, reply. It also unlocks a quiet workflow: leave an @-comment on the canvas as a task, then tell your AI to "check the comments" — it claims the thread, does the work, and reports back on it.
 
 ## Troubleshooting
 
-Start with `npx figma-relai doctor` — one command that checks Node, the relay ports (and whether something foreign is squatting on them), plugin presence, the saved room, and the comments token, each with its fix.
+Start with `npx figma-relai doctor` — one command that checks Node, the relay ports (and whether something foreign is squatting on them), plugin presence, the saved room, and the Figma token — where it came from, and whether the stored file's mode is tight enough — each with its fix.
 
 **The plugin shows NO SERVER.** No MCP server is listening on ports 9055–9057, which usually means your AI client isn't running or Relai isn't registered in it. The panel shows the exact registration command; the plugin keeps dialing and connects the moment a server appears.
 

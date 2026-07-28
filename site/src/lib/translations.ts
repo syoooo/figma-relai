@@ -66,7 +66,7 @@ export const translations = {
       title: 'Why the results come out better.',
       body: 'Connecting an AI to Figma is the easy part. Most of Relai is the unglamorous work that decides whether the output is production-grade or plausible-looking noise — and ninety-eight tests written to break it gate every release that touches logic.',
       items: [
-        { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'The minefield, mapped', body: 'The Plugin API is full of traps. Relai ships 30 of them, learned in production — trip one, and the raw error comes back with the fix attached; the same registry becomes the cheat sheet the AI reads before writing code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
+        { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'The minefield, mapped', body: 'The Plugin API is full of traps. Relai ships 35 of them, learned in production — trip one, and the raw error comes back with the fix attached; the same registry becomes the cheat sheet the AI reads before writing code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', tag: 'RECEIPT', title:'It checks its own work', body: 'After a write, the AI looks: screenshot, compare against intent, re-read the result. The difference between “done” and “actually done”.', rows: ['set_properties · 24 nodes · 0.6s ✓', 'export_asset · 1 png ✓', 'verify_visual · match ✓'] },
         { kicker: 'conventions', tag: 'CARRIED BY THE FILE', title:'Your system comes first', body: 'Before building, the AI inventories the file — and the rules you store in the file itself ride into its context: naming, token routing, no-go zones, your precedents. It builds from your components, not near-copies.', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components\n# memory — precedents, e.g.\n· "KARTE Badge border=1 is intent"' },
         { kicker: 'navigation', tag: 'TOOL RESULT', title:'A map, not a maze', body: 'Thirty-three tools, each answering with a summary, honest notes on what got truncated, and a recommended next step. The AI arrives briefed, too — eleven skills as MCP prompts, your own from `~/.figma-relai/skills`, the whole contract as a `manifest` regenerated from running code, and one `doctor` command that diagnoses the chain end to end.', artifact: '{\n  "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_details\n    on the set you plan to extend"\n}' }
@@ -102,7 +102,8 @@ export const translations = {
         { q: 'Can I fence off pages the AI must never touch?', a: 'Yes — AI no-go zones, per page, in the panel. Writes into a guarded page are rejected before they run, with a clear error. And the confirmation dial has four stops — OPEN · RISK · BULK · ALL: at RISK (the default), only the dangerous operations ask — deleting variables or styles, detach, flatten — and everything else keeps moving. Dial to OPEN when you’d rather not be asked at all.' },
         { q: 'Is there anything to copy between windows?', a: 'No. Pairing is automatic. The `join_room` tool exists for one rare case only: two Figma files running the plugin at the same time.' },
         { q: 'Can I stop the AI from running code?', a: 'Yes. `execute_figma` runs JavaScript against the Figma Plugin API as an escape hatch — it is arbitrary code execution, and the docs say so plainly. If you would rather the AI never ran code, turn it off with the plugin’s “Allow code execution” toggle.' },
-        { q: 'How does it know what my design uses?', a: '`get_design_system` inventories the file and the libraries it uses, so the AI builds from your existing components and tokens instead of redrawing near-copies.' }
+        { q: 'How does it know what my design uses?', a: '`get_design_system` inventories the file and the libraries it uses, so the AI builds from your existing components and tokens instead of redrawing near-copies. With a token it reads the library’s whole catalog — including the component your file has never placed, which is how a stretched near-copy ends up living next to the real one.' },
+        { q: 'Do I need a Figma token?', a: 'For two things only: comments, and that full library catalog. `npx figma-relai login` verifies it and stores it on your machine at 0600; the server process alone reads it, and it never crosses the relay to the plugin — the panel says a token is there, never what it is. Everything else works without one.' }
       ]
     },
     cta: {
@@ -210,7 +211,7 @@ export const translations = {
       title: '結果の質は、地味な作り込みで決まる。',
       body: 'AIをFigmaにつなぐこと自体は簡単です。Relaiの中身の大半は、出力を「それっぽい何か」で終わらせないための、目立たない作り込みです。ロジックに触れるリリースは、98項目の意地悪な検査が門番をしています。',
       items: [
-        { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'落とし穴には、地図がある。', body: 'Plugin APIは落とし穴だらけです。Relaiには実際の運用で踏んだ30件が同梱されています。踏めば、生のエラーに解決策が添えられて返ってきます。同じ一覧は、AIがコードを書く前に読むチートシートにもなります。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
+        { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'落とし穴には、地図がある。', body: 'Plugin APIは落とし穴だらけです。Relaiには実際の運用で踏んだ35件が同梱されています。踏めば、生のエラーに解決策が添えられて返ってきます。同じ一覧は、AIがコードを書く前に読むチートシートにもなります。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', tag: 'RECEIPT', title:'書いたら、見て確かめる。', body: '書き込んだら、見て確かめます。スクリーンショット、意図との見比べ、結果の読み直し。「終わった」と「本当に終わった」の差は、ここで生まれます。', rows: ['set_properties · 24 nodes · 0.6s ✓', 'export_asset · 1 png ✓', 'verify_visual · match ✓'] },
         { kicker: 'conventions', tag: 'CARRIED BY THE FILE', title:'まず、手元のシステムから。', body: '構築の前に、AIはまずファイルを調べます。ファイル自身に保存されたルールも、そのままコンテキストに入ります。命名、トークンの通し方、立入禁止、下した判例。似た見た目の描き直しではなく、手元のコンポーネントから組み立てます。', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components\n# memory — precedents, e.g.\n· "KARTE Badge border=1 is intent"' },
         { kicker: 'navigation', tag: 'TOOL RESULT', title:'結果には、次の一手がついてくる。', body: '33個のツールは、どれも要約・省略箇所の正直な注記・推奨される次の一手を添えて答えます。しかもAIは、下調べ済みで現場に来ます。11本のスキルがMCPプロンプトとして同梱され、自作スキルは`~/.figma-relai/skills`から読み込まれ、契約の全体は実行コードから再生成される`manifest`になっています。調子が悪ければ、`doctor`一発で診断です。', artifact: '{\n  "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_details\n    on the set you plan to extend"\n}' }
@@ -246,7 +247,8 @@ export const translations = {
         { q: 'AIに触らせたくないページを守れますか？', a: 'はい。パネルでページ単位の立入禁止（NO-GO）を設定でき、対象ページへの書き込みは実行の手前で明確なエラーとして拒否されます。確認は4段階のダイヤル（OPEN · RISK · BULK · ALL）に統合されています。既定のRISKでは、破壊的操作（変数/スタイル削除・detach・flatten）だけが確認を求め、それ以外は止まりません。確認なしで進めたいときはOPENへ。' },
         { q: 'ウィンドウ間で何かをコピーする必要は？', a: 'ありません。ペアリングは自動です。`join_room`ツールは、同時に2つのFigmaファイルでプラグインを動かすまれなケース専用です。' },
         { q: 'AIにコードを実行させないことはできますか？', a: 'はい。`execute_figma`はFigma Plugin APIを直接扱う最後の手段で、任意コード実行であることをドキュメントにも明記しています。望まない場合は「Allow code execution」をオフにしてください。' },
-        { q: 'デザインの利用状況はどう理解しますか？', a: '`get_design_system`がファイルと使用中ライブラリを棚卸しし、AIは既存のコンポーネントとトークンから構築します。' }
+        { q: 'デザインの利用状況はどう理解しますか？', a: '`get_design_system`がファイルと使用中ライブラリを棚卸しし、AIは既存のコンポーネントとトークンから構築します。トークンを渡せば、そのファイルがまだ一度も置いていないコンポーネントまで、ライブラリのカタログ全体が見えます。本物が公開済みなのに、引き伸ばした似せ物が隣で生き続けるのは、たいていこの差です。' },
+        { q: 'Figmaのトークンは必要ですか？', a: '必要なのは2つだけです。コメントと、いま挙げたライブラリの全カタログ。`npx figma-relai login`が有効性を確かめ、あなたのマシンに0600で保存します。読むのはサーバープロセスだけで、リレーを渡ってプラグインに届くことはありません。パネルが示すのは、トークンがあるという事実だけです。ほかの機能は、トークンなしで動きます。' }
       ]
     },
     cta: {
@@ -354,7 +356,7 @@ export const translations = {
       title: '结果更好，是有原因的。',
       body: '把AI接到Figma上并不难。Relai的大部分工作，是那些决定输出到底是生产级、还是"看着像回事的噪音"的朴素功夫 —— 98道故意找茬的检查,守在每次触及逻辑的发布之前。',
       items: [
-        { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'雷区，已绘制成图。', body: 'Plugin API处处是坑。Relai内置了30条生产环境踩出来的 —— 一旦踩中,原始报错连同解法一起返回;同一份清单,就是AI写代码前要读的速查表。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text —— new TextNodes\n        default to Inter Regular' },
+        { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'雷区，已绘制成图。', body: 'Plugin API处处是坑。Relai内置了35条生产环境踩出来的 —— 一旦踩中,原始报错连同解法一起返回;同一份清单,就是AI写代码前要读的速查表。', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text —— new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', tag: 'RECEIPT', title:'自己的活，自己验。', body: '写完就看:截图、对照意图、重读结果。"做完了"和"真的做完了"的差别,就在这里。', rows: ['set_properties · 24 nodes · 0.6s ✓', 'export_asset · 1 png ✓', 'verify_visual · match ✓'] },
         { kicker: 'conventions', tag: 'CARRIED BY THE FILE', title:'先学你的系统。', body: '动手之前,AI先盘点文件 —— 你存在文件里的规矩直接进入它的上下文:命名、Token路径、禁区、你的判例。它从你的组件出发构建,而不是照着画一个像的。', artifact: '# conventions —— carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components\n# memory — precedents, e.g.\n· "KARTE Badge border=1 is intent"' },
         { kicker: 'navigation', tag: 'TOOL RESULT', title:'给的是路标，不是迷宫。', body: '33个工具,每个都带着摘要、对截断之处的诚实标注、建议的下一步来回答。而且AI是备过课进场的 —— 11份skill作为MCP prompts内置,你自己写的从`~/.figma-relai/skills`装载,整套契约是随构建从运行代码重新生成的`manifest`;不对劲时,一条`doctor`命令端到端诊断。', artifact: '{\n  "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_details\n    on the set you plan to extend"\n}' }
@@ -390,7 +392,8 @@ export const translations = {
         { q: '能划出AI不准碰的页面吗？', a: '能——面板里按页设置「AI禁区」，写入禁区页会在碰到画布之前被明确拒绝。确认被统一成四档刻度盘（OPEN · RISK · BULK · ALL）：默认的RISK档只拦高危操作（删变量/样式、detach、flatten），其余照常放行；不想被问的时候，拨到OPEN。' },
         { q: '需要在窗口之间复制内容吗？', a: '不需要。配对自动完成。`join_room`工具只用于一种少见情况：两个Figma文件同时运行插件。' },
         { q: '可以阻止AI执行代码吗？', a: '可以。`execute_figma`是直接调用Figma Plugin API的应急出口 —— 文档明确说明这是任意代码执行。不希望的话，在插件中关闭「Allow code execution」即可。' },
-        { q: '它如何了解我的设计？', a: '`get_design_system`会盘点文件及其使用的库，让AI基于已有组件和Token构建。' }
+        { q: '它如何了解我的设计？', a: '`get_design_system`会盘点文件及其使用的库，让AI基于已有组件和Token构建。有令牌时，看到的是整份库目录——包括你的文件从没放过的那些组件。真件早已发布，旁边却活着一个拉伸出来的仿件，差别通常就在这里。' },
+        { q: '需要Figma令牌吗？', a: '只有两件事需要：评论，和上面说的完整库目录。`npx figma-relai login`先验证，再以0600存在你自己的机器上；只有服务器进程读它，绝不经中继到达插件——面板只说有没有，不说是什么。其余功能没有它照常工作。' }
       ]
     },
     cta: {
