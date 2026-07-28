@@ -2360,7 +2360,7 @@
     {
       "pattern": null,
       "hint": "",
-      "doc": "**Text edits inside a component SET propagate to every variant.** Applying a text style to one variant's label retypes the matching layer in all of them — same for `textDecoration` and text fills, at node level and via `setRange*` alike. Renaming the layer does not break the link (matching is positional). So a set whose sizes need DIFFERENT text styles cannot be styled in place: apply the styles while the components are still standalone and combine afterwards, or do what the house pattern does and put the per-size typography in its own atom that the parent instantiates. Two more from the same afternoon: `combineAsVariants` drops `textDecoration`, and a decoration written in the same execution as `setTextStyleIdAsync` is clobbered by the style landing — set it in a later call."
+      "doc": "**Text edits inside a component SET propagate to every variant.** Applying a text style to one variant's label retypes the matching layer in all of them — same for `textDecoration` and text fills, at node level and via `setRange*` alike. Renaming the layer does not break the link (matching is positional). So a set whose sizes need DIFFERENT text styles cannot be styled in place: apply the styles while the components are still standalone and combine afterwards — an atom does not save you either unless the atom's variants are standalone components rather than a set of their own. Two more from the same afternoon: `combineAsVariants` drops `textDecoration`, and a decoration written in the same execution as `setTextStyleIdAsync` is clobbered by the style landing — set it in a later call."
     },
     {
       "pattern": null,
