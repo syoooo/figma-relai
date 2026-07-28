@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **The library catalog stopped asking for a URL, and stopped hiding the components that matter.** `get_design_system` now resolves every library this file consumes on its own: a published asset knows its home file (`GET /v1/component_sets/{key}` → `meta.file_key`), and the plugin already hands out keys off nodes in the file, so the loop closes without anyone pasting a link. A token is the only requirement now. Two API rules make the probe work and both cost a real afternoon to learn: `.`-prefixed assets are never published, so their keys 404 everywhere; and a component SET's key resolves only at `/component_sets`, never at `/components`. Worse, `/files/{key}/components` returns the individual VARIANTS — `size=md, state=default` — so the old catalog listed 933 variant rows and not one of the 34 component sets a designer actually names. Sets are now first-class and variants are folded away with a count. This is not cosmetic: a `TextArea` sat published in a design system while the panel below it was hand-built from a stretched `Text Field`, because the file had never placed the real one and nothing could see past what the file already used.
+
 ## 0.5.2
 
 The token stops living in a config file, and the panel learns to say when it is missing.

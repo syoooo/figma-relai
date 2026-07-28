@@ -165,6 +165,16 @@ export const PITFALLS: Pitfall[] = [
     hint: "",
     doc: "**`setProperties` DOES work on instances nested inside other instances** — it records as an override on the outer instance. Only variable-binding writes (`setBoundVariable`) silently revert inside instance internals. Don't skip nested instances when migrating variant or boolean properties; skip them only for binding writes.",
   },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**What a file USES is not what its library HAS.** `get_design_system`'s remote-used list only reports components the file already placed — a library component nobody has dragged in yet is invisible to the plugin, and no amount of scanning the document will reveal it. Read the published catalog before concluding a component doesn't exist (one real case: a design system's `TextArea` was declared missing and hand-rebuilt from a stretched `Text Field`, because the file had never used the real one).",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**Dot-prefixed components are never published**, so their keys 404 on every REST endpoint. Figma hides `.`-prefixed assets from the publish dialog; they exist only nested inside published parents. When resolving a key → file via `/v1/components/{key}`, skip names starting with `.` — and note a component SET's key resolves only at `/v1/component_sets/{key}`, never at `/v1/components/{key}` (and vice versa). Relatedly, `/v1/files/{key}/components` returns the individual VARIANTS (`size=md, state=default`); the components a designer names live in `/component_sets`.",
+  },
 ];
 
 // First matching pitfall's hint, or null. Doc-only entries never match.
