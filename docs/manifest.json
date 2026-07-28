@@ -2333,9 +2333,29 @@
       "doc": "**`setProperties` DOES work on instances nested inside other instances** — it records as an override on the outer instance. Only variable-binding writes (`setBoundVariable`) silently revert inside instance internals. Don't skip nested instances when migrating variant or boolean properties; skip them only for binding writes."
     },
     {
+      "pattern": "Plugin runtime aborted",
+      "hint": "The sandbox VM ran out of room marshalling values, not time. Usual cause: reading a deep-wrapped property (componentProperties, overrides, boundVariables, exportSettings) across thousands of nodes — each access copies a fresh object into the VM. Chunk the scan (a few hundred nodes per execute_figma), collect only the fields you need, and never build one array holding every node's full property object.",
+      "doc": "**`Plugin runtime aborted` is an out-of-memory, not a timeout.** The stack shows `deepWrap` recursing into `newString` before `abort`. Reading deep-wrapped properties — `componentProperties`, `overrides`, `boundVariables`, `exportSettings` — copies a fresh object into the QuickJS sandbox on EVERY access, so a loop over tens of thousands of instances kills the runtime even though each read looks free. Chunk the scan and keep only the fields you need. (Real case: `componentProperties` over 29,861 instances aborted; the same scan over 7,139 was fine.)"
+    },
+    {
       "pattern": null,
       "hint": "",
       "doc": "**What a file USES is not what its library HAS.** `get_design_system`'s remote-used list only reports components the file already placed — a library component nobody has dragged in yet is invisible to the plugin, and no amount of scanning the document will reveal it. Read the published catalog before concluding a component doesn't exist (one real case: a design system's `TextArea` was declared missing and hand-rebuilt from a stretched `Text Field`, because the file had never used the real one)."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**A component property's identity is the `#id` suffix, not its display name.** Renaming `show label#4525:247` to `hasLabel#4525:247` in the library keeps every instance's override — text and boolean values survive a library update untouched. VARIANT axes are the opposite: they have no id and are matched by name, so renaming an axis or its values (`layout=horizontal` → `labelPosition=side`) is the only thing that actually drops instances back to a default. When auditing a library migration, snapshot the variant axes and ignore the renamed text/boolean props."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**`importComponentSetByKeyAsync` returns the file's LOCAL copy, not the latest published version.** If the file holds a stale copy of a library component, the import hands back the stale one and looks authoritative. To see what is actually published, read `componentPropertyDefinitions` over REST (`/v1/files/{key}/nodes?ids={node_id}&depth=1`) and compare. Importing is also expensive — each call materialises the whole set (a 72-variant set is thousands of nodes), and a handful in one script will abort the sandbox."
+    },
+    {
+      "pattern": "no setter for property",
+      "hint": "Some layout properties are read-only and have an imperative setter instead. Grid children: gridRowAnchorIndex/gridColumnAnchorIndex are readonly — call node.setGridChildPosition(row, column). Grid tracks: gridColumnSizes/gridRowSizes cannot be assigned as arrays, but gridColumnCount/gridRowCount are writable and the returned GridTrackSize objects have their own .type/.value setters.",
+      "doc": "**GRID auto-layout has read-only positions and imperative setters.** `gridRowAnchorIndex` / `gridColumnAnchorIndex` are readonly — move a child with `node.setGridChildPosition(row, column)` (spans stay writable: `gridColumnSpan`). `gridColumnSizes` / `gridRowSizes` reject array assignment (`no setter for property`), but `gridColumnCount` / `gridRowCount` are writable and each returned `GridTrackSize` has `.type` / `.value` setters — so add a track by raising the count, then set the new track's type. Shrinking the row count is how you drop a leftover empty row."
     },
     {
       "pattern": null,
