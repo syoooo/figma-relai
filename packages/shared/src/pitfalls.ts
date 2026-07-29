@@ -191,6 +191,26 @@ export const PITFALLS: Pitfall[] = [
     doc: "**GRID auto-layout has read-only positions and imperative setters.** `gridRowAnchorIndex` / `gridColumnAnchorIndex` are readonly — move a child with `node.setGridChildPosition(row, column)` (spans stay writable: `gridColumnSpan`). `gridColumnSizes` / `gridRowSizes` reject array assignment (`no setter for property`), but `gridColumnCount` / `gridRowCount` are writable and each returned `GridTrackSize` has `.type` / `.value` setters — so add a track by raising the count, then set the new track's type. Shrinking the row count is how you drop a leftover empty row.",
   },
   {
+    pattern: "loadAllPagesAsync",
+    hint: "Document-wide search needs every page in memory first: await figma.loadAllPagesAsync() before figma.root.findAll (expensive on big files — prefer scoping to figma.currentPage, or await page.loadAsync() on the one page you mean).",
+    doc: "**`figma.root.findAll` throws in dynamic-page mode until you `await figma.loadAllPagesAsync()`.** Page-scoped work never needs it: `figma.currentPage` is already loaded and `relai.query` searches from a node you pass. Load the whole document only when the search genuinely spans pages — on a 40-page file it is seconds of work and memory.",
+  },
+  {
+    pattern: "getMainComponentAsync",
+    hint: "instance.mainComponent is a sync read and dynamic-page mode blocks it — await instance.getMainComponentAsync() instead (same for mainComponent.parent: await, then read).",
+    doc: "**`instance.mainComponent` throws in dynamic-page mode** — `await instance.getMainComponentAsync()`. The same rule catches every sync sibling of an async API (`getNodeById`, `textStyleId =`, `page.children` on an unloaded page): when the message says *use X instead*, it means the whole traversal from that point is async.",
+  },
+  {
+    pattern: "component property definitions",
+    hint: "Component properties live on the SET, not on a variant: read node.parent.componentPropertyDefinitions when node.type === 'COMPONENT' and its parent is a COMPONENT_SET. Relai's get_component_properties does this redirect for you.",
+    doc: "**A variant has no component property definitions of its own** (`Can only get component property definitions of a component set or non-variant component`). They belong to the COMPONENT_SET — read `node.parent` when a variant is what you have, and add new TEXT/BOOLEAN properties to the set too: adding them to a single variant either fails or leaves the other variants without them.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**Applying a text style changes the node's font, so a `characters` write right after it can throw for a font nobody loaded.** `await node.setTextStyleIdAsync(id)` may swap the family or weight; load the *new* font (`await figma.loadFontAsync(node.fontName)`) before writing text. Applying the style is also the last word on properties it owns — a `textDecoration` written in the same breath is overwritten by the style landing, so set it in a later call.",
+  },
+  {
     pattern: null,
     hint: "",
     doc: "**Text edits inside a component SET propagate to every variant.** Applying a text style to one variant's label retypes the matching layer in all of them — same for `textDecoration` and text fills, at node level and via `setRange*` alike. Renaming the layer does not break the link (matching is positional). So a set whose sizes need DIFFERENT text styles cannot be styled in place: apply the styles while the components are still standalone and combine afterwards — an atom does not save you either unless the atom's variants are standalone components rather than a set of their own. Two more from the same afternoon: `combineAsVariants` drops `textDecoration`, and a decoration written in the same execution as `setTextStyleIdAsync` is clobbered by the style landing — set it in a later call.",

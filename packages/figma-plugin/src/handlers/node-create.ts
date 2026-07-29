@@ -140,8 +140,29 @@ registerHandler("create_section", async (params) => {
   section.y = params.y as number;
   section.resizeWithoutConstraints(params.width as number, params.height as number);
   section.name = (params.name as string) || "Section";
+  // Figma's default section is a 2px-radius box with a 10% black stroke, which
+  // matches no design system anywhere — so take the same styling params every
+  // other creator takes instead of making the caller patch it afterwards.
+  // Sections carry radius and strokes at runtime; the published typings still
+  // describe the older, fill-only SectionNode — so write through a loose view
+  // rather than pretend the properties are missing.
+  const styled = section as unknown as Record<string, unknown>;
+  if (params.fills !== undefined) section.fills = params.fills as Paint[];
+  else if (params.fillColor) section.fills = [solidPaint(params.fillColor as RGBA)];
+  if (params.strokes !== undefined) styled.strokes = params.strokes;
+  else if (params.strokeColor) styled.strokes = [solidPaint(params.strokeColor as RGBA)];
+  if (params.strokeWeight !== undefined) styled.strokeWeight = params.strokeWeight;
+  if (params.cornerRadius !== undefined) styled.cornerRadius = params.cornerRadius;
   await appendToParent(section, params.parentId as string | undefined);
-  return { id: section.id, name: section.name };
+  return {
+    id: section.id,
+    name: section.name,
+    styled: {
+      fills: params.fills !== undefined,
+      strokes: params.strokes !== undefined,
+      cornerRadius: params.cornerRadius !== undefined,
+    },
+  };
 });
 
 registerHandler("create_node_from_svg", async (params) => {

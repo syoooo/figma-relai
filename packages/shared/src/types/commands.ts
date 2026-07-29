@@ -108,6 +108,8 @@ export const FIGMA_COMMANDS = [
   "create_component_set",
   "get_component_properties",
   "set_component_properties",
+  "add_component_property",
+  "bind_component_property",
   "detach_instance",
   "reset_instance",
   "audit_colors",

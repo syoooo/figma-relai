@@ -210,7 +210,13 @@ export class FigmaConnection {
       ws.on("close", () => {
         logger.info("Disconnected from relay");
         this.ws = null;
-        this.tracker.rejectAll("Connection closed");
+        // A command that was already on the wire may have run to completion in
+        // Figma before the socket dropped — so say so instead of implying it
+        // failed. Retrying a write on the caller's behalf could apply it twice.
+        this.tracker.rejectAll(
+          "The link to Figma dropped while this command was in flight — it may already have applied. " +
+            "Re-read the file before retrying (the server reconnects on its own within a few seconds)."
+        );
         cleanup();
 
         // Only auto-reconnect if not manually disconnected. beforeReconnect
@@ -290,6 +296,15 @@ export class FigmaConnection {
     );
   }
 
+  /** Poll the presence map briefly — the relay pushes an update the moment the plugin joins. */
+  private async waitForPlugin(ms: number): Promise<void> {
+    const deadline = Date.now() + ms;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 150));
+      if (!this.currentRoom || this.presenceByRoom.get(this.currentRoom) !== false) return;
+    }
+  }
+
   // Send a command to Figma plugin via the relay
   async sendCommand(
     command: FigmaCommand,
@@ -320,7 +335,14 @@ export class FigmaConnection {
 
     if (command !== "join") {
       await this.ensureRoom();
-      // Presence said the room has no plugin — fail fast, not a 30s timeout
+      // Presence said the room has no plugin — fail fast, not a 30s timeout.
+      // But a session that starts while Figma is still dialling would fail on
+      // its very first question, so give the plugin a moment to appear before
+      // believing the answer. Waiting costs seconds only when it is genuinely
+      // absent; failing early costs the user their first command every time.
+      if (this.currentRoom && this.presenceByRoom.get(this.currentRoom) === false) {
+        await this.waitForPlugin(2500);
+      }
       if (this.currentRoom && this.presenceByRoom.get(this.currentRoom) === false) {
         throw new Error(
           "The Figma plugin is not open. Open the Relai plugin in Figma — it will reconnect to the same room automatically."

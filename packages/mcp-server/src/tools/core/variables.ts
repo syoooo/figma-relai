@@ -12,7 +12,10 @@ const ACTIONS: Record<string, [string, string[]]> = {
   create_collection: ["create_variable_collection", ["name", "modes"]],
   update_collection: ["update_variable_collection", ["collectionId", "name", "hiddenFromPublishing"]],
   delete_collection: ["delete_variable_collection", ["collectionId"]],
-  create: ["create_variable", ["collectionId", "name", "resolvedType", "value"]],
+  create: [
+    "create_variable",
+    ["collectionId", "name", "resolvedType", "value", "valuesByMode", "scopes", "description"],
+  ],
   update: ["update_variable", ["variableId", "modeId", "value", "name", "description", "hiddenFromPublishing"]],
   delete: ["delete_variable", ["variableId"]],
   add_mode: ["add_mode", ["collectionId", "name"]],
@@ -32,7 +35,7 @@ const ACTIONS: Record<string, [string, string[]]> = {
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_variables",
-    "Design-token variables: list_collections / list (variables in a collection) / snapshot (compact whole-file inventory — every collection and variable name/type in one call; take one before branch merges or bulk edits, diff after) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
+    "Design-token variables: list_collections / list (variables in a collection) / snapshot (compact whole-file inventory — every collection and variable name/type in one call; take one before branch merges or bulk edits, diff after) / create_collection / update_collection / delete_collection / create (pass valuesByMode to set every mode — and alias by variable NAME — in the same call) / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
     {
       action: z.enum(Object.keys(ACTIONS) as [string, ...string[]]),
       collectionId: z.string().optional(),
@@ -45,6 +48,12 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       modeId: z.string().optional(),
       resolvedType: z.enum(["COLOR", "FLOAT", "STRING", "BOOLEAN"]).optional(),
       value: z.unknown().optional().describe("Variable value (color object, number, string, bool)"),
+      valuesByMode: z
+        .record(z.unknown())
+        .optional()
+        .describe(
+          'create: every mode in one call, keyed by mode NAME or id — {"Light": {"r":1,"g":1,"b":1}, "Dark": {"aliasOf": "Color/gray/900"}}. `aliasOf` takes a variable id or its exact name, so a brand-mode token lands in one round-trip instead of create + one alias per mode.'
+        ),
       property: z.string().optional().describe('bind/unbind: node property (e.g. "fills", "width")'),
       scopes: z.array(z.string()).optional(),
       platform: z.enum(["WEB", "ANDROID", "iOS"]).optional(),

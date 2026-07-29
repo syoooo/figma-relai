@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.0
+
+Everything here came from a designer's write-up of one afternoon spent building a Progress Bar — the round-trips that cost the most, and the errors that explained the least.
+
+- **A token can be born with all its modes.** `manage_variables action:create` takes `valuesByMode`, keyed by mode NAME (`{"Obel": {...}, "KARTE": {"aliasOf": "Color/gray/500"}}`), and `aliasOf` resolves a variable by name. A three-brand token used to be a create plus one alias per mode; building 76 of them is what made the case.
+- **Component properties stopped needing a script.** `add_property` declares a TEXT/BOOLEAN/INSTANCE_SWAP property — on the SET, redirecting there automatically when you hand it a variant, because a property added to one variant either fails or leaves its siblings behind — and `bind_property` points a layer's `characters`/`visible` at it, in every variant at once with `layerName`. The reference is the part everyone forgets: a property nothing points at looks like it works until a designer flips it and nothing moves.
+- **A new page can land where it belongs**: `manage_pages action:create` takes `afterPageId` or `index` instead of always appending to the bottom of a forty-page file.
+- **A section comes out styled.** `create_node type:section` now takes `fillColor` / `strokeColor` / `cornerRadius`. Figma's default section is a 2px-radius box with a 10% black stroke, which matches no design system anywhere — and the fix belongs in the file's own conventions, not in a preset named after somebody's design system.
+- **A screenshot can be read without eyes.** Alongside the image, `screenshot` reports the node, its size, its child count and its dominant colors — because a team allowlist that strips vision leaves the assistant staring at a blob it cannot describe.
+- **Asking a variant about its properties answers instead of throwing.** `get_props` on a variant returns the set's definitions with a note saying where they came from; the AI reaching up from a selection is the normal move, not an error.
+- **Four more pitfalls** (41 now), all from the same afternoon: `figma.root.findAll` needs `loadAllPagesAsync` first (and page-scoped work never does); `instance.mainComponent` is a sync read that dynamic-page mode blocks; a variant owns no component property definitions; and applying a text style changes the node's font, so a `characters` write right after it can throw for a font nobody loaded.
+- **The link's honesty improved on both ends.** A session that starts while Figma is still dialling waits a moment for the plugin instead of failing its first question, and a command interrupted mid-flight now says it may already have applied — the server never retries a write on your behalf.
+
 ## 0.5.5
 
 The panel meets you in your own language — and stops spacing it by hand.

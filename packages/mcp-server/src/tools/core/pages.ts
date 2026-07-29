@@ -13,8 +13,13 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       pageId: z.string().optional().describe("Target page (rename/delete/set_background/guard/unguard)"),
       name: z.string().optional().describe("Page name (create/rename)"),
       color: colorSchema.optional().describe("Background color (set_background)"),
+      afterPageId: z
+        .string()
+        .optional()
+        .describe("create: put the new page right after this one — pages are ordered by meaning, and a new one lands at the bottom otherwise"),
+      index: z.number().int().min(0).optional().describe("create: exact position instead of afterPageId"),
     },
-    async ({ action, pageId, name, color }) => {
+    async ({ action, pageId, name, color, afterPageId, index }) => {
       try {
         let result: unknown;
         switch (action) {
@@ -22,7 +27,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
             result = await sendCommand("get_pages", {});
             break;
           case "create":
-            result = await sendCommand("create_page", { name });
+            result = await sendCommand("create_page", { name, afterPageId, index });
             break;
           case "rename":
             result = await sendCommand("rename_page", { pageId, name });

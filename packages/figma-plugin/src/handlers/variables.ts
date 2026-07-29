@@ -91,7 +91,49 @@ registerHandler("create_variable", async (params) => {
     variable.setValueForMode(collection.modes[0].modeId, params.value as any);
   }
 
-  return { id: variable.id, name: variable.name, resolvedType: variable.resolvedType };
+  // A brand-mode token is born with one value per mode, and half of those are
+  // aliases. Doing that in one call is the difference between 1 round-trip and
+  // 4 — pass modes by NAME (what the designer says) or by id.
+  const perMode = params.valuesByMode as Record<string, unknown> | undefined;
+  const applied: string[] = [];
+  if (perMode) {
+    const byName = new Map(collection.modes.map((m) => [m.name, m.modeId]));
+    const known = new Set(collection.modes.map((m) => m.modeId));
+    for (const [key, raw] of Object.entries(perMode)) {
+      const modeId = known.has(key) ? key : byName.get(key);
+      if (!modeId) {
+        throw new Error(
+          `No mode "${key}" in collection "${collection.name}" — it has: ${collection.modes
+            .map((m) => m.name)
+            .join(", ")}`
+        );
+      }
+      let value: unknown = raw;
+      // { aliasOf: "<variable id or name>" } — resolving names here is the whole
+      // point: the caller knows "General/radius/lg", not VariableID:1:23.
+      if (raw && typeof raw === "object" && "aliasOf" in (raw as Record<string, unknown>)) {
+        const ref = String((raw as Record<string, unknown>).aliasOf);
+        let target = await figma.variables.getVariableByIdAsync(ref).catch(() => null);
+        if (!target) {
+          const all = await figma.variables.getLocalVariablesAsync();
+          target = all.find((v) => v.name === ref) ?? null;
+        }
+        if (!target) throw new Error(`Alias target not found: "${ref}" (pass a variable id or its exact name)`);
+        value = { type: "VARIABLE_ALIAS", id: target.id };
+      }
+      variable.setValueForMode(modeId, value as any);
+      applied.push(key);
+    }
+  }
+  if (params.scopes !== undefined) variable.scopes = params.scopes as VariableScope[];
+  if (params.description !== undefined) variable.description = params.description as string;
+
+  return {
+    id: variable.id,
+    name: variable.name,
+    resolvedType: variable.resolvedType,
+    ...(applied.length ? { modesSet: applied } : {}),
+  };
 });
 
 registerHandler("update_variable", async (params) => {

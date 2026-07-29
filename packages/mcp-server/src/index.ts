@@ -13,7 +13,7 @@ import { loadState, saveState } from "./state.js";
 import { registerPrompts } from "./prompts.js";
 import { recordCommand, getSessionLog } from "./session-log.js";
 
-const VERSION = "0.5.5";
+const VERSION = "0.6.0";
 
 // Parse CLI arguments
 const args = process.argv.slice(2);

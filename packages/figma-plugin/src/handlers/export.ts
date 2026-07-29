@@ -53,5 +53,46 @@ registerHandler("get_screenshot", async (params) => {
     constraint: { type: "SCALE", value: scale },
   });
 
-  return { imageData: uint8ArrayToBase64(bytes) };
+  // Not every model gets to see the image — a team allowlist can strip vision
+  // and leave the assistant staring at a blob. The measurements it would have
+  // read off the picture come back as text so the work can continue blind.
+  return { imageData: uint8ArrayToBase64(bytes), ...describeForBlindReaders(node as SceneNode) };
 });
+
+/** Dimensions, structure and dominant colors — what a sighted reader takes from a glance. */
+function describeForBlindReaders(node: SceneNode): Record<string, unknown> {
+  const hex = (c: RGB) =>
+    "#" +
+    [c.r, c.g, c.b].map((v) => Math.round(v * 255).toString(16).padStart(2, "0")).join("");
+  const counts = new Map<string, number>();
+  let scanned = 0;
+  const visit = (n: SceneNode) => {
+    if (scanned >= 200) return; // a glance, not a census
+    scanned++;
+    const fills = (n as GeometryMixin).fills;
+    if (Array.isArray(fills)) {
+      for (const p of fills) {
+        if (p.type !== "SOLID" || p.visible === false || (p.opacity ?? 1) === 0) continue;
+        const key = hex(p.color);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    }
+    if ("children" in n) for (const c of (n as ChildrenMixin).children as SceneNode[]) visit(c);
+  };
+  try {
+    visit(node);
+  } catch {
+    // A description is a courtesy; never let it cost the screenshot
+  }
+  const colors = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([c, n]) => `${c}×${n}`);
+  return {
+    node: { id: node.id, name: node.name, type: node.type },
+    size: `${Math.round(node.width)}×${Math.round(node.height)}`,
+    children: "children" in node ? (node as ChildrenMixin).children.length : 0,
+    nodesScanned: scanned,
+    dominantColors: colors,
+  };
+}

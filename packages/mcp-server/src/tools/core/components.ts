@@ -6,7 +6,7 @@ import { jsonResult, errorResult } from "./helpers.js";
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_components",
-    "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey — imports from the team library if needed), get_props / set_props (component properties on an instance), get_overrides / set_overrides (copy overrides from a source instance to targets), reset_instance (clear ALL overrides so the instance re-inherits its main component — returns property snapshots before/after so you can re-apply what mattered), detach.",
+    "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey OR by the node id of a local component — an unpublished component has no importable key, so the id is the way), add_property / bind_property (declare a TEXT/BOOLEAN/INSTANCE_SWAP property on a SET — never on a single variant — then point a layer's characters/visible at it, in every variant at once with layerName), get_props / set_props (component properties on an instance; get_props on a variant answers with its set's definitions), get_overrides / set_overrides (copy overrides from a source instance to targets), reset_instance (clear ALL overrides so the instance re-inherits its main component — returns property snapshots before/after so you can re-apply what mattered), detach.",
     {
       action: z.enum([
         "list",
@@ -19,6 +19,8 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
         "set_overrides",
         "reset_instance",
         "detach",
+        "add_property",
+        "bind_property",
       ]),
       nodeId: z.string().optional().describe("Target node (create/get_props/set_props/reset_instance/detach)"),
       componentIds: z.array(z.string()).optional().describe("create_set: components to combine"),
@@ -32,6 +34,18 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       sourceInstanceId: z.string().optional().describe("set_overrides: copy from this instance"),
       targetNodeIds: z.array(z.string()).optional().describe("set_overrides: apply to these"),
       instanceNodeId: z.string().optional().describe("get_overrides: instance to inspect"),
+      propertyName: z.string().optional().describe("add_property: the name designers will see (e.g. hasLabel, text)"),
+      propertyType: z
+        .enum(["TEXT", "BOOLEAN", "INSTANCE_SWAP"])
+        .optional()
+        .describe("add_property: VARIANT axes come from variant names, so they are not addable here"),
+      defaultValue: z.union([z.string(), z.boolean()]).optional().describe("add_property: the value a fresh instance starts with"),
+      propertyKey: z.string().optional().describe("bind_property: the key add_property returned (name#id)"),
+      field: z
+        .enum(["characters", "visible", "mainComponent"])
+        .optional()
+        .describe("bind_property: which part of the layer the property drives — text, show/hide, or which component sits in a swap slot"),
+      layerName: z.string().optional().describe("bind_property: bind this layer in EVERY variant of the set at once"),
     },
     async (args) => {
       try {
@@ -60,6 +74,22 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
             result = await sendCommand("set_component_properties", {
               nodeId: args.nodeId,
               properties: args.properties,
+            });
+            break;
+          case "add_property":
+            result = await sendCommand("add_component_property", {
+              nodeId: args.nodeId,
+              propertyName: args.propertyName,
+              propertyType: args.propertyType,
+              defaultValue: args.defaultValue,
+            });
+            break;
+          case "bind_property":
+            result = await sendCommand("bind_component_property", {
+              nodeId: args.nodeId,
+              propertyKey: args.propertyKey,
+              field: args.field,
+              layerName: args.layerName,
             });
             break;
           case "get_overrides":

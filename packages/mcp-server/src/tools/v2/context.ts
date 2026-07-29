@@ -364,7 +364,14 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
               {
                 type: "text" as const,
                 text: JSON.stringify({
-                  summary: `Screenshot taken${nodeId ? ` of node ${nodeId}` : " of current view"}`,
+                  summary: result.size
+                    ? `Screenshot of ${result.node?.name ?? "the current view"} (${result.node?.type ?? "?"}) — ${result.size}px, ${result.children} children`
+                    : `Screenshot taken${nodeId ? ` of node ${nodeId}` : " of current view"}`,
+                  // Read these when the image itself never arrives — some setups
+                  // strip vision, and a blob nobody can see is not an answer.
+                  measured: result.size
+                    ? { node: result.node, size: result.size, children: result.children, dominantColors: result.dominantColors }
+                    : undefined,
                   recommended_next: [
                     { tool: "get_selection_context", reason: "Get structured data about the selection" },
                     { tool: "update_node", reason: "Make changes based on what you see" },

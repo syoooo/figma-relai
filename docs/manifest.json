@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.5.5",
+  "version": "0.6.0",
   "tools": [
     {
       "name": "batch_execute",
@@ -366,7 +366,7 @@
     {
       "name": "manage_components",
       "category": "components",
-      "description": "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey — imports from the team library if needed), get_props / set_props (component properties on an instance), get_overrides / set_overrides (copy overrides from a source instance to targets), reset_instance (clear ALL overrides so the instance re-inherits its main component — returns property snapshots before/after so you can re-apply what mattered), detach.",
+      "description": "Component workflow: list local components, create a component from a node, create_set (combine components as variants), instantiate (place an instance by componentKey OR by the node id of a local component — an unpublished component has no importable key, so the id is the way), add_property / bind_property (declare a TEXT/BOOLEAN/INSTANCE_SWAP property on a SET — never on a single variant — then point a layer's characters/visible at it, in every variant at once with layerName), get_props / set_props (component properties on an instance; get_props on a variant answers with its set's definitions), get_overrides / set_overrides (copy overrides from a source instance to targets), reset_instance (clear ALL overrides so the instance re-inherits its main component — returns property snapshots before/after so you can re-apply what mattered), detach.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -382,7 +382,9 @@
               "get_overrides",
               "set_overrides",
               "reset_instance",
-              "detach"
+              "detach",
+              "add_property",
+              "bind_property"
             ]
           },
           "nodeId": {
@@ -431,6 +433,43 @@
           "instanceNodeId": {
             "type": "string",
             "description": "get_overrides: instance to inspect"
+          },
+          "propertyName": {
+            "type": "string",
+            "description": "add_property: the name designers will see (e.g. hasLabel, text)"
+          },
+          "propertyType": {
+            "type": "string",
+            "enum": [
+              "TEXT",
+              "BOOLEAN",
+              "INSTANCE_SWAP"
+            ],
+            "description": "add_property: VARIANT axes come from variant names, so they are not addable here"
+          },
+          "defaultValue": {
+            "type": [
+              "string",
+              "boolean"
+            ],
+            "description": "add_property: the value a fresh instance starts with"
+          },
+          "propertyKey": {
+            "type": "string",
+            "description": "bind_property: the key add_property returned (name#id)"
+          },
+          "field": {
+            "type": "string",
+            "enum": [
+              "characters",
+              "visible",
+              "mainComponent"
+            ],
+            "description": "bind_property: which part of the layer the property drives — text, show/hide, or which component sits in a swap slot"
+          },
+          "layerName": {
+            "type": "string",
+            "description": "bind_property: bind this layer in EVERY variant of the set at once"
           }
         },
         "required": [
@@ -653,7 +692,16 @@
           },
           "fillColor": {
             "$ref": "#/properties/fontColor",
-            "description": "frame/rectangle fill"
+            "description": "frame/rectangle/section fill"
+          },
+          "strokeColor": {
+            "$ref": "#/properties/fontColor",
+            "description": "frame/rectangle/section stroke"
+          },
+          "cornerRadius": {
+            "type": "number",
+            "minimum": 0,
+            "description": "section corner radius — a new section defaults to radius 2 with a 10% black stroke, which matches no design system; pass what yours uses (for other node types, set radius with set_properties)"
           },
           "pointCount": {
             "type": "integer",
@@ -1100,7 +1148,7 @@
     {
       "name": "manage_variables",
       "category": "design-system",
-      "description": "Design-token variables: list_collections / list (variables in a collection) / snapshot (compact whole-file inventory — every collection and variable name/type in one call; take one before branch merges or bulk edits, diff after) / create_collection / update_collection / delete_collection / create / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
+      "description": "Design-token variables: list_collections / list (variables in a collection) / snapshot (compact whole-file inventory — every collection and variable name/type in one call; take one before branch merges or bulk edits, diff after) / create_collection / update_collection / delete_collection / create (pass valuesByMode to set every mode — and alias by variable NAME — in the same call) / update / delete / add_mode / remove_mode / rename_mode / set_scopes / set_code_syntax / remove_code_syntax / create_alias / bind (variable→node property) / unbind / set_node_mode / get_node_modes / tokenize (find hardcoded colors & numbers that match existing variables and bind them — fix:false to preview, fix:true to apply; scope with nodeId, default current page). Pass only the fields the action needs.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1171,6 +1219,11 @@
           },
           "value": {
             "description": "Variable value (color object, number, string, bool)"
+          },
+          "valuesByMode": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "create: every mode in one call, keyed by mode NAME or id — {\"Light\": {\"r\":1,\"g\":1,\"b\":1}, \"Dark\": {\"aliasOf\": \"Color/gray/900\"}}. `aliasOf` takes a variable id or its exact name, so a brand-mode token lands in one round-trip instead of create + one alias per mode."
           },
           "property": {
             "type": "string",
@@ -1272,6 +1325,15 @@
             ],
             "additionalProperties": false,
             "description": "Background color (set_background)"
+          },
+          "afterPageId": {
+            "type": "string",
+            "description": "create: put the new page right after this one — pages are ordered by meaning, and a new one lands at the bottom otherwise"
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "create: exact position instead of afterPageId"
           }
         },
         "required": [
@@ -2114,6 +2176,8 @@
     "create_component_set",
     "get_component_properties",
     "set_component_properties",
+    "add_component_property",
+    "bind_component_property",
     "detach_instance",
     "reset_instance",
     "audit_colors",
@@ -2356,6 +2420,26 @@
       "pattern": "no setter for property",
       "hint": "Some layout properties are read-only and have an imperative setter instead. Grid children: gridRowAnchorIndex/gridColumnAnchorIndex are readonly — call node.setGridChildPosition(row, column). Grid tracks: gridColumnSizes/gridRowSizes cannot be assigned as arrays, but gridColumnCount/gridRowCount are writable and the returned GridTrackSize objects have their own .type/.value setters.",
       "doc": "**GRID auto-layout has read-only positions and imperative setters.** `gridRowAnchorIndex` / `gridColumnAnchorIndex` are readonly — move a child with `node.setGridChildPosition(row, column)` (spans stay writable: `gridColumnSpan`). `gridColumnSizes` / `gridRowSizes` reject array assignment (`no setter for property`), but `gridColumnCount` / `gridRowCount` are writable and each returned `GridTrackSize` has `.type` / `.value` setters — so add a track by raising the count, then set the new track's type. Shrinking the row count is how you drop a leftover empty row."
+    },
+    {
+      "pattern": "loadAllPagesAsync",
+      "hint": "Document-wide search needs every page in memory first: await figma.loadAllPagesAsync() before figma.root.findAll (expensive on big files — prefer scoping to figma.currentPage, or await page.loadAsync() on the one page you mean).",
+      "doc": "**`figma.root.findAll` throws in dynamic-page mode until you `await figma.loadAllPagesAsync()`.** Page-scoped work never needs it: `figma.currentPage` is already loaded and `relai.query` searches from a node you pass. Load the whole document only when the search genuinely spans pages — on a 40-page file it is seconds of work and memory."
+    },
+    {
+      "pattern": "getMainComponentAsync",
+      "hint": "instance.mainComponent is a sync read and dynamic-page mode blocks it — await instance.getMainComponentAsync() instead (same for mainComponent.parent: await, then read).",
+      "doc": "**`instance.mainComponent` throws in dynamic-page mode** — `await instance.getMainComponentAsync()`. The same rule catches every sync sibling of an async API (`getNodeById`, `textStyleId =`, `page.children` on an unloaded page): when the message says *use X instead*, it means the whole traversal from that point is async."
+    },
+    {
+      "pattern": "component property definitions",
+      "hint": "Component properties live on the SET, not on a variant: read node.parent.componentPropertyDefinitions when node.type === 'COMPONENT' and its parent is a COMPONENT_SET. Relai's get_component_properties does this redirect for you.",
+      "doc": "**A variant has no component property definitions of its own** (`Can only get component property definitions of a component set or non-variant component`). They belong to the COMPONENT_SET — read `node.parent` when a variant is what you have, and add new TEXT/BOOLEAN properties to the set too: adding them to a single variant either fails or leaves the other variants without them."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**Applying a text style changes the node's font, so a `characters` write right after it can throw for a font nobody loaded.** `await node.setTextStyleIdAsync(id)` may swap the family or weight; load the *new* font (`await figma.loadFontAsync(node.fontName)`) before writing text. Applying the style is also the last word on properties it owns — a `textDecoration` written in the same breath is overwritten by the style landing, so set it in a later call."
     },
     {
       "pattern": null,

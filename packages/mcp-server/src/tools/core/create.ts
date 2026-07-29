@@ -57,7 +57,13 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       fontSize: z.number().positive().optional().describe("text only"),
       fontWeight: z.number().optional().describe("text only (e.g. 400, 700)"),
       fontColor: colorSchema.optional().describe("text only"),
-      fillColor: colorSchema.optional().describe("frame/rectangle fill"),
+      fillColor: colorSchema.optional().describe("frame/rectangle/section fill"),
+      strokeColor: colorSchema.optional().describe("frame/rectangle/section stroke"),
+      cornerRadius: z
+        .number()
+        .min(0)
+        .optional()
+        .describe("section corner radius — a new section defaults to radius 2 with a 10% black stroke, which matches no design system; pass what yours uses (for other node types, set radius with set_properties)"),
       pointCount: z.number().int().min(3).optional().describe("polygon/star points"),
       innerRadius: z.number().min(0).max(1).optional().describe("star inner radius ratio"),
       length: z.number().positive().optional().describe("line length"),

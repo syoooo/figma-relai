@@ -114,6 +114,16 @@ registerHandler("get_component_properties", async (params) => {
   const node = await getNodeById(params.nodeId as string);
   if (!node) throw new Error(`Node not found: ${params.nodeId}`);
 
+  // A variant owns no definitions — they live on its set. Asking about the
+  // variant you selected is the natural move, so answer it instead of throwing.
+  if (node.type === "COMPONENT" && node.parent?.type === "COMPONENT_SET") {
+    const set = node.parent as ComponentSetNode;
+    return {
+      definitions: set.componentPropertyDefinitions,
+      note: `Read from the set "${set.name}" (${set.id}) — a variant carries no definitions of its own.`,
+      variantProperties: (node as ComponentNode).variantProperties,
+    };
+  }
   if (node.type === "COMPONENT" || node.type === "COMPONENT_SET") {
     return (node as ComponentNode).componentPropertyDefinitions;
   } else if (node.type === "INSTANCE") {
@@ -121,6 +131,90 @@ registerHandler("get_component_properties", async (params) => {
   }
 
   throw new Error("Node is not a component or instance");
+});
+
+// Component properties live on the SET and are referenced by layers inside each
+// variant. Doing that by hand takes a script per component — and the reference
+// is the part everyone forgets, so a property with nothing pointing at it looks
+// like it works until a designer flips the switch and nothing moves.
+registerHandler("add_component_property", async (params) => {
+  const node = await getNodeById(params.nodeId as string);
+  if (!node) throw new Error(`Node not found: ${params.nodeId}`);
+
+  let target = node;
+  let redirected: string | null = null;
+  if (node.type === "COMPONENT" && node.parent?.type === "COMPONENT_SET") {
+    target = node.parent;
+    redirected = `Added to the set "${target.name}" — a variant cannot own properties.`;
+  }
+  if (target.type !== "COMPONENT_SET" && target.type !== "COMPONENT") {
+    throw new Error(
+      `Component properties belong to a COMPONENT_SET or a non-variant COMPONENT, not ${target.type}.`
+    );
+  }
+
+  const type = params.propertyType as "TEXT" | "BOOLEAN" | "INSTANCE_SWAP" | "VARIANT";
+  if (type === "VARIANT") {
+    throw new Error(
+      "VARIANT properties come from variant names (e.g. \"size=md, state=default\") — rename the variants instead of adding a property."
+    );
+  }
+  const key = (target as ComponentSetNode).addComponentProperty(
+    params.propertyName as string,
+    type,
+    params.defaultValue as string | boolean
+  );
+  return {
+    key,
+    on: { id: target.id, name: target.name, type: target.type },
+    ...(redirected ? { note: redirected } : {}),
+    next: "bind_property points a layer's characters/visible at this key — a property nothing references does nothing.",
+  };
+});
+
+registerHandler("bind_component_property", async (params) => {
+  const field = params.field as "characters" | "visible" | "mainComponent";
+  const key = params.propertyKey as string;
+  const layerName = params.layerName as string | undefined;
+  const node = await getNodeById(params.nodeId as string);
+  if (!node) throw new Error(`Node not found: ${params.nodeId}`);
+
+  const point = (n: SceneNode) => {
+    n.componentPropertyReferences = { ...(n.componentPropertyReferences || {}), [field]: key };
+  };
+
+  // Given a set (or one of its variants) plus a layer name, wire the same layer
+  // in every variant — the loop nobody enjoys writing, and the one that gets
+  // silently half-done when a variant was cloned in later.
+  const set =
+    node.type === "COMPONENT_SET"
+      ? (node as ComponentSetNode)
+      : node.type === "COMPONENT" && node.parent?.type === "COMPONENT_SET"
+        ? (node.parent as ComponentSetNode)
+        : null;
+  if (set && layerName) {
+    const bound: string[] = [];
+    const missing: string[] = [];
+    for (const variant of set.children) {
+      const layer = (variant as ComponentNode).findOne((n) => n.name === layerName);
+      if (!layer) { missing.push(variant.name); continue; }
+      point(layer as SceneNode);
+      bound.push(variant.name);
+    }
+    return {
+      boundIn: bound.length,
+      variants: set.children.length,
+      field,
+      propertyKey: key,
+      ...(missing.length ? { missingLayerIn: missing } : {}),
+    };
+  }
+
+  if (!("componentPropertyReferences" in node)) {
+    throw new Error(`${node.type} cannot reference a component property.`);
+  }
+  point(node as SceneNode);
+  return { id: node.id, name: node.name, field, propertyKey: key };
 });
 
 registerHandler("set_component_properties", async (params) => {

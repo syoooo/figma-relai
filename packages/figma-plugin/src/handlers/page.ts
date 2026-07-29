@@ -28,7 +28,18 @@ registerHandler("get_pages", async () => {
 registerHandler("create_page", async (params) => {
   const page = figma.createPage();
   page.name = params.name as string;
-  return { id: page.id, name: page.name };
+  // Pages are ordered by meaning, not by creation time — a new component page
+  // belongs next to its neighbours, not at the bottom of a 43-page file.
+  let index: number | null = null;
+  if (params.afterPageId) {
+    const at = figma.root.children.findIndex((p) => p.id === params.afterPageId);
+    if (at === -1) throw new Error(`Page not found: ${params.afterPageId}`);
+    index = at + 1;
+  } else if (typeof params.index === "number") {
+    index = Math.max(0, Math.min(params.index as number, figma.root.children.length - 1));
+  }
+  if (index !== null) figma.root.insertChild(index, page);
+  return { id: page.id, name: page.name, index: figma.root.children.indexOf(page) };
 });
 
 registerHandler("rename_page", async (params) => {
