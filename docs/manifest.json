@@ -1960,7 +1960,7 @@
     {
       "name": "validate_design_rules",
       "category": "verification",
-      "description": "Run design quality rules on a node: token coverage, auto-layout usage, naming conventions, and accessibility basics. Use after modifications or during design audits. Returns pass/fail for each rule with fix suggestions.",
+      "description": "Run design quality rules on a node: token coverage, token scopes, cross-component token borrowing, auto-layout usage, naming conventions, and accessibility basics. Use after modifications or during design audits — the scope and borrowing rules catch the two token faults that look perfect on the canvas. Returns pass/fail for each rule with fix suggestions.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2158,6 +2158,7 @@
     "audit_ghosts",
     "audit_token_debt",
     "audit_property_bindings",
+    "audit_node_tokens",
     "snapshot_variables",
     "list_rulesets",
     "save_ruleset",

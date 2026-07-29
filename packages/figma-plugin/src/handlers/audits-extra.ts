@@ -420,14 +420,18 @@ registerHandler("audit_property_bindings", async (params) => {
   return { ids: [...new Set(ids)], scanned, next: offset + scanned, done };
 });
 
-registerHandler("audit_token_debt", async (params) => {
-  const pages = await resolvePages(params.pageIds);
-  const scopedToPages = Array.isArray(params.pageIds) && params.pageIds.length > 0;
+const tokenGroup = (name: string) => name.split("/")[0];
+
+// The alias graph, and what it says about which groups are foundations. The
+// file-wide report and the single-node rule have to agree on this: two copies of
+// the criterion would drift, and then the same token would be a borrow in one
+// place and fine in the other.
+async function buildTokenGraph() {
+  const group = tokenGroup;
   const vars = await figma.variables.getLocalVariablesAsync();
   const collections = await figma.variables.getLocalVariableCollectionsAsync();
   const collName = new Map(collections.map((c) => [c.id, c.name]));
   const byId = new Map(vars.map((v) => [v.id, v]));
-  const group = (name: string) => name.split("/")[0];
 
   // Who aliases whom
   const aliasEdges: Array<{ from: Variable; toId: string }> = [];
@@ -492,6 +496,78 @@ registerHandler("audit_token_debt", async (params) => {
       collection: collName.get(edge.from.variableCollectionId) ?? "?",
     });
   }
+
+  return { vars, byId, collName, aliasEdges, hubs, styleBound, borrows, group };
+}
+
+// The same two questions the file-wide report answers, asked about one node —
+// so a component can be checked the moment it is finished, instead of showing up
+// in an audit weeks later. Scope and borrowing are both invisible on the canvas:
+// a wide-open token pollutes every property picker in the file, and a token that
+// aliases another component's token changes whenever that component does.
+registerHandler("audit_node_tokens", async (params) => {
+  const node = (await figma.getNodeByIdAsync(params.nodeId as string)) as SceneNode | null;
+  if (!node) throw new Error(`Node not found: ${params.nodeId}`);
+  const { byId, hubs, group } = await buildTokenGraph();
+
+  const ids = new Set<string>();
+  const subtree: SceneNode[] = [node];
+  if ("findAll" in node) subtree.push(...(node as FrameNode).findAll(() => true));
+  for (const n of subtree) {
+    for (const id of collectBoundVariableIds(n as SceneNode & Record<string, unknown>)) ids.add(id);
+  }
+  // Property-value bindings again — bounded, because reading them is what costs
+  // memory. A component subtree is small; a whole page handed in is not.
+  const PROPERTY_READ_LIMIT = 1000;
+  let propertyReads = 0;
+  for (const n of subtree) {
+    if (n.type !== "INSTANCE") continue;
+    if (propertyReads++ >= PROPERTY_READ_LIMIT) break;
+    const props = n.componentProperties as Record<string, { boundVariables?: Record<string, { id?: string }> }>;
+    for (const key in props) {
+      const bound = props[key]?.boundVariables;
+      if (!bound) continue;
+      for (const field in bound) {
+        const id = bound[field]?.id;
+        if (typeof id === "string") ids.add(id);
+      }
+    }
+  }
+
+  const wideScopes: Array<{ name: string; resolvedType: string }> = [];
+  const borrowed: Array<{ token: string; aliases: string }> = [];
+  for (const id of ids) {
+    const v = byId.get(id);
+    if (!v) continue;
+    if (v.scopes.length === 0 || v.scopes.indexOf("ALL_SCOPES") >= 0) {
+      wideScopes.push({ name: v.name, resolvedType: v.resolvedType });
+    }
+    for (const value of Object.values(v.valuesByMode)) {
+      const alias = value as { type?: string; id?: string };
+      if (!alias || alias.type !== "VARIABLE_ALIAS" || !alias.id) continue;
+      const target = byId.get(alias.id);
+      if (!target) continue;
+      if (group(target.name) === group(v.name) || hubs.has(group(target.name))) continue;
+      if (borrowed.some((b) => b.token === v.name && b.aliases === target.name)) continue;
+      borrowed.push({ token: v.name, aliases: target.name });
+    }
+  }
+
+  return {
+    node: node.name,
+    nodesScanned: subtree.length,
+    tokensBound: ids.size,
+    wideScopes,
+    borrowed,
+    truncated: propertyReads > PROPERTY_READ_LIMIT,
+    foundationGroups: [...hubs].sort(),
+  };
+});
+
+registerHandler("audit_token_debt", async (params) => {
+  const pages = await resolvePages(params.pageIds);
+  const scopedToPages = Array.isArray(params.pageIds) && params.pageIds.length > 0;
+  const { vars, collName, aliasEdges, hubs, styleBound, borrows, group } = await buildTokenGraph();
 
   // Usage: nodes plus other variables
   const usedByNode = new Set<string>();

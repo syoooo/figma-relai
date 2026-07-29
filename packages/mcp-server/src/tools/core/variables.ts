@@ -4,6 +4,56 @@ import type { SendCommandFn } from "../../tool-registry.js";
 import type { FigmaCommand } from "@figma-relai/shared";
 import { jsonResult, errorResult } from "./helpers.js";
 
+// A token created without scopes is offered everywhere: a stroke weight in the
+// padding field, a text colour among the border options. The mistake is free to
+// fix in the same breath and tedious to fix a hundred tokens later, so the answer
+// arrives with the token itself rather than waiting for an audit to find it.
+// Scope names come from the token's own name — the part a design system already
+// says out loud.
+const SCOPE_BY_NAME: Array<[RegExp, string[]]> = [
+  [/radius|corner/i, ["CORNER_RADIUS"]],
+  [/border-width|stroke-width|stroke\b/i, ["STROKE_FLOAT"]],
+  [/gap|spacing|padding|inset/i, ["GAP"]],
+  [/font-size|text-size/i, ["FONT_SIZE"]],
+  [/line-height|leading/i, ["LINE_HEIGHT"]],
+  [/letter-spacing|tracking/i, ["LETTER_SPACING"]],
+  [/opacity|alpha/i, ["OPACITY"]],
+  [/width|height|\bsize\b/i, ["WIDTH_HEIGHT"]],
+  [/text-color|text-fill|\bfg\b|foreground/i, ["TEXT_FILL"]],
+  [/border-color|outline-color|stroke-color/i, ["STROKE_COLOR"]],
+  [/background|surface|\bfill\b|\bbg\b/i, ["FRAME_FILL", "SHAPE_FILL"]],
+  [/shadow|elevation/i, ["EFFECT_COLOR"]],
+];
+
+const SCOPE_MENU: Record<string, string[]> = {
+  COLOR: ["FRAME_FILL", "SHAPE_FILL", "TEXT_FILL", "STROKE_COLOR", "EFFECT_COLOR"],
+  FLOAT: ["CORNER_RADIUS", "GAP", "WIDTH_HEIGHT", "STROKE_FLOAT", "FONT_SIZE", "OPACITY"],
+  STRING: ["TEXT_CONTENT", "FONT_FAMILY", "FONT_STYLE"],
+};
+
+export function suggestScopes(name: string, resolvedType: string): string[] | null {
+  const menu = SCOPE_MENU[resolvedType];
+  if (!menu) return null; // BOOLEAN and anything new: scopes don't apply
+  for (const [pattern, scopes] of SCOPE_BY_NAME) {
+    if (!pattern.test(name)) continue;
+    const usable = scopes.filter((s) => menu.indexOf(s) >= 0);
+    if (usable.length) return usable;
+  }
+  return null;
+}
+
+export function scopeWarning(name: string, resolvedType: string): string | null {
+  const menu = SCOPE_MENU[resolvedType];
+  if (!menu) return null;
+  const guess = suggestScopes(name, resolvedType);
+  return (
+    `"${name}" was created with ALL_SCOPES, so it will be offered for every property in the file. ` +
+    (guess
+      ? `Its name reads like ${guess.join(" + ")} — set that with manage_variables action:set_scopes.`
+      : `Narrow it with manage_variables action:set_scopes (${resolvedType} takes ${menu.join(", ")}).`)
+  );
+}
+
 // action → [plugin command, params to forward]
 const ACTIONS: Record<string, [string, string[]]> = {
   list_collections: ["get_variable_collections", []],
@@ -78,6 +128,13 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           params,
           args.action === "tokenize" ? 120000 : undefined
         );
+        const wideOpen =
+          args.action === "create" &&
+          (!Array.isArray(args.scopes) || args.scopes.length === 0 || args.scopes.indexOf("ALL_SCOPES") >= 0);
+        if (wideOpen) {
+          const warning = scopeWarning(String(args.name ?? ""), String(args.resolvedType ?? ""));
+          if (warning) return jsonResult({ ...(result as object), warning });
+        }
         return jsonResult(result);
       } catch (error) {
         return errorResult(error);

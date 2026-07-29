@@ -77,7 +77,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
   // ─── validate_design_rules ──────────────────────────────────────
   server.tool(
     "validate_design_rules",
-    "Run design quality rules on a node: token coverage, auto-layout usage, naming conventions, and accessibility basics. Use after modifications or during design audits. Returns pass/fail for each rule with fix suggestions.",
+    "Run design quality rules on a node: token coverage, token scopes, cross-component token borrowing, auto-layout usage, naming conventions, and accessibility basics. Use after modifications or during design audits — the scope and borrowing rules catch the two token faults that look perfect on the canvas. Returns pass/fail for each rule with fix suggestions.",
     {
       nodeId: z.string().optional().describe("Root node to validate (default: current selection)"),
       platform: z.enum(["desktop", "mobile"]).optional().describe("Target-size profile for the touch rule: desktop 24px (default), mobile 44px"),
@@ -238,6 +238,49 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           }
         } catch {
           // plugin build without the handler — rule silently absent
+        }
+
+        // Rules 6-7: the two token faults that look perfect on the canvas.
+        // A token left at ALL_SCOPES offers itself in every property picker in
+        // the file; a token that aliases another component's token inherits that
+        // component's changes. Both are cheap to fix now and expensive later.
+        try {
+          const tok = (await sendCommand("audit_node_tokens", { nodeId: targetId }, 60000)) as {
+            tokensBound?: number;
+            wideScopes?: Array<{ name: string; resolvedType: string }>;
+            borrowed?: Array<{ token: string; aliases: string }>;
+            truncated?: boolean;
+          };
+          if (tok && typeof tok.tokensBound === "number") {
+            const wide = tok.wideScopes ?? [];
+            const borrowed = tok.borrowed ?? [];
+            results.push({
+              rule: "token_scopes",
+              passed: wide.length === 0,
+              severity: "warning",
+              message: wide.length
+                ? `${wide.length} of ${tok.tokensBound} bound token(s) are still ALL_SCOPES: ${wide.slice(0, 4).map((w) => w.name).join(", ")}${wide.length > 4 ? "…" : ""}. A wide-open token shows up in every property picker — a stroke weight offered as padding, a text colour offered as a border.`
+                : `Scopes narrowed on all ${tok.tokensBound} bound token(s)`,
+              nodeId: targetId,
+              fix: wide.length
+                ? { tool: "manage_variables", reason: "Narrow each token's scopes to the properties it is for", args: { action: "update" } }
+                : undefined,
+            });
+            results.push({
+              rule: "token_borrowing",
+              passed: borrowed.length === 0,
+              severity: "error",
+              message: borrowed.length
+                ? `${borrowed.length} token(s) alias another component's token: ${borrowed.slice(0, 3).map((b) => `${b.token} → ${b.aliases}`).join("; ")}${borrowed.length > 3 ? "…" : ""}. Point both at the shared upstream instead — as written, changing that component changes this one too.`
+                : `No cross-component borrowing among ${tok.tokensBound} bound token(s)`,
+              nodeId: targetId,
+              fix: borrowed.length
+                ? { tool: "manage_variables", reason: "Re-point the borrowing token at the same upstream the lender uses", args: { action: "update" } }
+                : undefined,
+            });
+          }
+        } catch {
+          // plugin build without the handler — rules silently absent
         }
 
         const passed = results.filter(r => r.passed).length;
