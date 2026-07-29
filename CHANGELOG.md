@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **The panel stopped hand-typing its Japanese and Chinese spacing.** Every gap between CJK and Latin used to be a literal half-width space in the string — uneven by hand (`10レイヤー` had none while `MCP サーバー` had one) and wrong in every other context. The strings are now written without them and `text-autospace` puts back the 1/8 em the typography actually calls for, which is what the site has always done; `applyI18n` sets the document language so the engine knows which rules to run.
+- A pitfall's advice sharpened: an atom escapes the variant-set text sync only if its variants are standalone components rather than a set of their own.
+
 ## 0.5.4
 
 Writing the law now says what it did to the kit.
