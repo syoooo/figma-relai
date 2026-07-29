@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.2
+
+Two faults a written rule can state but never catch, and a switch that used to disarm itself.
+
+- **`validate_design_rules` measures what the conventions can only ask for.** `dimension_stability` compares every variant that differs only in a state axis and fails when the box moves — the reason a page twitches each time something is toggled. `text_can_grow` reports fixed-size text inside auto-layout, because a box that cannot grow clips the longest value, which is the one nobody previews. A design system can write "don't change size when the state changes" and stay wrong for months; only measurement settles it.
+- **A ruleset package now carries `autoRestore`, and re-importing never turns it off.** The switch is what heals a file after a branch merge discards its law, and importing a package exported before it was enabled used to silently disarm exactly that. The local switch wins on re-import.
+
 ## 0.6.1
 
 A design system's real debt is invisible: tokens nobody binds, and the audit that failed to see the bindings that exist.

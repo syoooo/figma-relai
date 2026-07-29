@@ -77,7 +77,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
   // ─── validate_design_rules ──────────────────────────────────────
   server.tool(
     "validate_design_rules",
-    "Run design quality rules on a node: token coverage, token scopes, cross-component token borrowing, auto-layout usage, naming conventions, and accessibility basics. Use after modifications or during design audits — the scope and borrowing rules catch the two token faults that look perfect on the canvas. Returns pass/fail for each rule with fix suggestions.",
+    "Run design quality rules on a node: token coverage, token scopes, cross-component token borrowing, dimension stability across states, fixed-size text that would clip, auto-layout usage, naming conventions, and accessibility basics. Use after modifications and before calling a component done — these rules catch the faults that look perfect on the canvas and surface weeks later in someone else's file. Returns pass/fail for each rule with fix suggestions.",
     {
       nodeId: z.string().optional().describe("Root node to validate (default: current selection)"),
       platform: z.enum(["desktop", "mobile"]).optional().describe("Target-size profile for the touch rule: desktop 24px (default), mobile 44px"),
@@ -277,6 +277,47 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
               fix: borrowed.length
                 ? { tool: "manage_variables", reason: "Re-point the borrowing token at the same upstream the lender uses", args: { action: "update" } }
                 : undefined,
+            });
+          }
+        } catch {
+          // plugin build without the handler — rules silently absent
+        }
+
+        // Rules 8-9: the two faults a written rule can state but never catch.
+        // A state that moves the box makes the page twitch on every toggle; a
+        // text box that cannot grow clips the longest value, which is the one
+        // nobody previews.
+        try {
+          const dim = (await sendCommand("audit_dimension_stability", { nodeId: targetId }, 60000)) as {
+            setsScanned?: number;
+            jitter?: Array<{ set: string; axis: string; holding: string; spread: string; variants: string[] }>;
+            jitterCount?: number;
+            fixedText?: Array<{ node: string; text: string; box: string }>;
+            fixedTextCount?: number;
+          };
+          if (dim && typeof dim.setsScanned === "number") {
+            const jitter = dim.jitter ?? [];
+            results.push({
+              rule: "dimension_stability",
+              passed: (dim.jitterCount ?? 0) === 0,
+              severity: "error",
+              message: jitter.length
+                ? `${dim.jitterCount} state change(s) move the box: ${jitter.slice(0, 2).map((j) => `${j.set} [${j.holding}] ${j.axis} → ${j.spread}`).join("; ")}${(dim.jitterCount ?? 0) > 2 ? " …" : ""}. Reserve the padding and the line box in every state so only the appearance changes.`
+                : `No state changes the box across ${dim.setsScanned} set(s)`,
+              nodeId: targetId,
+              fix: jitter.length
+                ? { tool: "set_properties", reason: "Give every state the same padding and height; change only the appearance", args: { nodeId: targetId } }
+                : undefined,
+            });
+            const fixed = dim.fixedText ?? [];
+            results.push({
+              rule: "text_can_grow",
+              passed: true,
+              severity: "info",
+              message: fixed.length
+                ? `${dim.fixedTextCount} fixed-size text node(s) — a fixed box clips instead of growing, so check the longest value: ${fixed.slice(0, 3).map((f) => `${f.node} "${f.text}" (${f.box})`).join("; ")}${(dim.fixedTextCount ?? 0) > 3 ? " …" : ""}`
+                : "No fixed-size text inside auto-layout — every label can grow to its longest value",
+              nodeId: targetId,
             });
           }
         } catch {

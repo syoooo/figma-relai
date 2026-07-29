@@ -89,6 +89,7 @@ export const FIGMA_COMMANDS = [
   "audit_token_debt",
   "audit_property_bindings",
   "audit_node_tokens",
+  "audit_dimension_stability",
   "snapshot_variables",
   "list_rulesets",
   "save_ruleset",

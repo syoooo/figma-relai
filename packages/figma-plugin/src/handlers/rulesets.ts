@@ -205,6 +205,7 @@ export function rulesetToMarkdown(set: Ruleset): string {
     `relai-ruleset: ${set.name}`,
     `layer: product`,
     `provenance: ${set.provenance || "unknown"}`,
+    `autoRestore: ${set.autoRestore}`,
     `exportedAt: ${nowIso()}`,
     "---",
   ].join("\n");
@@ -220,6 +221,7 @@ export function rulesetToMarkdown(set: Ruleset): string {
 export function markdownToRuleset(markdown: string, fallbackName?: string): Omit<Ruleset, "createdAt" | "updatedAt"> {
   let name = fallbackName ?? "";
   let provenance = "";
+  let autoRestore = false;
   let body = markdown;
   const fmMatch = markdown.match(/^---\n([\s\S]*?)\n---\n/);
   if (fmMatch) {
@@ -229,6 +231,7 @@ export function markdownToRuleset(markdown: string, fallbackName?: string): Omit
       if (!m) continue;
       if (m[1] === "relai-ruleset") name = m[2].trim();
       if (m[1] === "provenance") provenance = m[2].trim();
+      if (m[1] === "autoRestore") autoRestore = m[2].trim() === "true";
     }
   }
   // A hand-written conventions doc is not an export package: it carries no
@@ -253,7 +256,7 @@ export function markdownToRuleset(markdown: string, fallbackName?: string): Omit
       }
     }
   }
-  return { name, conventions: body.trim(), seedPrecedents: seeds, autoRestore: false, provenance };
+  return { name, conventions: body.trim(), seedPrecedents: seeds, autoRestore, provenance };
 }
 
 // ─── Commands ───────────────────────────────────────────────────────
@@ -387,9 +390,17 @@ registerHandler("import_ruleset", async (params) => {
     if (sets.length >= MAX_RULESETS) throw new Error(`Ruleset limit reached (${MAX_RULESETS}).`);
     sets.push({ ...parsed, createdAt: nowIso(), updatedAt: nowIso() });
   } else {
-    sets[index] = { ...sets[index], ...parsed, updatedAt: nowIso() };
+    // The switch on THIS machine wins: a package exported before it was turned
+    // on would otherwise silently disarm the one thing that heals a file after
+    // a branch merge — which is the whole reason the switch exists.
+    sets[index] = { ...sets[index], ...parsed, autoRestore: sets[index].autoRestore, updatedAt: nowIso() };
   }
   await writeRulesets(sets);
   await postRulesetState();
-  return { imported: parsed.name, overwrote: index !== -1, seeds: parsed.seedPrecedents.length };
+  return {
+    imported: parsed.name,
+    overwrote: index !== -1,
+    seeds: parsed.seedPrecedents.length,
+    autoRestore: sets[index === -1 ? sets.length - 1 : index].autoRestore,
+  };
 });

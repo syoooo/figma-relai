@@ -500,6 +500,105 @@ async function buildTokenGraph() {
   return { vars, byId, collName, aliasEdges, hubs, styleBound, borrows, group };
 }
 
+// Two faults a written rule can state but never catch: it can say "don't change
+// size when the state changes" and "the longest value has to fit", and both stay
+// true while the file quietly does neither. Only measurement settles them.
+const STATE_VALUES = new Set([
+  "default", "hovered", "pressed", "focused", "selected", "disabled", "true", "false",
+  "selected-hovered", "selected-pressed", "selected-focused", "selected-disabled",
+]);
+
+function variantPropsOf(variant: ComponentNode): Record<string, string> {
+  const direct = variant.variantProperties;
+  if (direct) return direct;
+  // Fall back to the generated name — "size=md, state=default"
+  const out: Record<string, string> = {};
+  for (const part of variant.name.split(",")) {
+    const [k, v] = part.split("=");
+    if (k && v) out[k.trim()] = v.trim();
+  }
+  return out;
+}
+
+registerHandler("audit_dimension_stability", async (params) => {
+  const node = (await figma.getNodeByIdAsync(params.nodeId as string)) as SceneNode | null;
+  if (!node) throw new Error(`Node not found: ${params.nodeId}`);
+
+  const sets: ComponentSetNode[] = [];
+  if (node.type === "COMPONENT_SET") sets.push(node);
+  else if (node.type === "COMPONENT" && node.parent?.type === "COMPONENT_SET") sets.push(node.parent);
+  else if ("findAllWithCriteria" in node) {
+    sets.push(...(node as FrameNode).findAllWithCriteria({ types: ["COMPONENT_SET"] }));
+  }
+
+  const jitter: Array<{ set: string; axis: string; holding: string; spread: string; variants: string[] }> = [];
+  for (const set of sets) {
+    const variants = set.children.filter((c): c is ComponentNode => c.type === "COMPONENT");
+    if (variants.length < 2) continue;
+    const props = variants.map((v) => ({ v, p: variantPropsOf(v) }));
+    const axes = Object.keys(props[0].p);
+    for (const axis of axes) {
+      const values = new Set(props.map((x) => (x.p[axis] ?? "").toLowerCase()));
+      const isState = /state|selected/i.test(axis) || [...values].every((val) => STATE_VALUES.has(val));
+      if (!isState || values.size < 2) continue;
+      // Everything else held constant, the state axis must not move the box
+      const groups = new Map<string, Array<{ v: ComponentNode; p: Record<string, string> }>>();
+      for (const item of props) {
+        const key = axes.filter((a) => a !== axis).map((a) => `${a}=${item.p[a]}`).join(", ");
+        const list = groups.get(key) ?? [];
+        list.push(item);
+        groups.set(key, list);
+      }
+      for (const [holding, list] of groups) {
+        if (list.length < 2) continue;
+        const w = list.map((x) => x.v.width), h = list.map((x) => x.v.height);
+        const dw = Math.max(...w) - Math.min(...w), dh = Math.max(...h) - Math.min(...h);
+        if (dw <= 0.5 && dh <= 0.5) continue;
+        jitter.push({
+          set: set.name,
+          axis,
+          holding: holding || "(no other axis)",
+          spread: `${dw > 0.5 ? `width ${Math.min(...w)}→${Math.max(...w)}` : ""}${dw > 0.5 && dh > 0.5 ? ", " : ""}${dh > 0.5 ? `height ${Math.min(...h)}→${Math.max(...h)}` : ""}`,
+          variants: list.map((x) => `${x.p[axis]}: ${Math.round(x.v.width)}×${Math.round(x.v.height)}`),
+        });
+      }
+    }
+  }
+
+  // A text box that cannot grow clips instead — the longest value is the one
+  // nobody previews. NONE means both axes are fixed; HEIGHT wraps, so it is safe.
+  const clipRisk: Array<{ node: string; text: string; box: string; id: string }> = [];
+  const roots: SceneNode[] = sets.length ? sets : [node];
+  for (const root of roots) {
+    if (!("findAllWithCriteria" in root)) continue;
+    for (const t of (root as FrameNode).findAllWithCriteria({ types: ["TEXT"] })) {
+      if (t.textAutoResize !== "NONE") continue;
+      if (!t.parent || !("layoutMode" in t.parent) || t.parent.layoutMode === "NONE") continue;
+      clipRisk.push({
+        node: t.name,
+        text: String(t.characters).slice(0, 24),
+        box: `${Math.round(t.width)}×${Math.round(t.height)}`,
+        id: t.id,
+      });
+    }
+  }
+  const seen = new Set<string>();
+  const uniqueClipRisk = clipRisk.filter((c) => {
+    const key = c.node + c.box;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return {
+    setsScanned: sets.length,
+    jitter: jitter.slice(0, 12),
+    jitterCount: jitter.length,
+    fixedText: uniqueClipRisk.slice(0, 10),
+    fixedTextCount: uniqueClipRisk.length,
+  };
+});
+
 // The same two questions the file-wide report answers, asked about one node —
 // so a component can be checked the moment it is finished, instead of showing up
 // in an audit weeks later. Scope and borrowing are both invisible on the canvas:

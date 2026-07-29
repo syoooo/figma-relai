@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "tools": [
     {
       "name": "batch_execute",
@@ -1960,7 +1960,7 @@
     {
       "name": "validate_design_rules",
       "category": "verification",
-      "description": "Run design quality rules on a node: token coverage, token scopes, cross-component token borrowing, auto-layout usage, naming conventions, and accessibility basics. Use after modifications or during design audits — the scope and borrowing rules catch the two token faults that look perfect on the canvas. Returns pass/fail for each rule with fix suggestions.",
+      "description": "Run design quality rules on a node: token coverage, token scopes, cross-component token borrowing, dimension stability across states, fixed-size text that would clip, auto-layout usage, naming conventions, and accessibility basics. Use after modifications and before calling a component done — these rules catch the faults that look perfect on the canvas and surface weeks later in someone else's file. Returns pass/fail for each rule with fix suggestions.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2159,6 +2159,7 @@
     "audit_token_debt",
     "audit_property_bindings",
     "audit_node_tokens",
+    "audit_dimension_stability",
     "snapshot_variables",
     "list_rulesets",
     "save_ruleset",
