@@ -1,14 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.5.5
+
+The panel meets you in your own language — and stops spacing it by hand.
 
 - **A fresh install opens in your language, not in English.** The panel used to start in English on every new machine and wait to be told otherwise; it now reads the app's own language on first run — Japanese and Chinese are recognised, anything else stays English. Your explicit choice still outranks it and still persists, and a panel that has never been told stays free to follow the environment.
 - **Importing a kit from a hand-written conventions file says what's missing.** A markdown doc that was never produced by `export` has no `relai-ruleset:` frontmatter, and the old error stopped at naming that fact. It now offers both ways forward: import it with a name, or paste a frontmatter block on top.
-
-## 0.5.5
-
-The panel's Japanese and Chinese stop being spaced by hand.
-
 - **The panel stopped hand-typing its Japanese and Chinese spacing.** Every gap between CJK and Latin used to be a literal half-width space in the string — uneven by hand (`10レイヤー` had none while `MCP サーバー` had one) and wrong in every other context. The strings are now written without them and `text-autospace` puts back the 1/8 em the typography actually calls for, which is what the site has always done; `applyI18n` sets the document language so the engine knows which rules to run.
 - A pitfall's advice sharpened: an atom escapes the variant-set text sync only if its variants are standalone components rather than a set of their own.
 
