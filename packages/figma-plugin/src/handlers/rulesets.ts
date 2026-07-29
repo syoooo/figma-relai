@@ -231,7 +231,13 @@ export function markdownToRuleset(markdown: string, fallbackName?: string): Omit
       if (m[1] === "provenance") provenance = m[2].trim();
     }
   }
-  if (!name.trim()) throw new Error("Ruleset name missing — no relai-ruleset frontmatter and no name given.");
+  // A hand-written conventions doc is not an export package: it carries no
+  // frontmatter, so say which of the two ways forward is missing.
+  if (!name.trim())
+    throw new Error(
+      "Ruleset name missing — this markdown has no `relai-ruleset:` frontmatter, so it wasn't produced by export. " +
+        "Either import it with a name, or add a frontmatter block (---\\nrelai-ruleset: <name>\\n---) at the top."
+    );
   const seeds: PrecedentEntry[] = [];
   const seedSection = body.match(/\n## seed-precedents\n([\s\S]*)$/);
   if (seedSection) {

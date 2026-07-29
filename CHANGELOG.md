@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Importing a kit from a hand-written conventions file says what's missing.** A markdown doc that was never produced by `export` has no `relai-ruleset:` frontmatter, and the old error stopped at naming that fact. It now offers both ways forward: import it with a name, or paste a frontmatter block on top.
+
 ## 0.5.5
 
 The panel's Japanese and Chinese stop being spaced by hand.
