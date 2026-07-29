@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1
+
+A design system's real debt is invisible: tokens nobody binds, and the audit that failed to see the bindings that exist.
+
+- **`analyze_design aspect:"token_debt"`** names two failures that never look wrong on the canvas: a component token that aliases *another component's* token — inheriting changes nobody meant to send it — and a token no node binds at all. Which groups count as foundations comes from the file's own alias graph, not a hardcoded list of names, so a file that calls its primitives something else still gets a straight answer.
+- **The census stopped missing bindings it never knew to look for.** Effects, layout grids, gradient stops, local styles, and a component property's value each hide variable references somewhere the old walk didn't reach. On the file that prompted this, reading only the obvious place accused thirty live tokens of being unused.
+- **Nothing is called unused until every page has been walked.** The scan is chunked, and the pages a chunk didn't see can't convict a token — a half-scanned file must never accuse a live one.
+- **Two more pitfalls, 44 now.** A variable bound to a component property's VALUE is invisible in `boundVariables`; and "Plugin runtime aborted" is out of memory rather than a timeout — reading `componentProperties` across a large file is the fastest way to earn it.
+
 ## 0.6.0
 
 Everything here came from a designer's write-up of one afternoon spent building a Progress Bar — the round-trips that cost the most, and the errors that explained the least.

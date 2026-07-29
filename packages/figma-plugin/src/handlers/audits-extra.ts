@@ -230,9 +230,28 @@ function collectBoundVariableIds(node: SceneNode & Record<string, unknown>): str
   };
   const bv = node.boundVariables as Record<string, unknown> | undefined;
   if (bv) {
-    for (const value of Object.values(bv)) {
+    for (const [key, value] of Object.entries(bv)) {
+      // An instance's property bindings sit one level deeper — {propKey: alias}.
+      // Missing them made every icon-name token look unused, and under-counted
+      // the ghost census by however many bindings ride on properties.
+      if (key === "componentProperties" && value && typeof value === "object") {
+        for (const inner of Object.values(value as Record<string, unknown>)) {
+          if (Array.isArray(inner)) inner.forEach(push);
+          else push(inner);
+        }
+        continue;
+      }
       if (Array.isArray(value)) value.forEach(push);
       else push(value);
+    }
+  }
+  // Effects and grids carry their own bindings (shadow colour, offset, radius…)
+  for (const channel of ["effects", "layoutGrids"] as const) {
+    const items = node[channel];
+    if (Array.isArray(items)) {
+      for (const item of items as Array<{ boundVariables?: Record<string, unknown> }>) {
+        if (item.boundVariables) Object.values(item.boundVariables).forEach(push);
+      }
     }
   }
   for (const channel of ["fills", "strokes"] as const) {
@@ -314,5 +333,231 @@ registerHandler("audit_ghosts", async (params) => {
     remoteRefs,
     danglingRefs,
     criterion: "ghost = resolves via getVariableByIdAsync, not remote, absent from getLocalVariablesAsync (soft-deleted)",
+  };
+});
+
+// ─── Token debt: tokens nobody uses, and tokens that borrow ──────────
+//
+// Two failures that never look wrong on the canvas. A component token nobody
+// binds is the ghost census's raw material, waiting. And a component token that
+// aliases ANOTHER component's token inherits changes nobody meant to send it —
+// the fix is for both to point at the shared upstream instead.
+//
+// The taxonomy comes from the alias graph rather than a hardcoded list of group
+// names: a group that many different groups alias INTO is a foundation (General,
+// the colour ramps, Typography). Everything else is component-authored, and an
+// alias into one of those is a borrow.
+// A property's default value can be bound to a variable, and that binding lives
+// on the DEFINITION, not on any node's boundVariables — instances only carry it
+// when they override. Reading it per instance (`instance.componentProperties`)
+// deep-wraps every property object and aborts the sandbox out of memory on a file
+// this size; the definitions are a few hundred nodes, and they are where the
+// binding is authored. Variants are skipped: only the set owns the definitions.
+function collectPropertyBindingIds(page: PageNode): string[] {
+  const ids: string[] = [];
+  const definitions = page.findAllWithCriteria({ types: ["COMPONENT", "COMPONENT_SET"] });
+  for (const def of definitions) {
+    if (def.type === "COMPONENT" && def.parent?.type === "COMPONENT_SET") continue;
+    const defs = (def as ComponentNode).componentPropertyDefinitions as
+      | Record<string, { boundVariables?: Record<string, { id?: string }> }>
+      | undefined;
+    if (!defs) continue;
+    for (const entry of Object.values(defs)) {
+      const bound = entry?.boundVariables;
+      if (!bound) continue;
+      for (const ref of Object.values(bound)) {
+        if (ref && typeof ref.id === "string") ids.push(ref.id);
+      }
+    }
+  }
+  return ids;
+}
+
+// A variable bound to a TEXT or INSTANCE_SWAP property value lives ONLY in
+// `instance.componentProperties[key].boundVariables` — `boundVariables
+// .componentProperties` carries the VARIANT ones and nothing else (measured:
+// an icon instance shows iconFamily there and hides its Icon Name binding).
+// Reading that map deep-wraps every property object; 1,000 instances costs 4
+// seconds, 5,700 aborts the sandbox out of memory. So the walk is handed out in
+// fixed slices and the server keeps asking until `done` — the memory a slice
+// costs is reclaimed when the command returns.
+registerHandler("audit_property_bindings", async (params) => {
+  const pages = await resolvePages(params.pageIds);
+  const offset = typeof params.offset === "number" ? params.offset : 0;
+  const limit = typeof params.limit === "number" ? params.limit : 1000;
+  const ids: string[] = [];
+  let index = 0;
+  let scanned = 0;
+  let done = true;
+  for (const page of pages) {
+    const instances = page.findAllWithCriteria({ types: ["INSTANCE"] });
+    if (index + instances.length <= offset) {
+      index += instances.length;
+      continue;
+    }
+    for (const inst of instances) {
+      if (index++ < offset) continue;
+      if (scanned >= limit) {
+        done = false;
+        break;
+      }
+      scanned++;
+      const props = inst.componentProperties as Record<
+        string,
+        { boundVariables?: Record<string, { id?: string }> }
+      >;
+      for (const key in props) {
+        const bound = props[key]?.boundVariables;
+        if (!bound) continue;
+        for (const field in bound) {
+          const id = bound[field]?.id;
+          if (typeof id === "string") ids.push(id);
+        }
+      }
+    }
+    if (!done) break;
+  }
+  return { ids: [...new Set(ids)], scanned, next: offset + scanned, done };
+});
+
+registerHandler("audit_token_debt", async (params) => {
+  const pages = await resolvePages(params.pageIds);
+  const scopedToPages = Array.isArray(params.pageIds) && params.pageIds.length > 0;
+  const vars = await figma.variables.getLocalVariablesAsync();
+  const collections = await figma.variables.getLocalVariableCollectionsAsync();
+  const collName = new Map(collections.map((c) => [c.id, c.name]));
+  const byId = new Map(vars.map((v) => [v.id, v]));
+  const group = (name: string) => name.split("/")[0];
+
+  // Who aliases whom
+  const aliasEdges: Array<{ from: Variable; toId: string }> = [];
+  for (const v of vars) {
+    for (const value of Object.values(v.valuesByMode)) {
+      const alias = value as { type?: string; id?: string };
+      if (alias && alias.type === "VARIABLE_ALIAS" && alias.id) {
+        aliasEdges.push({ from: v, toId: alias.id });
+      }
+    }
+  }
+  const sourceGroupsPerTarget = new Map<string, Set<string>>();
+  for (const edge of aliasEdges) {
+    const target = byId.get(edge.toId);
+    if (!target) continue;
+    const set = sourceGroupsPerTarget.get(group(target.name)) ?? new Set<string>();
+    set.add(group(edge.from.name));
+    sourceGroupsPerTarget.set(group(target.name), set);
+  }
+  const HUB_THRESHOLD = 3; // aliased into by three or more different groups
+  const hubs = new Set(
+    [...sourceGroupsPerTarget.entries()]
+      .filter(([, sources]) => sources.size >= HUB_THRESHOLD)
+      .map(([g]) => g)
+  );
+  // Styles are a shared layer too, and a group consumed by them is a foundation
+  // even when few variables alias it — type tokens live behind text styles, so
+  // counting only variable→variable edges called the font group a borrower.
+  const styleBound: Array<Record<string, unknown>> = [
+    ...(await figma.getLocalTextStylesAsync()),
+    ...(await figma.getLocalPaintStylesAsync()),
+    ...(await figma.getLocalEffectStylesAsync()),
+    ...(await figma.getLocalGridStylesAsync()),
+  ] as unknown as Array<Record<string, unknown>>;
+  for (const style of styleBound) {
+    const bound = (style.boundVariables ?? {}) as Record<string, unknown>;
+    for (const value of Object.values(bound)) {
+      const refs = Array.isArray(value) ? value : [value];
+      for (const ref of refs) {
+        const id = (ref as { id?: string })?.id;
+        const target = id ? byId.get(id) : undefined;
+        if (target) hubs.add(group(target.name));
+      }
+    }
+  }
+
+  // Borrows: component group → component group
+  const borrows: Array<{ token: string; aliases: string; collection: string }> = [];
+  const seenBorrow = new Set<string>();
+  for (const edge of aliasEdges) {
+    const target = byId.get(edge.toId);
+    if (!target) continue;
+    const fromGroup = group(edge.from.name);
+    const toGroup = group(target.name);
+    if (fromGroup === toGroup || hubs.has(toGroup)) continue;
+    const key = edge.from.name + "→" + target.name;
+    if (seenBorrow.has(key)) continue;
+    seenBorrow.add(key);
+    borrows.push({
+      token: edge.from.name,
+      aliases: target.name,
+      collection: collName.get(edge.from.variableCollectionId) ?? "?",
+    });
+  }
+
+  // Usage: nodes plus other variables
+  const usedByNode = new Set<string>();
+  let nodesScanned = 0;
+  for (const page of pages) {
+    for (const node of page.findAll(() => true)) {
+      nodesScanned++;
+      for (const id of collectBoundVariableIds(node as SceneNode & Record<string, unknown>)) {
+        usedByNode.add(id);
+      }
+    }
+    for (const id of collectPropertyBindingIds(page)) usedByNode.add(id);
+  }
+  const usedByVariable = new Set(aliasEdges.map((e) => e.toId));
+  // A token consumed only by a text or effect style is in use, even though no
+  // node names it directly
+  for (const style of styleBound) {
+    const bound = (style.boundVariables ?? {}) as Record<string, unknown>;
+    for (const value of Object.values(bound)) {
+      const refs = Array.isArray(value) ? value : [value];
+      for (const ref of refs) {
+        const id = (ref as { id?: string })?.id;
+        if (id) usedByNode.add(id);
+      }
+    }
+  }
+
+  // The plugin can only see the pages it was handed, so it reports the candidates
+  // and which of them it saw used; the server unions that across chunks before
+  // calling anything unused. A half-scanned file must never accuse a live token.
+  const candidates = vars
+    .filter((v) => !hubs.has(group(v.name)) && !usedByVariable.has(v.id))
+    .map((v) => ({
+      id: v.id,
+      name: v.name,
+      collection: collName.get(v.variableCollectionId) ?? "?",
+      scopes: v.scopes.join(","),
+    }));
+  const seenUsed = candidates.filter((c) => usedByNode.has(c.id)).map((c) => c.id);
+
+  // Scope hygiene, counted not listed — the existing backlog would drown the report
+  const wideOpen = vars.filter(
+    (v) => !hubs.has(group(v.name)) && v.scopes.length === 1 && v.scopes[0] === "ALL_SCOPES"
+  );
+  const wideOpenByGroup: Record<string, number> = {};
+  for (const v of wideOpen) wideOpenByGroup[group(v.name)] = (wideOpenByGroup[group(v.name)] ?? 0) + 1;
+
+  // A file with no alias layer has no foundation to detect, so every group looks
+  // component-authored and every unused primitive gets accused. Say that plainly
+  // rather than handing back a list that means something else than it appears to.
+  const noAliasLayer = hubs.size === 0;
+
+  return {
+    pages: pages.map((p) => p.name),
+    nodesScanned,
+    scopedToPages,
+    noAliasLayer,
+    foundationGroups: [...hubs].sort(),
+    borrowedTokens: borrows.slice(0, 40),
+    borrowCount: borrows.length,
+    candidates,
+    seenUsed,
+    allScopesByGroup: wideOpenByGroup,
+    criterion:
+      "A foundation group is aliased into by 3+ other groups; anything else is component-authored. " +
+      "Borrow = alias from one component group into another. Unused = no node binding and no alias pointing at it" +
+      (scopedToPages ? " (scoped to the pages given — run without pageIds before deleting anything)" : ""),
   };
 });

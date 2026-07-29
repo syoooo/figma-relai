@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "tools": [
     {
       "name": "batch_execute",
@@ -91,7 +91,7 @@
     {
       "name": "analyze_design",
       "category": "analysis",
-      "description": "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports), voice (the file's statistical fingerprint: radius/spacing/type signatures, tokenized-paint and instance rates — what \"sounds like this file\"), readiness (0-100 agent-readiness score with top gaps: conventions, precedents, semantic tokens, components), or ghosts (stale references to soft-deleted variables — they still render but are invisible in pickers and dead on publish). Defaults to the current selection; tokens/voice/ghosts default to the current page.",
+      "description": "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports), voice (the file's statistical fingerprint: radius/spacing/type signatures, tokenized-paint and instance rates — what \"sounds like this file\"), readiness (0-100 agent-readiness score with top gaps: conventions, precedents, semantic tokens, components), ghosts (stale references to soft-deleted variables — they still render but are invisible in pickers and dead on publish), or token_debt (component tokens nobody binds, and component tokens that alias ANOTHER component's token instead of the shared upstream — both look right on the canvas and bite later). Defaults to the current selection; tokens/voice/ghosts default to the current page.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -106,7 +106,8 @@
               "overall",
               "voice",
               "readiness",
-              "ghosts"
+              "ghosts",
+              "token_debt"
             ]
           },
           "nodeId": {
@@ -2155,6 +2156,8 @@
     "audit_voice_drift",
     "audit_readiness",
     "audit_ghosts",
+    "audit_token_debt",
+    "audit_property_bindings",
     "snapshot_variables",
     "list_rulesets",
     "save_ruleset",
@@ -2455,6 +2458,16 @@
       "pattern": null,
       "hint": "",
       "doc": "**Writing `leadingTrim` on a text node detaches its text style** and strands the style's typography variables as node-level bindings — the node keeps rendering but no longer follows the style. `textDecoration` is safe (the style survives); `leadingTrim` is not. When a cap-trimmed label needs to sit in a full line box (so an icon beside it doesn't hang below the baseline, and toggling the icon doesn't change the height), leave the trim alone and bind the PARENT frame's height to the same leading variable the style uses."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**A variable bound to a component property's VALUE hides from `boundVariables`.** `node.boundVariables.componentProperties` lists the VARIANT properties and nothing else — a token bound to a TEXT or INSTANCE_SWAP property (an icon glyph name, a swapped instance) lives only in `instance.componentProperties[key].boundVariables.value`. Read one location and every such token looks unreferenced. Bindings authored as a property's *default* sit in a third place, `componentPropertyDefinitions[key].boundVariables`, on the SET."
+    },
+    {
+      "pattern": "Plugin runtime aborted",
+      "hint": "Out of memory, not a timeout: something in the loop deep-wraps a large object per node. componentProperties is the usual culprit — read it in slices of ~1000 nodes per command instead of walking the whole file in one script.",
+      "doc": "**\"Plugin runtime aborted\" is out of memory, not a timeout**, and reading `instance.componentProperties` in bulk is the fastest way there: the getter deep-wraps every property object, so 1,000 instances costs about 4 seconds and 5,700 kills the sandbox. Memory is only reclaimed when the command returns, so the fix is slices — walk a fixed number of nodes per command and have the caller ask again — not a tidier traversal inside one script."
     },
     {
       "pattern": null,

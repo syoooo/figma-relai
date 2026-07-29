@@ -228,6 +228,16 @@ export const PITFALLS: Pitfall[] = [
   {
     pattern: null,
     hint: "",
+    doc: "**A variable bound to a component property's VALUE hides from `boundVariables`.** `node.boundVariables.componentProperties` lists the VARIANT properties and nothing else — a token bound to a TEXT or INSTANCE_SWAP property (an icon glyph name, a swapped instance) lives only in `instance.componentProperties[key].boundVariables.value`. Read one location and every such token looks unreferenced. Bindings authored as a property's *default* sit in a third place, `componentPropertyDefinitions[key].boundVariables`, on the SET.",
+  },
+  {
+    pattern: "Plugin runtime aborted",
+    hint: "Out of memory, not a timeout: something in the loop deep-wraps a large object per node. componentProperties is the usual culprit — read it in slices of ~1000 nodes per command instead of walking the whole file in one script.",
+    doc: "**\"Plugin runtime aborted\" is out of memory, not a timeout**, and reading `instance.componentProperties` in bulk is the fastest way there: the getter deep-wraps every property object, so 1,000 instances costs about 4 seconds and 5,700 kills the sandbox. Memory is only reclaimed when the command returns, so the fix is slices — walk a fixed number of nodes per command and have the caller ask again — not a tidier traversal inside one script.",
+  },
+  {
+    pattern: null,
+    hint: "",
     doc: "**Dot-prefixed components are never published**, so their keys 404 on every REST endpoint. Figma hides `.`-prefixed assets from the publish dialog; they exist only nested inside published parents. When resolving a key → file via `/v1/components/{key}`, skip names starting with `.` — and note a component SET's key resolves only at `/v1/component_sets/{key}`, never at `/v1/components/{key}` (and vice versa). Relatedly, `/v1/files/{key}/components` returns the individual VARIANTS (`size=md, state=default`); the components a designer names live in `/component_sets`.",
   },
 ];

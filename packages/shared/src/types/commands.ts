@@ -86,6 +86,8 @@ export const FIGMA_COMMANDS = [
   "audit_voice_drift",
   "audit_readiness",
   "audit_ghosts",
+  "audit_token_debt",
+  "audit_property_bindings",
   "snapshot_variables",
   "list_rulesets",
   "save_ruleset",

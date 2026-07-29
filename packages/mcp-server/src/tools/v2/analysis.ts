@@ -51,9 +51,9 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
 
   server.tool(
     "analyze_design",
-    "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports), voice (the file's statistical fingerprint: radius/spacing/type signatures, tokenized-paint and instance rates — what \"sounds like this file\"), readiness (0-100 agent-readiness score with top gaps: conventions, precedents, semantic tokens, components), or ghosts (stale references to soft-deleted variables — they still render but are invisible in pickers and dead on publish). Defaults to the current selection; tokens/voice/ghosts default to the current page.",
+    "Audit the design from one aspect: color (token coverage, unbound fills/strokes), layout (auto-layout quality, spacing consistency), components (detached instances, component health), accessibility (WCAG contrast incl. large-text thresholds, touch targets, minimum text sizes), tokens (hardcoded values that match an existing variable — each finding names the variable to bind; fix in one shot with manage_variables action:tokenize fix:true), overall (runs color/layout/components/accessibility and returns a weighted 0-100 health score — good for audits and reports), voice (the file's statistical fingerprint: radius/spacing/type signatures, tokenized-paint and instance rates — what \"sounds like this file\"), readiness (0-100 agent-readiness score with top gaps: conventions, precedents, semantic tokens, components), ghosts (stale references to soft-deleted variables — they still render but are invisible in pickers and dead on publish), or token_debt (component tokens nobody binds, and component tokens that alias ANOTHER component's token instead of the shared upstream — both look right on the canvas and bite later). Defaults to the current selection; tokens/voice/ghosts default to the current page.",
     {
-      aspect: z.enum(["color", "layout", "components", "accessibility", "tokens", "overall", "voice", "readiness", "ghosts"]),
+      aspect: z.enum(["color", "layout", "components", "accessibility", "tokens", "overall", "voice", "readiness", "ghosts", "token_debt"]),
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
       pageIds: z.array(z.string()).optional().describe("voice/ghosts: pages to scan (default: current page; ghosts auto-chunks any count)"),
       platform: z.enum(["desktop", "mobile"]).optional().describe("accessibility: target-size profile — desktop 24px (default), mobile 44px"),
@@ -71,6 +71,9 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       }
       if (aspect === "readiness") {
         return runReadiness(sendCommand);
+      }
+      if (aspect === "token_debt") {
+        return runTokenDebt(sendCommand, pageIds);
       }
       if (aspect === "ghosts") {
         return runGhosts(sendCommand, pageIds);
@@ -135,6 +138,90 @@ interface GhostScan {
   remoteRefs?: number;
   ghosts?: Array<{ id: string; name?: string; refCount: number; sampleNodes: string[] }>;
   criterion?: string;
+}
+
+interface TokenDebtScan {
+  pages?: string[];
+  nodesScanned?: number;
+  foundationGroups?: string[];
+  noAliasLayer?: boolean;
+  borrowedTokens?: Array<{ token: string; aliases: string; collection: string }>;
+  borrowCount?: number;
+  candidates?: Array<{ id: string; name: string; collection: string; scopes: string }>;
+  seenUsed?: string[];
+  allScopesByGroup?: Record<string, number>;
+  criterion?: string;
+}
+
+// Borrows are pure variable arithmetic and always whole-file. "Unused" depends
+// on what got walked, so the pages are chunked (the plugin caps at ten) and the
+// used-sets are unioned here — a token is only called unused once every page in
+// the request has failed to use it.
+async function runTokenDebt(sendCommand: SendCommandFn, pageIds?: string[]): Promise<CallToolResult> {
+  const chunks: Array<string[] | undefined> = [];
+  if (pageIds && pageIds.length > 10) {
+    for (let i = 0; i < pageIds.length; i += 10) chunks.push(pageIds.slice(i, i + 10));
+  } else {
+    chunks.push(pageIds);
+  }
+
+  const used = new Set<string>();
+  const pagesScanned: string[] = [];
+  let nodesScanned = 0;
+  let head: TokenDebtScan = {};
+  let instancesScanned = 0;
+  for (const chunk of chunks) {
+    const part = (await sendCommand("audit_token_debt", { pageIds: chunk }, 300000)) as TokenDebtScan;
+    head = part;
+    for (const id of part.seenUsed ?? []) used.add(id);
+    pagesScanned.push(...(part.pages ?? []));
+    nodesScanned += part.nodesScanned ?? 0;
+    // Property-value bindings can't ride along with that walk — reading them
+    // costs enough memory to abort the sandbox, so they come back in slices.
+    let offset = 0;
+    for (;;) {
+      const slice = (await sendCommand(
+        "audit_property_bindings",
+        { pageIds: chunk, offset, limit: 1000 },
+        300000
+      )) as { ids?: string[]; next?: number; done?: boolean };
+      for (const id of slice.ids ?? []) used.add(id);
+      instancesScanned += slice.next != null ? slice.next - offset : 0;
+      if (slice.done !== false) break;
+      offset = slice.next ?? offset + 1000;
+    }
+  }
+
+  const unused = (head.candidates ?? []).filter((c) => !used.has(c.id));
+  const borrows = head.borrowedTokens ?? [];
+  const summary =
+    `${borrows.length} borrowed token${borrows.length === 1 ? "" : "s"}, ` +
+    `${unused.length} unused across ${pagesScanned.length} page${pagesScanned.length === 1 ? "" : "s"}`;
+
+  return standardResult({
+    summary:
+      summary +
+      (head.noAliasLayer
+        ? " — this file has no alias layer, so nothing counts as a foundation: the unused list is plain variables, not component tokens"
+        : "") +
+      (pagesScanned.length <= 1
+        ? " — only one page was walked; pass pageIds for the whole file before treating anything as unused"
+        : ""),
+    data: {
+      pagesScanned,
+      nodesScanned,
+      instancesScanned,
+      foundationGroups: head.foundationGroups,
+      borrowedTokens: borrows,
+      unusedTokens: unused.slice(0, 40),
+      unusedCount: unused.length,
+      allScopesByGroup: head.allScopesByGroup,
+      criterion: head.criterion,
+    },
+    recommended_next: borrows.length
+      ? [{ tool: "manage_variables", reason: "Point both tokens at the shared upstream instead of one borrowing the other" }]
+      : [{ tool: "analyze_design", reason: "aspect: ghosts — unused tokens are what stale references are made of" }],
+  });
 }
 
 async function runGhosts(sendCommand: SendCommandFn, pageIds?: string[]): Promise<CallToolResult> {
