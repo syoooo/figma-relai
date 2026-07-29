@@ -5,7 +5,7 @@ export function createServer(): McpServer {
   return new McpServer(
     {
       name: "Relai",
-      version: "0.5.4",
+      version: "0.5.5",
     },
     {
       instructions: `
