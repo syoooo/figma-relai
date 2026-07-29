@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A fresh install opens in your language, not in English.** The panel used to start in English on every new machine and wait to be told otherwise; it now reads the app's own language on first run — Japanese and Chinese are recognised, anything else stays English. Your explicit choice still outranks it and still persists, and a panel that has never been told stays free to follow the environment.
 - **Importing a kit from a hand-written conventions file says what's missing.** A markdown doc that was never produced by `export` has no `relai-ruleset:` frontmatter, and the old error stopped at naming that fact. It now offers both ways forward: import it with a name, or paste a frontmatter block on top.
 
 ## 0.5.5

@@ -1223,7 +1223,16 @@
       }
     };
     var LOCALES = ['en', 'ja', 'zh'];
-    var locale = 'en';
+    // First run follows the app's own language instead of assuming English; a
+    // saved choice always wins, and staying unsaved means the panel keeps
+    // following the environment until someone actually picks.
+    function detectLocale() {
+      var l = String(navigator.language || 'en').toLowerCase();
+      if (l.indexOf('ja') === 0) return 'ja';
+      if (l.indexOf('zh') === 0) return 'zh';
+      return 'en';
+    }
+    var locale = detectLocale();
 
     function t(key) { return (I18N[locale] && I18N[locale][key]) || I18N.en[key] || key; }
     function applyI18n() {
