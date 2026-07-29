@@ -208,6 +208,11 @@ export const PITFALLS: Pitfall[] = [
   {
     pattern: null,
     hint: "",
+    doc: "**`SPACE_BETWEEN` centres a lone child.** A header built as label + value with the value hidden by default looks correct in the variant you were staring at and lands centred everywhere else — because Figma spreads a single item to the middle rather than leaving it at the start. When one side is optional, align the row `MIN` and let the first child FILL: the optional one stays pinned to the far edge when it appears, and the other stays put when it does not.",
+  },
+  {
+    pattern: null,
+    hint: "",
     doc: "**Applying a text style changes the node's font, so a `characters` write right after it can throw for a font nobody loaded.** `await node.setTextStyleIdAsync(id)` may swap the family or weight; load the *new* font (`await figma.loadFontAsync(node.fontName)`) before writing text. Applying the style is also the last word on properties it owns — a `textDecoration` written in the same breath is overwritten by the style landing, so set it in a later call.",
   },
   {
