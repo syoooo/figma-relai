@@ -246,6 +246,11 @@ export const PITFALLS: Pitfall[] = [
     doc: "**An instance whose variant you deleted becomes a ghost, and `setProperties` cannot reach it.** It still reports a `mainComponent` — named after the *deleted* variant, parented to the live set — but its `componentProperties` no longer carry the set's variant axes, so writes are dropped without an error. Figma does not fall back to the default variant. The repair is `instance.swapComponent(targetVariant)` and then `setProperties`; a variant-count audit will not find these, because the set itself looks healthy.",
   },
   {
+    pattern: "instance sublayer or table cell",
+    hint: "findAll is handing you a stale proxy, not a broken file: after many swapComponent calls or nested property writes, the page keeps enumerating instance sublayers whose ids no longer resolve. Guard each node with try/catch — and don't read the failing node's name in the catch, that throws too. A plugin reload clears the list.",
+    doc: "**A long editing session leaves `findAll` enumerating instance sublayers that no longer exist.** After a few hundred `swapComponent` calls and nested component-property writes, `page.findAll` still returns proxies whose ids are gone: touching one — `getMainComponentAsync`, or merely `.name` — throws *The node (instance sublayer or table cell) with id … does not exist*, while `getNodeByIdAsync` on the same id answers `null`. The document is fine (it renders and validates); it is the enumeration that is stale, and a plugin reload clears it. Two consequences for doc-wide sweeps: wrap each node in its own try/catch, and never read the failing node inside the catch to report it.",
+  },
+  {
     pattern: null,
     hint: "",
     doc: "**Writing a plain value over a variable-bound component property does not unbind it.** `instance.setProperties({ key: \"diamond\" })` on a property whose value is a `VARIABLE_ALIAS` returns without error and leaves the alias in place — the next read still shows the token. There is no `unbind` for property values: call `instance.resetOverrides()` and re-apply everything you wanted to keep (the sizes, the styles, and any fills bound inside that instance, which the reset also clears).",

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **A 49th pitfall, found while verifying the 48th.** After a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve — the document is fine, the list is stale, and a plugin reload clears it. Carries a runtime hint. The site still says 48 until this ships.
+
 ## 0.6.4
 
 Four more pitfalls, 48 now — all of them from one afternoon of taking a component set apart and putting it back.
