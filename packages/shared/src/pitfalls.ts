@@ -238,6 +238,21 @@ export const PITFALLS: Pitfall[] = [
   {
     pattern: null,
     hint: "",
+    doc: "**`component.clone()` loses every `componentPropertyReferences` until it is back inside a SET** — and it does not get them back when you append it. Cloning a variant to make a new one therefore yields a variant whose label, `show*` toggles and swaps are all dead: the layers are there, the wiring is not. The clone renders convincingly because each layer keeps the *value* it had. After `set.appendChild(clone)`, walk the source variant and the clone in `findAll` order and copy `componentPropertyReferences` node for node.",
+  },
+  {
+    pattern: "Invalid component property name|no longer exists",
+    hint: "Deleting a variant turns instances that pointed at it into ghosts: they keep the dead variant's name, lose the set's variant axes, and setProperties silently does nothing. Call instance.swapComponent(newVariant) first, then set the properties.",
+    doc: "**An instance whose variant you deleted becomes a ghost, and `setProperties` cannot reach it.** It still reports a `mainComponent` — named after the *deleted* variant, parented to the live set — but its `componentProperties` no longer carry the set's variant axes, so writes are dropped without an error. Figma does not fall back to the default variant. The repair is `instance.swapComponent(targetVariant)` and then `setProperties`; a variant-count audit will not find these, because the set itself looks healthy.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**Component property keys are `name#id`, and the name may itself contain `#`** — `.Icon Content` ships `Icon Name#4866:0`, `Icon Name w/##4866:28` and `Icon Name w/###4866:56`. Splitting on the *first* `#` maps the last two to the same base name, so a lookup silently binds only one of them and the duotone layers keep their placeholder glyph. Split on `lastIndexOf(\"#\")`. The mirror trick is useful: matching on the `#id` tail alone follows a property across a rename, since `editComponentProperty` keeps the id.",
+  },
+  {
+    pattern: null,
+    hint: "",
     doc: "**Dot-prefixed components are never published**, so their keys 404 on every REST endpoint. Figma hides `.`-prefixed assets from the publish dialog; they exist only nested inside published parents. When resolving a key → file via `/v1/components/{key}`, skip names starting with `.` — and note a component SET's key resolves only at `/v1/component_sets/{key}`, never at `/v1/components/{key}` (and vice versa). Relatedly, `/v1/files/{key}/components` returns the individual VARIANTS (`size=md, state=default`); the components a designer names live in `/component_sets`.",
   },
 ];
