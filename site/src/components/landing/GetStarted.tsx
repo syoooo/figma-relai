@@ -1,5 +1,5 @@
 
-import { ArrowUpRight, Figma } from 'lucide-react';
+import { ArrowUpRight, Download } from 'lucide-react';
 import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
@@ -9,7 +9,7 @@ import { btnClass } from './btn';
 const CLAUDE = 'claude mcp add Relai -- npx -y figma-relai';
 const CODEX = 'codex mcp add Relai -- npx -y figma-relai';
 const CURSOR = `{ "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"] } } }`;
-const COMMUNITY_URL = 'https://www.figma.com/community/plugin/1662131506342078142';
+const DOWNLOAD_URL = 'https://github.com/syoooo/figma-relai/releases/latest';
 
 export function GetStarted() {
   const { language } = useLanguage();
@@ -31,9 +31,9 @@ export function GetStarted() {
                 <h3 className="text-lg font-semibold tracking-tight">{step.title}</h3>
                 <p className="t-prose mt-1.5 text-sm text-muted-foreground">{step.body}</p>
                 {index === 0 && (
-                  <a href={COMMUNITY_URL} target="_blank" rel="noreferrer" className={btnClass({ variant: 'outline', size: 'sm' }) + ' mt-4'}>
-                    <Figma className="h-3.5 w-3.5" />
-                    {copy.community}
+                  <a href={DOWNLOAD_URL} target="_blank" rel="noreferrer" className={btnClass({ variant: 'outline', size: 'sm' }) + ' mt-4'}>
+                    <Download className="h-3.5 w-3.5" />
+                    {copy.download}
                     <ArrowUpRight className="h-3.5 w-3.5" />
                   </a>
                 )}

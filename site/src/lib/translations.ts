@@ -85,11 +85,11 @@ export const translations = {
       title: 'Three steps.',
       body: 'You need Figma Desktop, Node.js 18+, and an MCP client.',
       steps: [
-        { title: 'Install the plugin', body: 'Get it from Figma Community and run it. It connects on its own and remembers its room across restarts.' },
+        { title: 'Install the plugin', body: 'Download the zip from the latest release, unzip it, then Plugins → Development → Import plugin from manifest in the desktop app. It connects on its own and remembers its room across restarts.' },
         { title: 'Register the server', body: 'Point your AI client at Relai.' },
         { title: 'Ask for something', body: 'Pairing is automatic — there is nothing to copy between windows.' }
       ],
-      community: 'Open in Figma Community',
+      download: 'Download the plugin',
       cursor: 'For Cursor, add this to'
     },
     faq: {
@@ -230,11 +230,11 @@ export const translations = {
       title: '3ステップ',
       body: '必要なのはFigma Desktop、Node.js 18+、MCPクライアントだけです。',
       steps: [
-        { title: 'プラグインを導入', body: 'Figma Communityから入手して実行します。自動で接続し、再起動後もルームを記憶します。' },
+        { title: 'プラグインを導入', body: '最新リリースからzipをダウンロードして展開し、デスクトップアプリのPlugins → Development → Import plugin from manifestで読み込みます。自動で接続し、再起動後もルームを記憶します。' },
         { title: 'サーバーを登録', body: 'AIクライアントをRelaiに向けます。' },
         { title: '頼んでみる', body: 'ペアリングは自動です。ウィンドウ間でコピーするものはありません。' }
       ],
-      community: 'Figma Communityで開く',
+      download: 'プラグインをダウンロード',
       cursor: 'Cursorの場合は、以下を追加：'
     },
     faq: {
@@ -375,11 +375,11 @@ export const translations = {
       title: '三步完成。',
       body: '你只需要Figma Desktop、Node.js 18+和一个MCP客户端。',
       steps: [
-        { title: '安装插件', body: '从Figma Community获取并运行。它会自行连接，并在重启后记住所在房间。' },
+        { title: '安装插件', body: '从最新release下载zip解压，在桌面版通过Plugins → Development → Import plugin from manifest导入。它会自行连接，并在重启后记住所在房间。' },
         { title: '注册服务器', body: '将你的AI客户端指向Relai。' },
         { title: '开口提需求', body: '配对自动完成，不需要在窗口之间复制任何内容。' }
       ],
-      community: '在Figma Community打开',
+      download: '下载插件',
       cursor: '对于Cursor，将以下内容加入'
     },
     faq: {

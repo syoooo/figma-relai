@@ -36,7 +36,7 @@ re-census        30,251 → 936 · zero visual change
 
 你需要 [Figma Desktop](https://www.figma.com/downloads/)、[Node.js](https://nodejs.org/) 18+ 和一个 MCP 客户端。
 
-**1. 安装插件。** 从 [Figma Community](https://www.figma.com/community/plugin/1662131506342078142) 获取并运行。它会自行连接，并在重启后记住所在房间。
+**1. 安装插件。** 从 [最新 release](https://github.com/syoooo/figma-relai/releases/latest) 下载 `relai-plugin.zip` 解压，在桌面版打开 **Plugins → Development → Import plugin from manifest…**，选择 `manifest.json`。它会自行连接，并在重启后记住所在房间。
 
 **2. 注册服务器**，加进你的 AI 客户端：
 

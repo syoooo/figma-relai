@@ -8,6 +8,9 @@ CLAUDE.md
 .claude/
 .mcp.json
 
+# release artifact (built by scripts/package-plugin.sh)
+dist-plugin/
+
 # prepack copies (never committed)
 packages/mcp-server/README.md
 packages/mcp-server/LICENSE

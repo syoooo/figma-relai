@@ -36,7 +36,7 @@ re-census        30,251 → 936 · zero visual change
 
 You need [Figma Desktop](https://www.figma.com/downloads/), [Node.js](https://nodejs.org/) 18+, and an MCP client.
 
-**1. Install the plugin.** Get it from [Figma Community](https://www.figma.com/community/plugin/1662131506342078142) and run it. It connects on its own and remembers its room across restarts.
+**1. Install the plugin.** Download `relai-plugin.zip` from [the latest release](https://github.com/syoooo/figma-relai/releases/latest), unzip it, then open **Plugins → Development → Import plugin from manifest…** in the desktop app and pick `manifest.json`. It connects on its own and remembers its room across restarts.
 
 **2. Register the server** with your AI client:
 

@@ -36,7 +36,7 @@ re-census        30,251 → 936 · zero visual change
 
 必要なのは [Figma Desktop](https://www.figma.com/downloads/)、[Node.js](https://nodejs.org/) 18+、MCP クライアントです。
 
-**1. プラグインを導入する。** [Figma Community](https://www.figma.com/community/plugin/1662131506342078142) から入手して実行します。自動で接続し、再起動後もルームを記憶します。
+**1. プラグインを導入する。** [最新リリース](https://github.com/syoooo/figma-relai/releases/latest) から `relai-plugin.zip` をダウンロードして展開し、デスクトップアプリの **Plugins → Development → Import plugin from manifest…** で `manifest.json` を選びます。自動で接続し、再起動後もルームを記憶します。
 
 **2. サーバーを登録する。** AI クライアントに次を追加します:
 
