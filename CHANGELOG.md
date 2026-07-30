@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Four more pitfalls, 52 now.** Deleting a layer from a component can orphan instance-side overrides on layers you never touched — the component still renders correctly, which is why nobody notices. Also: after a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve (this one carries a runtime hint). Setting `layoutSizing* = "FIXED"` right after `insertChild` freezes a node at the size the row just stretched it to. And a component that sizes itself from the inside must not be re-sized from the outside: where a wrapper hugs a child bound to size tokens, the wrapper's *lack* of bindings is the mechanism. The site still says 48 until these ship.
+- **Five more pitfalls, 53 now.** `componentPropertyReferences` cannot be written on a layer inside a nested instance — but fills, text and visibility on that same layer can, so excluding sublayers from a paint loop leaves half the job done and no error. Deleting a layer from a component can orphan instance-side overrides on layers you never touched — the component still renders correctly, which is why nobody notices. Also: after a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve (this one carries a runtime hint). Setting `layoutSizing* = "FIXED"` right after `insertChild` freezes a node at the size the row just stretched it to. And a component that sizes itself from the inside must not be re-sized from the outside: where a wrapper hugs a child bound to size tokens, the wrapper's *lack* of bindings is the mechanism. The site still says 48 until these ship.
 
 ## 0.6.4
 

@@ -2482,6 +2482,11 @@
       "doc": "**An instance whose variant you deleted becomes a ghost, and `setProperties` cannot reach it.** It still reports a `mainComponent` — named after the *deleted* variant, parented to the live set — but its `componentProperties` no longer carry the set's variant axes, so writes are dropped without an error. Figma does not fall back to the default variant. The repair is `instance.swapComponent(targetVariant)` and then `setProperties`; a variant-count audit will not find these, because the set itself looks healthy."
     },
     {
+      "pattern": "component property references on instance sublayer",
+      "hint": "componentPropertyReferences can only be set on nodes the component itself owns — never on a layer inside a nested instance (those references belong to that instance's own main). Fills, text and visibility on the same sublayer ARE writable; only the references are not. Filter by walking up to the component root and skipping any node with an INSTANCE ancestor.",
+      "doc": "**`componentPropertyReferences` cannot be set on a layer inside a nested instance — but almost everything else on that layer can.** The references belong to that instance's own main component, so writing them throws `Cannot set component property references on instance sublayer`. The trap is over-correcting: excluding instance sublayers from the *paint* loop as well leaves half the job done and no error, because fills, characters and visibility on those same sublayers are perfectly writable — and in a component whose label or icon lives inside a nested atom, that is exactly where the colour you meant to change lives. Skip sublayers when copying references; include them when painting."
+    },
+    {
       "pattern": null,
       "hint": "",
       "doc": "**Deleting a layer from a component can silently orphan instance-side overrides on layers you did not touch.** Figma re-creates part of the instance's subtree with fresh node ids, and any override keyed to the old ids is dropped — on the instance only. The component still renders correctly, which is exactly why nobody notices: the master is where you look. After removing layers from a set, diff each instance against its main property by property; a screenshot of the component proves nothing about its instances."
