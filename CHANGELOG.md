@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.3
+
+The plugin comes from a release now, and the package page had to be republished to say so.
+
+- **Install the plugin by importing its manifest**: download the zip from the latest GitHub release, unzip, then **Plugins → Development → Import plugin from manifest…** in the desktop app. Figma's review guidelines rule out plugins that require a separate package to manipulate Figma, so that is the public entrance. Nothing about the MCP server changes — it is still `npx -y figma-relai`.
+- **A docs-only change earned a version bump for once**: npm refreshes a package page only on publish, so a README correction that matters — an install path that no longer exists — cannot wait for the next feature.
+
 ## 0.6.2
 
 Two faults a written rule can state but never catch, and a switch that used to disarm itself.
