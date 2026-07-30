@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **A 49th pitfall, found while verifying the 48th.** After a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve — the document is fine, the list is stale, and a plugin reload clears it. Carries a runtime hint. The site still says 48 until this ships.
+- **Three more pitfalls, 51 now.** After a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve — the document is fine, the list is stale, and a plugin reload clears it (this one carries a runtime hint). Setting `layoutSizing* = "FIXED"` right after `insertChild` freezes a node at the size the row just stretched it to. And a component that sizes itself from the inside must not be re-sized from the outside: where a wrapper hugs a child bound to size tokens, the wrapper's *lack* of bindings is the mechanism. The site still says 48 until these ship.
 
 ## 0.6.4
 

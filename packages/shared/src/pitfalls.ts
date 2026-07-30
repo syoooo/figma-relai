@@ -246,6 +246,16 @@ export const PITFALLS: Pitfall[] = [
     doc: "**An instance whose variant you deleted becomes a ghost, and `setProperties` cannot reach it.** It still reports a `mainComponent` — named after the *deleted* variant, parented to the live set — but its `componentProperties` no longer carry the set's variant axes, so writes are dropped without an error. Figma does not fall back to the default variant. The repair is `instance.swapComponent(targetVariant)` and then `setProperties`; a variant-count audit will not find these, because the set itself looks healthy.",
   },
   {
+    pattern: null,
+    hint: "",
+    doc: "**Setting `layoutSizingHorizontal/Vertical = \"FIXED\"` right after `insertChild` freezes the node at the size the row just stretched it to**, not the size it wants. An icon instance that is 12×12 on its own lands in a 16-tall row, gets stretched, and the FIXED you meant as *don't grow* records 16×16 permanently. Insert, let the layout settle, and set `layoutAlign`/`layoutGrow` instead — or copy the posture of a healthy sibling in the same row rather than asserting sizing modes from scratch.",
+  },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**A component that sizes itself from the inside must not be re-sized from the outside.** Where a wrapper hugs a child whose own width/height are bound to size tokens, the wrapper carries no bindings at all — that absence *is* the mechanism. Binding the outer instance's width/height to look tidy overrides the child and pins one size across every variant, and the mistake is invisible because the number is right in whichever variant you were looking at. Before binding a dimension, check whether the node already derives it.",
+  },
+  {
     pattern: "instance sublayer or table cell",
     hint: "findAll is handing you a stale proxy, not a broken file: after many swapComponent calls or nested property writes, the page keeps enumerating instance sublayers whose ids no longer resolve. Guard each node with try/catch — and don't read the failing node's name in the catch, that throws too. A plugin reload clears the list.",
     doc: "**A long editing session leaves `findAll` enumerating instance sublayers that no longer exist.** After a few hundred `swapComponent` calls and nested component-property writes, `page.findAll` still returns proxies whose ids are gone: touching one — `getMainComponentAsync`, or merely `.name` — throws *The node (instance sublayer or table cell) with id … does not exist*, while `getNodeByIdAsync` on the same id answers `null`. The document is fine (it renders and validates); it is the enumeration that is stale, and a plugin reload clears it. Two consequences for doc-wide sweeps: wrap each node in its own try/catch, and never read the failing node inside the catch to report it.",
