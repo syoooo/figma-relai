@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- **Three more pitfalls, 51 now.** After a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve — the document is fine, the list is stale, and a plugin reload clears it (this one carries a runtime hint). Setting `layoutSizing* = "FIXED"` right after `insertChild` freezes a node at the size the row just stretched it to. And a component that sizes itself from the inside must not be re-sized from the outside: where a wrapper hugs a child bound to size tokens, the wrapper's *lack* of bindings is the mechanism. The site still says 48 until these ship.
+- **Four more pitfalls, 52 now.** Deleting a layer from a component can orphan instance-side overrides on layers you never touched — the component still renders correctly, which is why nobody notices. Also: after a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve (this one carries a runtime hint). Setting `layoutSizing* = "FIXED"` right after `insertChild` freezes a node at the size the row just stretched it to. And a component that sizes itself from the inside must not be re-sized from the outside: where a wrapper hugs a child bound to size tokens, the wrapper's *lack* of bindings is the mechanism. The site still says 48 until these ship.
 
 ## 0.6.4
 

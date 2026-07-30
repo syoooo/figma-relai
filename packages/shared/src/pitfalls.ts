@@ -248,6 +248,11 @@ export const PITFALLS: Pitfall[] = [
   {
     pattern: null,
     hint: "",
+    doc: "**Deleting a layer from a component can silently orphan instance-side overrides on layers you did not touch.** Figma re-creates part of the instance's subtree with fresh node ids, and any override keyed to the old ids is dropped — on the instance only. The component still renders correctly, which is exactly why nobody notices: the master is where you look. After removing layers from a set, diff each instance against its main property by property; a screenshot of the component proves nothing about its instances.",
+  },
+  {
+    pattern: null,
+    hint: "",
     doc: "**Setting `layoutSizingHorizontal/Vertical = \"FIXED\"` right after `insertChild` freezes the node at the size the row just stretched it to**, not the size it wants. An icon instance that is 12×12 on its own lands in a 16-tall row, gets stretched, and the FIXED you meant as *don't grow* records 16×16 permanently. Insert, let the layout settle, and set `layoutAlign`/`layoutGrow` instead — or copy the posture of a healthy sibling in the same row rather than asserting sizing modes from scratch.",
   },
   {
