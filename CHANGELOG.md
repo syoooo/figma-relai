@@ -1,8 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.6.5
 
-- **Six more pitfalls, 54 now.** SLOT properties are per-node and same-naming two of them does not merge them — so content placed in one variant's slot cannot survive switching to a variant that owns the other. `componentPropertyReferences` cannot be written on a layer inside a nested instance — but fills, text and visibility on that same layer can, so excluding sublayers from a paint loop leaves half the job done and no error. Deleting a layer from a component can orphan instance-side overrides on layers you never touched — the component still renders correctly, which is why nobody notices. Also: after a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve (this one carries a runtime hint). Setting `layoutSizing* = "FIXED"` right after `insertChild` freezes a node at the size the row just stretched it to. And a component that sizes itself from the inside must not be re-sized from the outside: where a wrapper hugs a child bound to size tokens, the wrapper's *lack* of bindings is the mechanism. The site still says 48 until these ship.
+Six more pitfalls, 54 now — every one of them found by taking components apart, and four of them by getting it wrong first.
+
+- **What a clone forgets and a deletion leaves behind, part two.** `componentPropertyReferences` cannot be written on a layer inside a nested instance — but the fills, text and visibility on that same layer can, so filtering sublayers out of a paint loop leaves half the job done and raises nothing. And deleting a layer from a component can orphan instance-side overrides on layers you never touched: the component still renders correctly, which is exactly why nobody notices.
+- **Two ways a size stops meaning what you think.** Setting `layoutSizing* = "FIXED"` right after `insertChild` freezes a node at whatever the row just stretched it to, not the size it wants. And a component that sizes itself from the inside must not be re-sized from the outside — where a wrapper hugs a child bound to size tokens, the wrapper's *lack* of bindings is the mechanism, and binding it "to be tidy" pins one size across every variant.
+- **Two facts about the API worth knowing before you design around them.** SLOT properties are per-node, and giving two of them the same name does not merge them — so content placed in one variant's slot cannot survive switching to a variant that owns the other. And after a long editing session `findAll` keeps enumerating instance sublayers whose ids no longer resolve; the document is fine, the list is stale, and a plugin reload clears it. That one carries a runtime hint.
 
 ## 0.6.4
 
