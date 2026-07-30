@@ -2484,6 +2484,11 @@
     {
       "pattern": null,
       "hint": "",
+      "doc": "**Writing a plain value over a variable-bound component property does not unbind it.** `instance.setProperties({ key: \"diamond\" })` on a property whose value is a `VARIABLE_ALIAS` returns without error and leaves the alias in place — the next read still shows the token. There is no `unbind` for property values: call `instance.resetOverrides()` and re-apply everything you wanted to keep (the sizes, the styles, and any fills bound inside that instance, which the reset also clears)."
+    },
+    {
+      "pattern": null,
+      "hint": "",
       "doc": "**Component property keys are `name#id`, and the name may itself contain `#`** — `.Icon Content` ships `Icon Name#4866:0`, `Icon Name w/##4866:28` and `Icon Name w/###4866:56`. Splitting on the *first* `#` maps the last two to the same base name, so a lookup silently binds only one of them and the duotone layers keep their placeholder glyph. Split on `lastIndexOf(\"#\")`. The mirror trick is useful: matching on the `#id` tail alone follows a property across a rename, since `editComponentProperty` keeps the id."
     },
     {
