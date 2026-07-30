@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.4
+
+Four more pitfalls, 48 now — all of them from one afternoon of taking a component set apart and putting it back.
+
+- **What a cloned variant forgets, and what a deleted one leaves behind.** `component.clone()` drops every `componentPropertyReferences` the moment it leaves the set, and appending it back does not restore them: you get a variant whose label, toggles and swaps are dead while every layer still shows the value it had, so it looks right. And deleting a variant turns the instances that pointed at it into ghosts — they keep reporting the dead variant's name, lose the set's axes, and swallow `setProperties` without an error. That one carries a runtime hint, so the fix now arrives attached to the error.
+- **Two smaller traps that both end in a token that looks bound and isn't.** Component property keys are `name#id`, but the name may itself contain `#` — split on the first one and `.Icon Content`'s two duotone slots collapse into a single base name, so only one of them ever gets wired. And writing a plain value over a property whose value is a variable alias returns clean and changes nothing; there is no unbind, only `resetOverrides()` and rebuilding what it took with it.
+
 ## 0.6.3
 
 The plugin comes from a release now, and the package page had to be republished to say so.
