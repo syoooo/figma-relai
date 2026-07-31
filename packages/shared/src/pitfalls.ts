@@ -288,6 +288,11 @@ export const PITFALLS: Pitfall[] = [
   {
     pattern: null,
     hint: "",
+    doc: "**A freshly created instance placed under an explicit variable mode shows the wrong glyph on the first read.** Create an instance, drop it under a frame (or node) whose Theme mode differs from the page's, and read it back: the nested variant *does* swap — `iconFamily=Phosphor` becomes `FA7` — but a component property bound to a variable resolves to the new variant's **default** instead of the token, so every icon comes back as the placeholder. The binding is intact, not destroyed; setting the mode a second time (or clearing and re-setting it) resolves it correctly. So a brand-switch probe built and screenshotted in one pass will tell you the whole file's icon tokens are broken when nothing is wrong. Toggle the mode once more before you read or screenshot, and confirm against a node that already existed in the file.",
+  },
+  {
+    pattern: null,
+    hint: "",
     doc: "**Dot-prefixed components are never published**, so their keys 404 on every REST endpoint. Figma hides `.`-prefixed assets from the publish dialog; they exist only nested inside published parents. When resolving a key → file via `/v1/components/{key}`, skip names starting with `.` — and note a component SET's key resolves only at `/v1/component_sets/{key}`, never at `/v1/components/{key}` (and vice versa). Relatedly, `/v1/files/{key}/components` returns the individual VARIANTS (`size=md, state=default`); the components a designer names live in `/component_sets`.",
   },
 ];
