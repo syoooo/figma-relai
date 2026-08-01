@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { lintCreatedNodes, setProps, queryNodes, type QueryNode } from "./sandbox-helpers.js";
+import { lintCreatedNodes, lintComponentSets, setProps, queryNodes, type QueryNode } from "./sandbox-helpers.js";
 
 describe("lintCreatedNodes", () => {
   const spread = { type: "DROP_SHADOW", spread: 4, visible: true };
@@ -104,5 +104,90 @@ describe("queryNodes (selector subset)", () => {
     expect(queryNodes(page, "RECTANGLE, GROUP").length).toBe(2);
     expect(queryNodes(cardB, "TEXT").length).toBe(1); // scoped to Card B
     expect(queryNodes(cardB, "FRAME").length).toBe(0); // scope itself not matched
+  });
+});
+
+describe("lintComponentSets", () => {
+  const wired = (keys: string[]) => ({ name: "type=text", referencedKeys: keys });
+
+  test("flags a property no variant references", () => {
+    const warnings = lintComponentSets([
+      {
+        id: "4509:18525",
+        name: "Search Field",
+        definitions: { "showClear#4530:95": { type: "BOOLEAN" }, "value#4530:0": { type: "TEXT" }, size: { type: "VARIANT" } },
+        variants: [wired(["value#4530:0"]), wired(["value#4530:0"])],
+      },
+    ]);
+    expect(warnings.length).toBe(1);
+    expect(warnings[0]).toContain("showClear#4530:95");
+    expect(warnings[0]).toContain("Search Field");
+    expect(warnings[0]).not.toContain("value#4530:0"); // wired, so not named
+  });
+
+  test("VARIANT axes are never 'unreferenced' — they need no layer", () => {
+    expect(lintComponentSets([
+      {
+        id: "1:1",
+        name: "Badge",
+        definitions: { size: { type: "VARIANT" }, variant: { type: "VARIANT" } },
+        variants: [wired([])],
+      },
+    ])).toEqual([]);
+  });
+
+  test("flags a variant that lost its slot while siblings kept theirs", () => {
+    const warnings = lintComponentSets([
+      {
+        id: "2318:20962",
+        name: "atom/TableView Column",
+        definitions: { "Slot#1947:22": { type: "SLOT" } },
+        variants: [
+          { name: "type=text", referencedKeys: ["Slot#1947:22"] },
+          { name: "type=checkbox", referencedKeys: [] }, // clone() dropped it
+        ],
+      },
+    ]);
+    expect(warnings.length).toBe(1);
+    expect(warnings[0]).toContain("type=checkbox");
+    expect(warnings[0]).toContain("slotContentId");
+  });
+
+  test("a set whose variants each carry one of two slots is not a lost slot", () => {
+    // Menu keeps Sm/Md slots on different size variants on purpose
+    expect(lintComponentSets([
+      {
+        id: "2318:14953",
+        name: "Menu",
+        definitions: { "Sm Items Slot#1938:15": { type: "SLOT" }, "Md Items Slot#1938:18": { type: "SLOT" }, size: { type: "VARIANT" } },
+        variants: [
+          { name: "size=sm", referencedKeys: ["Sm Items Slot#1938:15"] },
+          { name: "size=md", referencedKeys: ["Md Items Slot#1938:18"] },
+        ],
+      },
+    ])).toEqual([]);
+  });
+
+  test("a variant missing a sibling's boolean is not flagged — only the whole set counts", () => {
+    // ghost Buttons legitimately have no shortcut layer
+    expect(lintComponentSets([
+      {
+        id: "2318:49",
+        name: "Button",
+        definitions: { "showShortcut#414:0": { type: "BOOLEAN" }, variant: { type: "VARIANT" } },
+        variants: [
+          { name: "variant=default", referencedKeys: ["showShortcut#414:0"] },
+          { name: "variant=ghost", referencedKeys: [] },
+        ],
+      },
+    ])).toEqual([]);
+  });
+
+  test("survives sets with no variants, no definitions, or junk", () => {
+    expect(lintComponentSets([
+      { id: "1", name: "empty", definitions: {}, variants: [] },
+      { id: "2", name: "no-variants", definitions: { "a#1": { type: "TEXT" } }, variants: [] },
+      undefined as unknown as Parameters<typeof lintComponentSets>[0][number],
+    ])).toEqual([]);
   });
 });

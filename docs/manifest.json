@@ -2187,6 +2187,7 @@
     "reset_instance",
     "audit_colors",
     "find_orphan_instances",
+    "audit_component_properties",
     "get_variable_collections",
     "get_variables",
     "create_variable_collection",
@@ -2529,12 +2530,12 @@
     {
       "pattern": null,
       "hint": "",
-      "doc": "**`variable.remove()` succeeds even when instances still bind it, and the variable keeps working — so a retirement can look clean and change nothing.** After removing it, `getLocalVariablesAsync()` no longer lists it (the designer sees it gone from the panel) but `getVariableByIdAsync(id)` still resolves it, the bindings still render its last value, and no error is raised anywhere. The trap is upstream, in the consumer scan that told you it was safe: a walker that does `if (node.type === 'INSTANCE') { check its componentProperties; return }` never descends into nested instances, and component-property bindings mostly live there — an `.Icon Content` inside a `Body Cell` inside a `Column`. One retirement measured 0 consumers by that walk and 160 by a walk that recursed. Before removing a variable, recurse through instance children, and after removing it confirm the id no longer resolves."
+      "doc": "**`variable.remove()` succeeds even when instances still bind it, and the variable keeps working — so a retirement can look clean and change nothing.** After removing it, `getLocalVariablesAsync()` no longer lists it (the designer sees it gone from the panel) but `getVariableByIdAsync(id)` still resolves it, the bindings still render its last value, and no error is raised anywhere. The trap is upstream, in the consumer scan that told you it was safe: a walker that does `if (node.type === 'INSTANCE') { check its componentProperties; return }` never descends into nested instances, and component-property bindings mostly live there — an `.Icon Content` inside a `Body Cell` inside a `Column`. One retirement measured 0 consumers by that walk and 160 by a walk that recursed. Before removing a variable, recurse through instance children; afterwards the id keeps resolving forever (it is a tombstone, not proof of failure), so verify instead that it has left `getLocalVariablesAsync()` and that a recursive scan finds zero bindings."
     },
     {
       "pattern": null,
       "hint": "",
-      "doc": "**`clone()` on a variant downgrades a SLOT child to a plain FRAME and drops its `slotContentId` reference** — the copy looks right and quietly loses the slot. Re-assigning `componentPropertyReferences = { slotContentId: '<Slot#id>' }` to the cloned frame restores the behaviour: the master still reports `FRAME`, but instances of it materialise a real `SLOT` child, expose the SLOT property, and accept appended content. There is no `figma.createSlot()`, so this reassignment is the only repair from code; duplicating the variant in the Figma UI keeps the SLOT type intact."
+      "doc": "**`clone()` on a variant downgrades a SLOT child to a plain FRAME and drops its `slotContentId` reference** — the copy looks right and quietly loses the slot. Re-assigning `componentPropertyReferences = { slotContentId: '<Slot#id>' }` to the cloned frame restores the behaviour: the master still reports `FRAME`, but instances of it materialise a real `SLOT` child, expose the SLOT property, and accept appended content. There is no `figma.createSlot()`, so this reassignment is the only repair from code; duplicating the variant in the Figma UI keeps the SLOT type intact. Relai's post-run lint now names the slotless variants, but only for component sets it can reach — return the ids of what you cloned."
     },
     {
       "pattern": null,

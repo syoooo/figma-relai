@@ -299,3 +299,61 @@ export function lintCreatedNodes(nodes: readonly LintTarget[]): string[] {
   }
   return warnings;
 }
+
+// ── post-run lint: component properties wired to nothing ────────────
+// Both faults below are invisible on the canvas: the master renders, the
+// panel shows the control, and toggling it does nothing. They are caught by
+// comparing what a set DECLARES against what its variants actually REFERENCE.
+
+export interface ComponentSetLint {
+  id?: string;
+  name?: string;
+  /** componentPropertyDefinitions, reduced to the type tag */
+  definitions: Readonly<Record<string, { type: string }>>;
+  /** one entry per variant, with the property keys its subtree references */
+  variants: ReadonlyArray<{ name?: string; referencedKeys: readonly string[] }>;
+}
+
+function listSample(items: readonly string[], max = 3): string {
+  return items.slice(0, max).join(", ") + (items.length > max ? ` …+${items.length - max}` : "");
+}
+
+export function lintComponentSets(sets: readonly ComponentSetLint[]): string[] {
+  const warnings: string[] = [];
+  for (const set of sets) {
+    if (!set || !set.definitions || !Array.isArray(set.variants) || set.variants.length === 0) continue;
+    const declared = Object.entries(set.definitions).filter(([, def]) => def?.type !== "VARIANT");
+    if (declared.length === 0) continue;
+
+    const referenced = new Set<string>();
+    for (const variant of set.variants) for (const key of variant.referencedKeys ?? []) referenced.add(key);
+
+    // A property nothing references cannot do anything — there is no
+    // "deliberate" version of this, unlike a variant that legitimately lacks
+    // one of its siblings' layers.
+    const dead = declared.filter(([key]) => !referenced.has(key)).map(([key]) => key);
+    if (dead.length > 0) {
+      warnings.push(
+        `"${set.name}" (${set.id}) declares ${dead.length} propert${dead.length === 1 ? "y" : "ies"} that no variant references: ${listSample(dead)}. The panel shows the control and toggling it does nothing — wire it to a layer's componentPropertyReferences, or delete the property.`
+      );
+    }
+
+    // clone() downgrades a SLOT child to a plain FRAME and drops its
+    // slotContentId. A variant carrying none of the set's slots while its
+    // siblings carry one is that bug, not a design choice.
+    const slotKeys = declared.filter(([, def]) => def?.type === "SLOT").map(([key]) => key);
+    if (slotKeys.length > 0) {
+      const carries = (v: { referencedKeys: readonly string[] }) =>
+        (v.referencedKeys ?? []).some((key) => slotKeys.includes(key));
+      if (set.variants.some(carries)) {
+        const slotless = set.variants.filter((v) => !carries(v)).map((v) => v.name ?? "?");
+        if (slotless.length > 0) {
+          warnings.push(
+            `"${set.name}" (${set.id}) has ${slotless.length} variant(s) with no slot at all while their siblings have one: ${listSample(slotless)}. clone() turns a SLOT into a plain FRAME and drops the reference — reassign componentPropertyReferences = { slotContentId: "${slotKeys[0]}" } on the copied frame.`
+          );
+        }
+      }
+    }
+  }
+  return warnings;
+}

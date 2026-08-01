@@ -298,7 +298,7 @@ export const PITFALLS: Pitfall[] = [
   {
     pattern: null,
     hint: "",
-    doc: "**`clone()` on a variant downgrades a SLOT child to a plain FRAME and drops its `slotContentId` reference** — the copy looks right and quietly loses the slot. Re-assigning `componentPropertyReferences = { slotContentId: '<Slot#id>' }` to the cloned frame restores the behaviour: the master still reports `FRAME`, but instances of it materialise a real `SLOT` child, expose the SLOT property, and accept appended content. There is no `figma.createSlot()`, so this reassignment is the only repair from code; duplicating the variant in the Figma UI keeps the SLOT type intact.",
+    doc: "**`clone()` on a variant downgrades a SLOT child to a plain FRAME and drops its `slotContentId` reference** — the copy looks right and quietly loses the slot. Re-assigning `componentPropertyReferences = { slotContentId: '<Slot#id>' }` to the cloned frame restores the behaviour: the master still reports `FRAME`, but instances of it materialise a real `SLOT` child, expose the SLOT property, and accept appended content. There is no `figma.createSlot()`, so this reassignment is the only repair from code; duplicating the variant in the Figma UI keeps the SLOT type intact. Relai's post-run lint now names the slotless variants, but only for component sets it can reach — return the ids of what you cloned.",
   },
   {
     pattern: null,

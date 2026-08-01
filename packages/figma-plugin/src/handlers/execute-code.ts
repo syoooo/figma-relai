@@ -1,7 +1,13 @@
 import { pitfallHint } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
 import { serializeNode } from "../utils/node-helpers.js";
-import { makeRelai, lintCreatedNodes, type LintTarget } from "../utils/sandbox-helpers.js";
+import {
+  makeRelai,
+  lintCreatedNodes,
+  lintComponentSets,
+  type LintTarget,
+} from "../utils/sandbox-helpers.js";
+import { ancestorComponentSet, collectComponentSet } from "../utils/component-set-scan.js";
 import { isScopeLocked, isInLockedScope, scopeLockState } from "../write-guard.js";
 import { guardedNodesAmong } from "./guards.js";
 
@@ -9,6 +15,12 @@ import { guardedNodesAmong } from "./guards.js";
 // Plugin API. Gated by the designer's "Allow code execution" plugin setting.
 
 const MAX_RESULT_CHARS = 50000;
+
+// Calls that change the document. Used only to decide whether silence in the
+// return value is worth a nudge, so over-matching costs a sentence and
+// under-matching costs a missed check.
+const MUTATING_CALL =
+  /\.(?:clone|remove|appendChild|insertChild|createInstance|swapComponent|setProperties|resetOverrides|setBoundVariable|setExplicitVariableModeForCollection|editComponentProperty|addComponentProperty|deleteComponentProperty|resize)\s*\(|figma\.(?:create|combineAsVariants|group|union|flatten)/;
 
 function looksLikeNode(value: unknown): value is SceneNode {
   return (
@@ -123,6 +135,31 @@ registerHandler("execute_code", async (params) => {
     }
   }
   const warnings = lintCreatedNodes([...lintTargets.values()]);
+
+  // Component-set faults are invisible on the canvas, so they are checked on
+  // the set the touched nodes belong to rather than on the nodes themselves.
+  const sets = new Map<string, ComponentSetNode>();
+  for (const nodeId of lintTargets.keys()) {
+    if (sets.size >= 3) break;
+    try {
+      const set = ancestorComponentSet(await figma.getNodeByIdAsync(nodeId));
+      if (set && !sets.has(set.id)) sets.set(set.id, set);
+    } catch {
+      // Stale id from the returned-value regex — nothing to attribute
+    }
+  }
+  if (sets.size > 0) {
+    warnings.push(...lintComponentSets([...sets.values()].map(collectComponentSet)));
+  }
+
+  // The lint above only sees nodes relai made or the script returned. A script
+  // that edits the file and reports prose gets checked by nothing at all —
+  // which is exactly how a lost slot ships.
+  if (lintTargets.size === 0 && MUTATING_CALL.test(code)) {
+    warnings.push(
+      "This script changed the file but returned no node ids, so the silent-mistake lint had nothing to check. Return the ids of everything you created or mutated."
+    );
+  }
 
   // Scope lock can't intercept arbitrary code up front, so it lints after the
   // fact: touched nodes outside the locked selection get a loud warning.

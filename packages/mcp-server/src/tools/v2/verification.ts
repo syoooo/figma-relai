@@ -240,6 +240,39 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           // plugin build without the handler — rule silently absent
         }
 
+        // Rule 5.5: component properties wired to nothing. A declared property
+        // no variant references shows up in the panel and does nothing when
+        // used; a variant that lost its slot to clone() looks identical to its
+        // siblings. Neither is visible on the canvas.
+        try {
+          const wiring = (await sendCommand(
+            "audit_component_properties",
+            { nodeId: targetId },
+            60000
+          )) as { scanned?: number; findings?: string[] };
+          if (wiring && typeof wiring.scanned === "number" && wiring.scanned > 0) {
+            const findings = wiring.findings ?? [];
+            results.push({
+              rule: "property_wiring",
+              passed: findings.length === 0,
+              severity: "warning",
+              message: findings.length
+                ? `${findings.length} component-property fault(s) across ${wiring.scanned} set(s): ${findings.slice(0, 2).join(" | ")}${findings.length > 2 ? " …" : ""}`
+                : `Every declared property is referenced by a layer (${wiring.scanned} set(s) checked)`,
+              nodeId: targetId,
+              fix: findings.length
+                ? {
+                    tool: "manage_components",
+                    reason: "Wire the property to a layer, or delete it",
+                    args: { action: "props" },
+                  }
+                : undefined,
+            });
+          }
+        } catch {
+          // plugin build without the handler — rule silently absent
+        }
+
         // Rules 6-7: the two token faults that look perfect on the canvas.
         // A token left at ALL_SCOPES offers itself in every property picker in
         // the file; a token that aliases another component's token inherits that

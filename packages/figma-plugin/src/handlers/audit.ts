@@ -1,5 +1,7 @@
 import { registerHandler } from "../dispatcher.js";
 import { getNodeById } from "../utils/node-helpers.js";
+import { lintComponentSets } from "../utils/sandbox-helpers.js";
+import { ancestorComponentSet, collectComponentSet } from "../utils/component-set-scan.js";
 
 // Read-only audits that must walk a whole subtree in one round-trip.
 // The MCP-side analyzers previously fetched node info level by level, which
@@ -107,4 +109,28 @@ registerHandler("find_orphan_instances", async (params) => {
   }
 
   return { scanned, total: instances.length, orphans, capped: orphans.length >= 100 };
+});
+
+// Component properties the panel offers but nothing consumes. Both faults are
+// invisible on the canvas — the master renders, the control is there, and
+// using it does nothing — so only a declared-versus-referenced comparison
+// finds them. Shares its rules with the execute_figma post-run lint.
+registerHandler("audit_component_properties", async (params) => {
+  const root = params.nodeId ? await getNodeById(params.nodeId as string) : figma.currentPage;
+  if (!root) throw new Error(`Node not found: ${params.nodeId}`);
+  if (root.type === "PAGE") await (root as PageNode).loadAsync();
+
+  const sets: ComponentSetNode[] = [];
+  const own = ancestorComponentSet(root);
+  if (own) sets.push(own);
+  else if ("findAllWithCriteria" in root) {
+    sets.push(
+      ...((root as ChildrenMixin & {
+        findAllWithCriteria: (c: { types: NodeType[] }) => SceneNode[];
+      }).findAllWithCriteria({ types: ["COMPONENT_SET"] }) as ComponentSetNode[])
+    );
+  }
+
+  const findings = lintComponentSets(sets.slice(0, 40).map(collectComponentSet));
+  return { scanned: sets.length, findings, capped: sets.length > 40 };
 });

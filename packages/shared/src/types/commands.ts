@@ -118,6 +118,7 @@ export const FIGMA_COMMANDS = [
   "reset_instance",
   "audit_colors",
   "find_orphan_instances",
+  "audit_component_properties",
   // Variables
   "get_variable_collections",
   "get_variables",
