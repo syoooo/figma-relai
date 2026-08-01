@@ -2514,7 +2514,7 @@
     {
       "pattern": null,
       "hint": "",
-      "doc": "**Writing a plain value over a variable-bound component property does not unbind it.** `instance.setProperties({ key: \"diamond\" })` on a property whose value is a `VARIABLE_ALIAS` returns without error and leaves the alias in place — the next read still shows the token. There is no `unbind` for property values: call `instance.resetOverrides()` and re-apply everything you wanted to keep (the sizes, the styles, and any fills bound inside that instance, which the reset also clears)."
+      "doc": "**A plain write clears a variable-bound component property only on the node you write to — read back to confirm which node still holds the alias.** `instance.setProperties({ key: \"diamond\" })` does drop the `VARIABLE_ALIAS` on that instance (measured both with a different value and with the token's own resolved string). What surprises people is where the binding *else* lives: set it on one instance and the main component keeps its own alias, so re-reading the master still reports bound; and an instance nested two levels down (`.Icon Content` inside a `Body Cell` inside a `Column`) carries its own override that the parent write never touches. Always read the property back on the exact node you meant to change, and sweep nested instances separately."
     },
     {
       "pattern": null,
@@ -2525,6 +2525,16 @@
       "pattern": null,
       "hint": "",
       "doc": "**A plugin-created instance placed under an explicit variable mode stays stuck on the placeholder, and waiting does not fix it.** Create an instance, drop it under a node whose Theme mode differs from the page's, and read it back: the nested variant *does* swap (`iconFamily=Phosphor` → `FA7`), but a component property bound to a variable resolves to the new variant's **default** rather than to the token, so every icon reads as the placeholder glyph. Measured: still wrong after three minutes untouched — in `characters` and in the rendered screenshot alike — and setting the *same* mode again changes nothing. What unsticks it is `clearExplicitVariableModeForCollection` followed by `setExplicitVariableModeForCollection`; the binding was never destroyed, only unresolved. (Distinct from the few-second repaint lag a designer sees after switching a theme by hand on content that already exists.) A brand-switch probe built and screenshotted in one pass will therefore report that a whole file's icon tokens are broken when nothing is wrong: clear-and-re-set before reading, and confirm against a node that was already in the file."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**`variable.remove()` succeeds even when instances still bind it, and the variable keeps working — so a retirement can look clean and change nothing.** After removing it, `getLocalVariablesAsync()` no longer lists it (the designer sees it gone from the panel) but `getVariableByIdAsync(id)` still resolves it, the bindings still render its last value, and no error is raised anywhere. The trap is upstream, in the consumer scan that told you it was safe: a walker that does `if (node.type === 'INSTANCE') { check its componentProperties; return }` never descends into nested instances, and component-property bindings mostly live there — an `.Icon Content` inside a `Body Cell` inside a `Column`. One retirement measured 0 consumers by that walk and 160 by a walk that recursed. Before removing a variable, recurse through instance children, and after removing it confirm the id no longer resolves."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**`clone()` on a variant downgrades a SLOT child to a plain FRAME and drops its `slotContentId` reference** — the copy looks right and quietly loses the slot. Re-assigning `componentPropertyReferences = { slotContentId: '<Slot#id>' }` to the cloned frame restores the behaviour: the master still reports `FRAME`, but instances of it materialise a real `SLOT` child, expose the SLOT property, and accept appended content. There is no `figma.createSlot()`, so this reassignment is the only repair from code; duplicating the variant in the Figma UI keeps the SLOT type intact."
     },
     {
       "pattern": null,
