@@ -296,12 +296,29 @@ export class FigmaConnection {
     );
   }
 
-  /** Poll the presence map briefly — the relay pushes an update the moment the plugin joins. */
+  /**
+   * Poll the presence map briefly, then ASK.
+   *
+   * Presence is only ever written by a pushed `presence` event, so a plugin
+   * that closes and reopens can leave the cache stuck on false: the close set
+   * it, and the reopen's event never landed. Polling a cache that nothing is
+   * refreshing just burns the timeout and then reports "the plugin is not
+   * open" about a plugin sitting right there — while list_rooms, which asks
+   * the relay instead of trusting the cache, happily lists it.
+   */
   private async waitForPlugin(ms: number): Promise<void> {
     const deadline = Date.now() + ms;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 150));
       if (!this.currentRoom || this.presenceByRoom.get(this.currentRoom) !== false) return;
+    }
+    if (!this.currentRoom) return;
+    try {
+      const rooms = await this.listRooms();
+      const live = rooms.find((r) => r.room === this.currentRoom);
+      if (live?.hasPlugin) this.presenceByRoom.set(this.currentRoom, true);
+    } catch {
+      // Unreachable relay is the caller's problem, not this cache's
     }
   }
 
