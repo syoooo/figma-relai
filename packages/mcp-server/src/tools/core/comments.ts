@@ -140,7 +140,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
             fileKey = addressableKey(identity);
           } catch (err) {
             return textResult(
-              `${(err as Error).message} Pass fileUrl with the figma.com URL of the file (or branch) you mean.`
+              `${(err as Error).message} Pass fileUrl with the figma.com URL of the file — or of the branch, since comments live per branch.`
             );
           }
         }

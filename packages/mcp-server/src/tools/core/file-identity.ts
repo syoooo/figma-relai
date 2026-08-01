@@ -73,14 +73,14 @@ export async function resolveFileIdentity(sendCommand: SendCommandFn): Promise<F
   const candidates = probe?.candidates ?? [];
   if (candidates.length === 0) {
     throw new FileIdentityError(
-      "This file publishes no components, so its key cannot be resolved from the plugin (figma.fileKey is private-plugin-only). Pass fileUrl."
+      "This file publishes no components, so its key cannot be resolved from the plugin (figma.fileKey is private-plugin-only)."
     );
   }
 
   const token = loadToken();
   if (!token) {
     throw new FileIdentityError(
-      "Resolving the file key needs a Figma token — store one with `npx -y figma-relai@latest login`, or pass fileUrl."
+      "Resolving the file key needs a Figma token — store one with `npx -y figma-relai@latest login`."
     );
   }
 
@@ -111,7 +111,7 @@ export async function resolveFileIdentity(sendCommand: SendCommandFn): Promise<F
     throw new FileIdentityError(
       denied
         ? "Figma rejected the token on every probe (401/403) — it is expired or lacks the file content read scope. Re-run `npx -y figma-relai@latest login`."
-        : "None of this file's published component keys resolved. Pass fileUrl."
+        : "None of this file's published component keys resolved."
     );
   }
 
