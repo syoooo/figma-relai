@@ -91,8 +91,14 @@ async function anchorComments(
         on: hit.type === "PAGE" ? "canvas" : "node",
         name: hit.name,
         page: hit.page,
-        ...(hit.x !== undefined && offset
-          ? { canvas: { x: Math.round(hit.x + offset.x), y: Math.round((hit.y ?? 0) + offset.y) } }
+        // A pin on a node is offset from that node; a pin on empty canvas is
+        // offset from the page origin, which is the canvas coordinate itself.
+        ...(offset
+          ? hit.type === "PAGE"
+            ? { canvas: { x: Math.round(offset.x), y: Math.round(offset.y) } }
+            : hit.x !== undefined
+              ? { canvas: { x: Math.round(hit.x + offset.x), y: Math.round((hit.y ?? 0) + offset.y) } }
+              : {}
           : {}),
       },
     });

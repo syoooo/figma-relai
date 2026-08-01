@@ -36,8 +36,8 @@ export const PITFALLS: Pitfall[] = [
   },
   {
     pattern: "explicitly loaded",
-    hint: "Non-current pages must be loaded before traversal: await page.loadAsync() before reading page.children or calling findAll.",
-    doc: "**Traversing a non-current page throws until you `await page.loadAsync()`** — `figma.currentPage` is always loaded, other pages are not.",
+    hint: "Non-current pages must be loaded before traversal: await page.loadAsync() before reading page.children or calling findAll. A getNodeByIdAsync that succeeded is NOT proof its page is loaded — resolve the node's page and load that, rather than relying on whatever ran before you.",
+    doc: "**Traversing a non-current page throws until you `await page.loadAsync()`** — `figma.currentPage` is always loaded, other pages are not. Two things make this bite later than it should. `getNodeByIdAsync` resolves a node on an unloaded page perfectly well, so a handler handed a node id looks healthy right up to the moment it walks children. And the page is often already loaded by whatever ran first, so identical code passes in a session where another tool touched that page and throws in one where it did not — which reads as flakiness rather than a missing load. Load the page you need yourself; and if the caller swallows handler errors, this stops being a failure and becomes a check that silently disappears.",
   },
   {
     pattern: "layoutSizing",

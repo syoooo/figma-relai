@@ -45,27 +45,56 @@ function cacheKey(componentKey: string, rootName: string): string {
   return `${componentKey}::${rootName}`;
 }
 
-/** Published components only: dot-prefixed ones are unpublishable and 404. */
-function publishedKeys(): Array<{ key: string; name: string; kind: "set" | "component" }> {
-  const out: Array<{ key: string; name: string; kind: "set" | "component" }> = [];
-  const seen = new Set<string>();
-  for (const page of figma.root.children) {
-    for (const node of page.children) {
-      if (out.length >= MAX_PROBE_KEYS) return out;
-      if (node.type !== "COMPONENT_SET" && node.type !== "COMPONENT") continue;
-      if (node.name.startsWith(".")) continue;
-      const key = (node as ComponentSetNode | ComponentNode).key;
-      if (!key || seen.has(key)) continue;
-      seen.add(key);
-      out.push({ key, name: node.name, kind: node.type === "COMPONENT_SET" ? "set" : "component" });
-    }
+type Candidate = { key: string; name: string; kind: "set" | "component" };
+
+/** Dot-prefixed components are unpublishable, so their keys only 404. */
+function harvest(page: PageNode, out: Candidate[], seen: Set<string>): void {
+  for (const node of page.children) {
+    if (out.length >= MAX_PROBE_KEYS) return;
+    if (node.type !== "COMPONENT_SET" && node.type !== "COMPONENT") continue;
+    if (node.name.startsWith(".")) continue;
+    const key = (node as ComponentSetNode | ComponentNode).key;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ key, name: node.name, kind: node.type === "COMPONENT_SET" ? "set" : "component" });
   }
+}
+
+/**
+ * Under `documentAccess: dynamic-page` a page's children cannot be read until
+ * that page is loaded — reaching for them throws rather than returning empty,
+ * which took this whole handler down. Pages are loaded one at a time and only
+ * until enough keys are in hand: a probe needs a handful, and a file with
+ * fifty pages should not pay for all of them.
+ */
+async function publishedKeys(): Promise<Candidate[]> {
+  const out: Candidate[] = [];
+  const seen = new Set<string>();
+  harvest(figma.currentPage, out, seen); // already loaded, so it is free
+  if (out.length >= MAX_PROBE_KEYS) return out;
+  for (const page of figma.root.children) {
+    if (page.id === figma.currentPage.id) continue;
+    try {
+      await page.loadAsync();
+    } catch {
+      continue;
+    }
+    harvest(page, out, seen);
+    if (out.length >= MAX_PROBE_KEYS) break;
+  }
+  return out;
+}
+
+/** Whatever is readable without loading anything — for the panel's first paint. */
+function loadedPageKeys(): Candidate[] {
+  const out: Candidate[] = [];
+  harvest(figma.currentPage, out, new Set());
   return out;
 }
 
 registerHandler("get_file_identity", async () => {
   const rootName = figma.root.name;
-  const candidates = publishedKeys();
+  const candidates = await publishedKeys();
   const store = await readStore();
   for (const c of candidates) {
     const hit = store[cacheKey(c.key, rootName)];
@@ -99,11 +128,20 @@ registerHandler("set_file_identity", async (params) => {
   return { stored: true, identity };
 });
 
-/** Panel boot: show the lineage without waiting for an agent to ask. */
+/**
+ * Panel boot: paint the lineage if it happens to be one lookup away.
+ *
+ * Deliberately cheap — it reads only the page already open. Loading pages to
+ * find a cache key would make every plugin launch pay for a label. When this
+ * finds nothing the panel simply shows what it always did, and the first
+ * agent contact of the session resolves and posts the real answer.
+ */
 export async function postFileIdentity(): Promise<void> {
   const rootName = figma.root.name;
+  const candidates = loadedPageKeys();
+  if (candidates.length === 0) return;
   const store = await readStore();
-  for (const c of publishedKeys()) {
+  for (const c of candidates) {
     const hit = store[cacheKey(c.key, rootName)];
     if (hit) {
       figma.ui.postMessage({ type: "file-identity", rootName, identity: hit });

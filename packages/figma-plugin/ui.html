@@ -679,7 +679,14 @@
     .guard-row .gname { flex: 1; min-width: 0; overflow-wrap: anywhere; }
     .guard-row.on { color: var(--text); }
     .feed-entry.evidence { color: var(--amber-dim); }
-    .feed-entry.evidence .sq { width: 6px; height: 6px; background: var(--amber); flex-shrink: 0; }
+    /* Same trouble the status cell had: a block with no text offers the row no
+       baseline, so the row took its bottom edge and dragged the words down to
+       meet it. It sits on the first line's box like .st does, and the text
+       stays where the neighbouring rows put it. */
+    .feed-entry.evidence .sq {
+      width: 6px; height: 6px; background: var(--amber); flex-shrink: 0;
+      align-self: flex-start; margin-top: calc((1.7em - 6px) / 2);
+    }
 
     /* ── Tools list ─────────────────────────────────────── */
     .tools-list {
@@ -1012,7 +1019,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.7.0 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
+  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.7.1 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
 
   <script>
     // ---------- i18n ----------

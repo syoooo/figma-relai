@@ -10,11 +10,12 @@ import {
 } from "./tools/index.js";
 import { startEmbeddedRelay, type EmbeddedRelay } from "./embedded-relay.js";
 import { refreshTokenStatus } from "./credentials.js";
+import { resolveFileIdentity } from "./tools/core/file-identity.js";
 import { loadState, saveState } from "./state.js";
 import { registerPrompts } from "./prompts.js";
 import { recordCommand, getSessionLog } from "./session-log.js";
 
-const VERSION = "0.7.0";
+const VERSION = "0.7.1";
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -127,6 +128,20 @@ async function main() {
   // Expose skill documents as MCP prompts (inlined at build time)
   registerPrompts(server);
 
+  // Which file is this? Nothing used to ask until manage_comments did, so the
+  // panel's lineage stayed blank in every session that never touched comments
+  // — and blank forever on a machine that never touches them at all. The first
+  // command that reaches the plugin is the earliest honest moment to find out.
+  let identityProbed = false;
+  const probeIdentityOnce = () => {
+    if (identityProbed) return;
+    identityProbed = true;
+    void resolveFileIdentity((c, p2, t) => connection.sendCommand(c, p2, t)).catch(() => {
+      // No token, nothing published, no branch — all ordinary. The panel keeps
+      // showing what it showed before and the caller is never told.
+    });
+  };
+
   // Register all domain tools; every plugin command lands in the session log
   registerAllTools(server, async (command, params, timeoutMs) => {
     const t0 = Date.now();
@@ -137,6 +152,10 @@ async function main() {
     try {
       const result = await connection.sendCommand(command, params, timeoutMs);
       recordCommand({ ts: t0, command, nodeId, ok: true, ms: Date.now() - t0 });
+      // Not for the identity commands themselves, or the probe calls itself
+      if (command !== "get_file_identity" && command !== "set_file_identity") {
+        probeIdentityOnce();
+      }
       return result;
     } catch (error) {
       recordCommand({

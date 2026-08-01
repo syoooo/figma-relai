@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.1
+
+0.7.0 shipped three things that had never once run. This is what an hour of actually running them found.
+
+- **The file-identity handler threw the moment it was called.** It walked every page's children, and under `documentAccess: dynamic-page` a page that is not the current one throws until it is loaded — so the lineage the panel was built to show could never arrive. Pages are loaded one at a time now, and only until enough component keys are in hand: a probe needs a handful, and a fifty-page file should not pay for all of them. The panel's first paint stays free — it reads only the page already open, and lets the session's own probe fill in the rest.
+- **Nothing ever asked which file this was.** `resolveFileIdentity` had exactly one caller, `manage_comments`, so the lineage stayed blank in any session that never touched comments — and blank forever on a machine that never touches them at all. The first command that reaches the plugin now triggers the lookup once, and fails silently when there is no token, nothing published, or no branch to find.
+- **The same page-loading trap sat in `audit_component_properties`,** where it would have been quieter still: `validate_design_rules` catches a handler's error and moves on, so the new `property_wiring` rule would have vanished from the report rather than failing. It loads the page it needs now. This one was already in the pitfall registry, hint and all — the entry says so plainly, and two handlers written the same afternoon walked into it anyway. It now also records what makes it bite late: `getNodeByIdAsync` succeeds on an unloaded page, and whatever ran before you has often loaded it already, so the same code passes in one session and throws in the next.
+- **A comment pinned to empty canvas reported no position.** Its node is the page itself, a page has no bounding box, and the offset was dropped along with it — but for that pin the offset *is* the canvas coordinate.
+
 ## 0.7.0
 
 Things that looked fine and did nothing — a lamp lit for a dead token, a switch wired to no layer, a lock that came back off, and an auto-detect that had never once succeeded.

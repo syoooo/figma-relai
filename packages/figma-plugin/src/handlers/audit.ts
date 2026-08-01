@@ -118,7 +118,16 @@ registerHandler("find_orphan_instances", async (params) => {
 registerHandler("audit_component_properties", async (params) => {
   const root = params.nodeId ? await getNodeById(params.nodeId as string) : figma.currentPage;
   if (!root) throw new Error(`Node not found: ${params.nodeId}`);
-  if (root.type === "PAGE") await (root as PageNode).loadAsync();
+  // Reading a set's children needs its page loaded, and a node handed in by id
+  // may well live on one that is not. Left unloaded it throws, and the caller
+  // catches quietly — so the rule disappears instead of reporting.
+  if (root.type === "PAGE") {
+    await (root as PageNode).loadAsync();
+  } else {
+    let page: BaseNode | null = root;
+    while (page && page.type !== "PAGE") page = page.parent;
+    if (page) await (page as PageNode).loadAsync();
+  }
 
   const sets: ComponentSetNode[] = [];
   const own = ancestorComponentSet(root);
