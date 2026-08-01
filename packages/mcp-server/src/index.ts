@@ -9,6 +9,7 @@ import {
   listToolCatalog,
 } from "./tools/index.js";
 import { startEmbeddedRelay, type EmbeddedRelay } from "./embedded-relay.js";
+import { refreshTokenStatus } from "./credentials.js";
 import { loadState, saveState } from "./state.js";
 import { registerPrompts } from "./prompts.js";
 import { recordCommand, getSessionLog } from "./session-log.js";
@@ -81,6 +82,10 @@ if (subcommand) {
 async function main() {
   // Create MCP server
   const server = createServer();
+
+  // Ask Figma whether the stored token is still alive before anyone lights a
+  // lamp for it. Fire-and-forget: nothing here should wait on the network.
+  void refreshTokenStatus();
 
   // Host the relay in this process unless another instance already does
   // (bind-or-connect: first MCP server binds 9055, later ones connect to it).

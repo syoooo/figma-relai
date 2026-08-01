@@ -312,7 +312,7 @@
     {
       "name": "manage_comments",
       "category": "comments",
-      "description": "Read and write comments on the Figma file: list (with node anchors — great for 'apply the feedback in the comments' or polling for designer requests; filter with unresolved:true and since:<ISO date>), add (optionally pinned to a node), reply, delete. Comment-driven workflow: designers leave asks as comments in Figma; poll list (unresolved + since last check), do the work, then reply on the thread with what was done. Requires a FIGMA_TOKEN env var (personal access token with comment scopes, generated at figma.com Settings → Security); the canvas tools work without it. The file is auto-detected from the open plugin when possible — otherwise pass fileUrl.",
+      "description": "Read and write comments on the Figma file: list (with node anchors — great for 'apply the feedback in the comments' or polling for designer requests; filter with unresolved:true and since:<ISO date>), add (optionally pinned to a node), reply, delete. Comment-driven workflow: designers leave asks as comments in Figma; poll list (unresolved + since last check), do the work, then reply on the thread with what was done. Requires a FIGMA_TOKEN env var (personal access token with comment scopes, generated at figma.com Settings → Security); the canvas tools work without it. The file is resolved from the plugin automatically (via a published component key, and the branch you are on — comments live per branch); pass fileUrl if this file publishes nothing.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2188,6 +2188,9 @@
     "audit_colors",
     "find_orphan_instances",
     "audit_component_properties",
+    "get_file_identity",
+    "get_comment_anchors",
+    "set_file_identity",
     "get_variable_collections",
     "get_variables",
     "create_variable_collection",

@@ -31,6 +31,7 @@ import "./handlers/audits-extra.js";
 import "./handlers/rulesets.js";
 import "./handlers/timeline.js";
 import "./handlers/proposals.js";
+import "./handlers/file-identity.js";
 
 import { dispatch, hasHandler, cancelCommand, clearCancelled } from "./dispatcher.js";
 import { beginCommand, endCommand, pushEvent, drainEvents } from "./event-buffer.js";
@@ -57,6 +58,7 @@ import { collectNodeRefs, isWriteCommand } from "./write-guard.js";
 import { reconcileOnLoad, rulesetStatus, postRulesetState } from "./handlers/rulesets.js";
 import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timeline.js";
 import { pendingProposals } from "./handlers/proposals.js";
+import { postFileIdentity } from "./handlers/file-identity.js";
 
 // Commands that count as a full check-up for the gentle reminder
 const CHECKUP_COMMANDS = new Set(["audit_readiness", "audit_ghosts"]);
@@ -74,6 +76,12 @@ interface RelaiSettings {
   requireApproval?: ApprovalMode; // legacy (pre-0.4)
   confirmHighRisk?: boolean; // legacy (pre-0.4)
   confirmLevel?: ConfirmLevel;
+  /**
+   * A lock the designer set stays set. Reloading the plugin (or reopening the
+   * file) used to drop it silently, which is a safety regression: the panel
+   * came back with the switch off and nobody noticed.
+   */
+  scopeLock?: { ids: string[]; names: string[] };
 }
 
 function effectiveConfirmLevel(s: RelaiSettings): ConfirmLevel {
@@ -96,6 +104,11 @@ async function loadSettings(): Promise<RelaiSettings> {
 // Send persisted settings to the UI so it can restore the room + auto-connect
 loadSettings().then(async (settings) => {
   currentSettings = settings;
+  // Restore the lock before anything can be dispatched — a lock that comes
+  // back off after a reload is worse than no lock, because the switch lies.
+  if (settings.scopeLock?.ids?.length) {
+    setScopeLock(settings.scopeLock.ids, settings.scopeLock.names ?? []);
+  }
   // Heal the merge wound first: a linked file whose law was wiped gets it
   // back automatically when the ruleset's auto switch is on.
   let rulesetHealed: string | null = null;
@@ -117,8 +130,10 @@ loadSettings().then(async (settings) => {
     rulesetStatus: await rulesetStatus(),
     rulesetHealed,
     lastCheckup,
+    scopeLock: scopeLockState(),
   });
   void postRulesetState();
+  void postFileIdentity();
 });
 
 // ── Approval gate ───────────────────────────────────────────────────
@@ -301,19 +316,26 @@ figma.ui.onmessage = async (msg: any) => {
 
   if (msg.type === "scope-lock") {
     if (msg.on) {
+      // With a selection, lock to it. With none, lock to the page the designer
+      // is standing on — a PAGE cannot be selected in Figma, so this is the
+      // only way to say "only this page". isInLockedScope already walks the
+      // ancestor chain up to the page, so the check itself is unchanged.
       const sel = figma.currentPage.selection;
-      if (sel.length === 0) {
-        figma.ui.postMessage({ type: "scope-lock-state", on: false, names: [], empty: true });
-        return;
-      }
-      setScopeLock(
-        sel.map((n) => n.id),
-        sel.slice(0, 3).map((n) => n.name)
-      );
+      const ids = sel.length > 0 ? sel.map((n) => n.id) : [figma.currentPage.id];
+      const names =
+        sel.length > 0 ? sel.slice(0, 3).map((n) => n.name) : [figma.currentPage.name];
+      setScopeLock(ids, names);
+      currentSettings.scopeLock = { ids, names };
     } else {
       clearScopeLock();
+      delete currentSettings.scopeLock;
     }
-    figma.ui.postMessage({ type: "scope-lock-state", ...scopeLockState() });
+    void figma.clientStorage.setAsync(SETTINGS_KEY, currentSettings);
+    figma.ui.postMessage({
+      type: "scope-lock-state",
+      ...scopeLockState(),
+      page: figma.currentPage.selection.length === 0,
+    });
     return;
   }
 

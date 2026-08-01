@@ -3,7 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SendCommandFn } from "../../tool-registry.js";
 import { jsonResult, errorResult } from "./helpers.js";
 import { parseFileKey } from "./comments.js";
-import { loadToken } from "../../credentials.js";
+import { loadToken, noteAuthFailure } from "../../credentials.js";
 
 // The "look before you draw" tool. Layered honestly around what each API can
 // see: the plugin reports local + used-remote items and enabled-library
@@ -153,9 +153,16 @@ function apiFor(token: string): Api {
     const res = await fetch(`https://api.figma.com/v1${path}`, {
       headers: { "X-Figma-Token": token },
     });
+    noteAuthFailure(res.status);
     const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     return { ok: res.ok, status: res.status, json };
   };
+}
+
+/** 403 on every probe is a dead token, not twelve missing components. */
+function authFailure(statuses: readonly number[]): string | null {
+  if (statuses.length === 0 || !statuses.every((s) => s === 401 || s === 403)) return null;
+  return "Figma rejected the token on every probe (401/403) — it is expired or lacks the file content read scope. Re-run `npx -y figma-relai@latest login`, then retry.";
 }
 
 const metaOf = (r: { json: Record<string, unknown> }) =>
@@ -182,15 +189,21 @@ export async function discoverLibraryFiles(
     .slice(0, PROBE_LIMIT);
 
   const found = new Map<string, string>();
+  const statuses: number[] = [];
   for (const c of candidates) {
     for (const p of c.paths) {
       const res = await api(`${p}${c.key}`);
+      statuses.push(res.status);
       const fileKey = metaOf(res).file_key as string | undefined;
       if (res.ok && fileKey) {
         if (!found.has(fileKey)) found.set(fileKey, c.name as string);
         break;
       }
     }
+  }
+  if (found.size === 0) {
+    const denied = authFailure(statuses);
+    if (denied) throw new Error(denied);
   }
   return [...found].map(([fileKey, via]) => ({ fileKey, via }));
 }
@@ -257,10 +270,14 @@ async function fetchLibraryCatalogs(
     if (!fileKey) return { note: `Could not extract a file key from "${libraryFileUrl}".` };
     targets = [{ fileKey, via: "libraryFileUrl" }];
   } else {
-    targets = await discoverLibraryFiles(api, scan);
+    try {
+      targets = await discoverLibraryFiles(api, scan);
+    } catch (err) {
+      return { note: (err as Error).message };
+    }
     if (!targets.length) {
       return {
-        note: "No library file could be resolved from the keys this file holds — every candidate 404'd. Pass libraryFileUrl explicitly.",
+        note: "No library file could be resolved from the keys this file holds — every candidate 404'd (unpublished, or from a library this token cannot read). Pass libraryFileUrl explicitly.",
       };
     }
   }

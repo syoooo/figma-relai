@@ -785,7 +785,7 @@
         </div>
         <div class="conv-text" data-i18n="token_modal_body">No Figma access token. manage_comments and full library catalogs stay locked. Run this in any terminal, then restart your AI session:</div>
         <div class="cmd-block" id="tokenCmdBlock" onclick="copyLoginCmd()">
-          <code>npx figma-relai login</code>
+          <code>npx -y figma-relai@latest login</code>
           <span class="copy-label" id="tokenCopyLabel" data-i18n="copy">copy</span>
         </div>
       </div>
@@ -883,7 +883,7 @@
         </div>
       </div>
       <div class="setting-row">
-        <span class="label"><span data-i18n="lock_label">Lock to selection</span><span class="sub" id="lockSub" data-i18n="lock_hint">reject edits outside the current selection</span></span>
+        <span class="label"><span data-i18n="lock_label">Lock the scope</span><span class="sub" id="lockSub" data-i18n="lock_hint">reject edits outside the selection — none selected locks the page</span></span>
         <label class="switch"><input type="checkbox" id="scopeLock" onchange="onScopeLockToggle()"><span class="track"></span></label>
       </div>
       <div class="setting-row">
@@ -959,6 +959,11 @@
         agent_hint_on: 'Your AI is in this room, paired with this file.',
         agent_hint_off: 'No AI in this room yet — waiting for one to pair.',
         token_absent: 'NONE',
+        token_expired: 'EXPIRED',
+        token_checking: '…',
+        token_hint_expired: 'Figma rejected this token — expired or missing scopes. Click for how to replace it.',
+        token_hint_checking: 'Asking Figma whether this token still works…',
+        token_hint_ready_as: 'Figma accepted this token — signed in as ',
         token_hint_absent: 'No Figma access token — click for how to add one.',
         token_hint_ready: 'Figma access token found by the MCP server. Comments and library catalogs are unlocked.',
         token_modal_body: 'No Figma access token. manage_comments and full library catalogs stay locked. Run this in any terminal, then restart your AI session:',
@@ -977,9 +982,9 @@
         approval_title: 'AGENT REQUESTS',
         approve: 'Approve',
         deny: 'Deny',
-        lock_label: 'Lock to selection',
-        lock_hint: 'reject edits outside the current selection',
-        lock_empty: 'select something first, then toggle',
+        lock_label: 'Lock the scope',
+        lock_hint: 'reject edits outside the selection — none selected locks the page',
+        lock_page_prefix: 'locked to this page: ',
         lock_on_prefix: 'locked to: ',
         conventions_view: 'view',
         rules_add: 'add',
@@ -1055,6 +1060,11 @@
         agent_hint_on: 'AIがこのルームにいて、このファイルとペアリングしています。',
         agent_hint_off: 'このルームにまだAIがいません — ペアリング待ちです。',
         token_absent: 'なし',
+        token_expired: '期限切れ',
+        token_checking: '…',
+        token_hint_expired: 'Figmaがこのトークンを拒否しました（期限切れか権限不足）。クリックで再設定の方法を表示します。',
+        token_hint_checking: 'トークンがまだ有効かFigmaに確認しています…',
+        token_hint_ready_as: 'Figmaが受理しました。サインイン中: ',
         token_hint_absent: 'Figmaアクセストークンが未設定です。クリックで設定方法を表示します。',
         token_hint_ready: 'MCPサーバーがFigmaアクセストークンを認識しています。コメントとライブラリ目録が利用できます。',
         token_modal_body: 'Figmaアクセストークンが未設定です。manage_commentsとライブラリ全目録は使えません。以下をターミナルで実行し、AIのセッションを再起動してください：',
@@ -1073,9 +1083,9 @@
         approval_title: 'エージェントからのリクエスト',
         approve: '承認',
         deny: '拒否',
-        lock_label: '選択範囲に限定',
-        lock_hint: '選択範囲の外への編集をブロック',
-        lock_empty: '先にオブジェクトを選択してください',
+        lock_label: '編集範囲を限定',
+        lock_hint: '選択範囲の外への編集をブロック（未選択なら現在のページ）',
+        lock_page_prefix: 'このページに限定: ',
         lock_on_prefix: 'ロック中: ',
         conventions_view: '表示',
         rules_add: '追加',
@@ -1151,6 +1161,11 @@
         agent_hint_on: 'AI已在这个房间里，与这个文件配对。',
         agent_hint_off: '这个房间还没有AI — 等待配对。',
         token_absent: '未设置',
+        token_expired: '已过期',
+        token_checking: '…',
+        token_hint_expired: 'Figma拒绝了这个令牌（已过期或权限不足）。点击查看重新设置的方法。',
+        token_hint_checking: '正在向Figma确认这个令牌是否还有效…',
+        token_hint_ready_as: 'Figma已验证此令牌，登录身份: ',
         token_hint_absent: '未设置Figma访问令牌，点击查看设置方法。',
         token_hint_ready: 'MCP服务器已识别到Figma访问令牌，评论与库目录均可用。',
         token_modal_body: '未设置Figma访问令牌，manage_comments与完整库目录不可用。在任意终端执行以下命令，然后重启AI会话：',
@@ -1169,9 +1184,9 @@
         approval_title: 'Agent请求',
         approve: '批准',
         deny: '拒绝',
-        lock_label: '仅限选区',
-        lock_hint: '阻止选区之外的改动',
-        lock_empty: '请先选中内容再开启',
+        lock_label: '限定改动范围',
+        lock_hint: '阻止选区之外的改动（未选中则锁定本页）',
+        lock_page_prefix: '已锁定本页: ',
         lock_on_prefix: '已锁定: ',
         conventions_view: '查看',
         rules_add: '添加',
@@ -2009,20 +2024,36 @@
     // tokenPresent is null until the relay answers hello — a standalone relay
     // cannot know, so the chip stays hidden rather than claiming "NONE".
     var tokenPresent = null;
-    var LOGIN_CMD = 'npx figma-relai login';
+    // Presence used to be the whole story, so an expired token lit green while
+    // every REST call failed. `valid` is what the lamp colours by now.
+    var tokenValid = null;
+    var tokenHandle = '';
+    // @latest so the command also works inside a checkout of this repo, where
+    // a bare `npx figma-relai` resolves the workspace and cannot find a bin.
+    var LOGIN_CMD = 'npx -y figma-relai@latest login';
 
     function renderToken() {
       var chip = document.getElementById('tokenChip');
       if (tokenPresent === null) { chip.style.display = 'none'; return; }
       chip.style.display = '';
-      setChipState(chip, document.getElementById('tokenVal'), document.getElementById('tokenLamp'),
-        !!tokenPresent, tokenPresent ? 'on' : 'off',
-        t('token_absent'), t(tokenPresent ? 'token_hint_ready' : 'token_hint_absent'));
-      chip.style.cursor = tokenPresent ? 'default' : 'pointer';
+      var word, hint, lampClass, ok;
+      if (!tokenPresent) {
+        ok = false; lampClass = 'off'; word = t('token_absent'); hint = t('token_hint_absent');
+      } else if (tokenValid === false) {
+        ok = false; lampClass = 'warn'; word = t('token_expired'); hint = t('token_hint_expired');
+      } else if (tokenValid === true) {
+        ok = true; lampClass = 'on'; word = '';
+        hint = tokenHandle ? t('token_hint_ready_as') + tokenHandle : t('token_hint_ready');
+      } else {
+        ok = false; lampClass = 'warn'; word = t('token_checking'); hint = t('token_hint_checking');
+      }
+      setChipState(chip, document.getElementById('tokenVal'),
+        document.getElementById('tokenLamp'), ok, lampClass, word, hint);
+      chip.style.cursor = ok ? 'default' : 'pointer';
     }
 
     function onTokenChipClick() {
-      if (tokenPresent === false) openTokenModal();
+      if (tokenPresent === false || tokenValid === false) openTokenModal();
     }
     function openTokenModal() {
       document.getElementById('tokenModal').classList.add('open');
@@ -2220,7 +2251,14 @@
           var data = JSON.parse(event.data);
 
           if (data.type === 'hello' && data.server === 'figma-relai') {
-            tokenPresent = data.features ? !!data.features.token : null;
+            var tf = data.features ? data.features.token : undefined;
+            if (tf && typeof tf === 'object') {
+              tokenPresent = !!tf.present; tokenValid = tf.valid; tokenHandle = tf.handle || '';
+            } else if (data.features) {
+              tokenPresent = !!tf; tokenValid = null; tokenHandle = '';
+            } else {
+              tokenPresent = null; tokenValid = null; tokenHandle = ''; tokenValid = null; tokenHandle = '';
+            }
             renderToken();
             return;
           }
@@ -2313,6 +2351,12 @@
         if (!s.room) saveSettings({ room: roomName });
         document.getElementById('allowExec').checked = s.allowCodeExec !== false;
         document.getElementById('autoConnect').checked = s.autoConnect !== false;
+        // A restored lock must show as locked, or the switch lies about the file's state
+        if (msg.scopeLock && msg.scopeLock.on) {
+          document.getElementById('scopeLock').checked = true;
+          document.getElementById('lockSub').textContent =
+            t('lock_on_prefix') + (msg.scopeLock.names || []).join(', ');
+        }
         if (s.confirmLevel === 'open' || s.confirmLevel === 'risk' || s.confirmLevel === 'bulk' || s.confirmLevel === 'all') {
           confirmLevel = s.confirmLevel;
         } else if (s.requireApproval === 'bulk' || s.requireApproval === 'all') {
@@ -2407,10 +2451,9 @@
       if (msg.type === 'scope-lock-state') {
         document.getElementById('scopeLock').checked = !!msg.on;
         var lockSub = document.getElementById('lockSub');
-        if (msg.empty) {
-          lockSub.textContent = t('lock_empty');
-        } else if (msg.on) {
-          lockSub.textContent = t('lock_on_prefix') + (msg.names || []).join(', ');
+        if (msg.on) {
+          lockSub.textContent = t(msg.page ? 'lock_page_prefix' : 'lock_on_prefix') +
+            (msg.names || []).join(', ');
         } else {
           lockSub.textContent = t('lock_hint');
         }

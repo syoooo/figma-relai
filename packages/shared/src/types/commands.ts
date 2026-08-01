@@ -119,6 +119,9 @@ export const FIGMA_COMMANDS = [
   "audit_colors",
   "find_orphan_instances",
   "audit_component_properties",
+  "get_file_identity",
+  "get_comment_anchors",
+  "set_file_identity",
   // Variables
   "get_variable_collections",
   "get_variables",

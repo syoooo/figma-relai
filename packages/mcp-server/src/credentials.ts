@@ -91,3 +91,51 @@ export async function verifyToken(
     return { ok: false, reason: `Could not reach api.figma.com: ${(err as Error).message}` };
   }
 }
+
+// ── Live status ─────────────────────────────────────────────────────
+// The panel used to light green on presence alone, so an expired token read
+// as healthy while every REST call failed. Validity is checked once at
+// startup and again whenever a call comes back 401/403, then cached — the
+// relay announces features synchronously and cannot await.
+
+export interface TokenStatus {
+  present: boolean;
+  /** null = not checked yet (never claim health we have not verified) */
+  valid: boolean | null;
+  handle?: string;
+  reason?: string;
+}
+
+let cached: TokenStatus = { present: false, valid: null };
+let inFlight: Promise<TokenStatus> | null = null;
+
+export function tokenStatus(): TokenStatus {
+  return { ...cached, present: tokenSource() !== null };
+}
+
+export async function refreshTokenStatus(): Promise<TokenStatus> {
+  if (inFlight) return inFlight;
+  const token = loadToken();
+  if (!token) {
+    cached = { present: false, valid: null };
+    return cached;
+  }
+  inFlight = verifyToken(token)
+    .then((res) => {
+      cached = res.ok
+        ? { present: true, valid: true, handle: res.handle }
+        : { present: true, valid: false, reason: res.reason };
+      return cached;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
+}
+
+/** Call when Figma answers 401/403 — the lamp should go red the moment it dies. */
+export function noteAuthFailure(status: number): void {
+  if (status !== 401 && status !== 403) return;
+  cached = { present: tokenSource() !== null, valid: false, reason: `Figma answered ${status}.` };
+  void refreshTokenStatus();
+}
