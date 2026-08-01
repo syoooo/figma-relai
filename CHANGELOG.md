@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2
+
+The lineage lookup worked on a scratch file and found nothing in a real one.
+
+- **A design system does not park its components at the top of a page — it files them in sections.** The key probe read only each page's direct children, so a file publishing sixty component sets reported that it published none, and the panel's file-and-branch line stayed empty for the second release running. It walks now, skipping what cannot hold a publishable component: instances, and the inside of a set, whose children are variants carrying keys that are not the set's.
+- **What made this survive a release is worth more than the fix.** The chain was proved by hand with a recursive search, then implemented with a single-level loop — two different pieces of code, only one of them ever run against the real file. And 0.7.1's verification used a scratch file, where a fixture sits exactly where the naive loop would find it. A structure simple enough to test quickly is a structure that cannot fail the way the real one does.
+
 ## 0.7.1
 
 0.7.0 shipped three things that had never once run. This is what an hour of actually running them found.

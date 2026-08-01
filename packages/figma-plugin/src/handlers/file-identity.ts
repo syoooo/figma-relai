@@ -47,16 +47,30 @@ function cacheKey(componentKey: string, rootName: string): string {
 
 type Candidate = { key: string; name: string; kind: "set" | "component" };
 
-/** Dot-prefixed components are unpublishable, so their keys only 404. */
-function harvest(page: PageNode, out: Candidate[], seen: Set<string>): void {
-  for (const node of page.children) {
+/**
+ * Components are rarely parked at the top of a page — a design system files
+ * them inside sections, and scanning one level deep found nothing at all in a
+ * file that publishes sixty sets. So this walks, skipping what cannot hold a
+ * publishable component: instances, and the inside of a set (its children are
+ * variants, whose keys are not the set's).
+ *
+ * Dot-prefixed names are unpublishable, so their keys only ever 404.
+ */
+function harvest(root: PageNode | SceneNode, out: Candidate[], seen: Set<string>, depth = 0): void {
+  if (out.length >= MAX_PROBE_KEYS || depth > 6) return;
+  const children = "children" in root ? root.children : [];
+  for (const node of children) {
     if (out.length >= MAX_PROBE_KEYS) return;
-    if (node.type !== "COMPONENT_SET" && node.type !== "COMPONENT") continue;
-    if (node.name.startsWith(".")) continue;
-    const key = (node as ComponentSetNode | ComponentNode).key;
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push({ key, name: node.name, kind: node.type === "COMPONENT_SET" ? "set" : "component" });
+    if (node.type === "INSTANCE") continue;
+    if (node.type === "COMPONENT_SET" || node.type === "COMPONENT") {
+      if (node.name.startsWith(".")) continue;
+      const key = (node as ComponentSetNode | ComponentNode).key;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push({ key, name: node.name, kind: node.type === "COMPONENT_SET" ? "set" : "component" });
+      continue; // a set's children are variants; their keys are not the set's
+    }
+    if ("children" in node) harvest(node, out, seen, depth + 1);
   }
 }
 
