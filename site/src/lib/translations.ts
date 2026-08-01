@@ -1,6 +1,6 @@
 import type { Language } from './i18n';
 
-export const VERSION = 'v0.7.2';
+export const VERSION = 'v0.7.3';
 
 export const translations = {
   en: {

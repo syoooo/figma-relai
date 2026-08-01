@@ -13,7 +13,10 @@ import { registerHandler } from "../dispatcher.js";
 // carries the law and the precedents, and a file key is an environment fact,
 // not a design decision. It has no business travelling through a merge.
 
-const STORE_KEY = "relai.fileIdentity";
+// Bumped because 0.7.2 cached a wrong answer: the branch lookup was skipped,
+// so every branch stored itself as the main file under its own name. A cache
+// is read before anything else, so a poisoned one outlives the fix.
+const STORE_KEY = "relai.fileIdentity.2";
 const MAX_ENTRIES = 20;
 const MAX_PROBE_KEYS = 6;
 

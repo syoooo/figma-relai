@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.3
+
+0.7.2 fixed the half of the lookup that could not find the keys. This is the other half, which found them and then threw the answer away.
+
+- **A branch reported itself as the main file.** The component endpoint is documented to return `file_name` and does not, so the fallback took the *branch's* own name for the file's — and the very next line asks whether those two differ before going to look for a branch. They could not differ; they were the same value. The branch list was never fetched, `manage_comments` addressed the parent file, and three pins on a branch came back as an empty list. The name is now read from the file endpoint, which is the only place it actually arrives and which carries the branch list in the same response.
+- **The cached wrong answer had to go with it.** Identity is read from the plugin's cache before anything else, so 0.7.2's mistake would have outlived its own fix on every machine that already ran it.
+- **One failed lookup used to end the matter for the whole session.** The probe latched on its first attempt, so reloading the plugin, opening another file, or storing a token mid-session left the panel blank until the AI session itself was restarted. Only success latches now; failure gets a few more chances and then stops asking.
+
 ## 0.7.2
 
 The lineage lookup worked on a scratch file and found nothing in a real one.

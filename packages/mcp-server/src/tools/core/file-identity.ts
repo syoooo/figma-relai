@@ -84,7 +84,7 @@ export async function resolveFileIdentity(sendCommand: SendCommandFn): Promise<F
     );
   }
 
-  let main: { fileKey: string; fileName: string; via: string } | null = null;
+  let main: { fileKey: string; via: string } | null = null;
   const statuses: number[] = [];
   for (const c of candidates) {
     // A set's key resolves only under /component_sets and a component's only
@@ -95,11 +95,11 @@ export async function resolveFileIdentity(sendCommand: SendCommandFn): Promise<F
       statuses.push(res.status);
       const meta = (res.json.meta ?? {}) as Record<string, unknown>;
       if (res.ok && typeof meta.file_key === "string") {
-        main = {
-          fileKey: meta.file_key,
-          fileName: (meta.file_name as string) ?? rootName,
-          via: c.key,
-        };
+        // Only the key is taken from here. `file_name` is documented but not
+        // actually returned, and defaulting it to the root name made the
+        // branch test compare a value with itself — so the branch lookup
+        // never ran and every branch reported itself as the main file.
+        main = { fileKey: meta.file_key, via: c.key };
         break;
       }
     }
@@ -115,19 +115,22 @@ export async function resolveFileIdentity(sendCommand: SendCommandFn): Promise<F
     );
   }
 
-  const identity: FileIdentity = { fileKey: main.fileKey, fileName: main.fileName };
-
-  // A branch reports its own name as figma.root.name, so a mismatch with the
-  // main file's name is the signal to go looking for it.
-  if (rootName && rootName !== main.fileName) {
-    const res = await figmaApi(token, `/files/${main.fileKey}?branch_data=true&depth=1`);
-    const branches = (res.json.branches as Array<{ key?: string; name?: string }>) ?? [];
+  // The file endpoint is the only place the name actually arrives, and it
+  // carries the branch list in the same response — so it is asked
+  // unconditionally, and a branch reporting its own name as figma.root.name
+  // is recognised by the mismatch.
+  const file = await figmaApi(token, `/files/${main.fileKey}?branch_data=true&depth=1`);
+  const identity: FileIdentity = {
+    fileKey: main.fileKey,
+    fileName: typeof file.json.name === "string" ? file.json.name : rootName,
+  };
+  if (rootName && rootName !== identity.fileName) {
+    const branches = (file.json.branches as Array<{ key?: string; name?: string }>) ?? [];
     const hit = branches.find((b) => b.name === rootName);
     if (hit?.key) {
       identity.branchKey = hit.key;
       identity.branchName = hit.name;
     }
-    if (typeof res.json.name === "string") identity.fileName = res.json.name;
   }
 
   try {

@@ -15,7 +15,7 @@ import { loadState, saveState } from "./state.js";
 import { registerPrompts } from "./prompts.js";
 import { recordCommand, getSessionLog } from "./session-log.js";
 
-const VERSION = "0.7.2";
+const VERSION = "0.7.3";
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -132,14 +132,23 @@ async function main() {
   // panel's lineage stayed blank in every session that never touched comments
   // — and blank forever on a machine that never touches them at all. The first
   // command that reaches the plugin is the earliest honest moment to find out.
-  let identityProbed = false;
+  // A failure is not final: the designer may reload the plugin, open another
+  // file, or store a token mid-session, and a latch set on the first attempt
+  // would keep the panel blank for the rest of the process. Success latches;
+  // failure gets a few more chances and then stops asking.
+  let identityProbes = 0;
+  let identityResolved = false;
   const probeIdentityOnce = () => {
-    if (identityProbed) return;
-    identityProbed = true;
-    void resolveFileIdentity((c, p2, t) => connection.sendCommand(c, p2, t)).catch(() => {
-      // No token, nothing published, no branch — all ordinary. The panel keeps
-      // showing what it showed before and the caller is never told.
-    });
+    if (identityResolved || identityProbes >= 3) return;
+    identityProbes += 1;
+    void resolveFileIdentity((c, p2, t) => connection.sendCommand(c, p2, t))
+      .then(() => {
+        identityResolved = true;
+      })
+      .catch(() => {
+        // No token, nothing published, no branch — all ordinary. The panel keeps
+        // showing what it showed before and the caller is never told.
+      });
   };
 
   // Register all domain tools; every plugin command lands in the session log
