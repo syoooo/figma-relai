@@ -6,7 +6,7 @@ import { jsonResult, errorResult } from "./helpers.js";
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "import_from_library",
-    "Import a component, style, or variable from an enabled team library by its key. Component keys come from the design system or get_local_components; imported components can then be instantiated with manage_components.",
+    "Import a component, style, or variable from an enabled team library by its key. Keys come from get_design_system's libraryCatalog, which resolves each library this file draws from and lists everything it publishes — not just what the file already uses. If the library you want is not in that catalog, it is listed under librariesNotCatalogued with what to do about it. Imported components can then be instantiated with manage_components.",
     {
       kind: z.enum(["component", "style", "variable"]),
       key: z.string().describe("Library key"),

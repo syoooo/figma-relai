@@ -784,7 +784,7 @@
     {
       "name": "get_design_system",
       "category": "design-system",
-      "description": "Inventory the design system available to this file — call this BEFORE building UI, then prefer instantiating existing components (manage_components action:instantiate takes local and library keys) and binding existing variables over drawing raw shapes. Reports: local components/styles/variable collections with usage counts, remote components/styles the file already uses, enabled libraries' variable collections, and — with a token stored (`npx figma-relai login`) — the FULL published catalog of every library this file consumes, resolved automatically. What the file already uses is never the whole library: a component the file has not placed yet is invisible until this catalog is read. Results are cached per session — pass refresh:true after big library changes.",
+      "description": "Inventory the design system available to this file — call this BEFORE building UI, then prefer instantiating existing components (manage_components action:instantiate takes local and library keys) and binding existing variables over drawing raw shapes. Reports: local components/styles/variable collections with usage counts, remote components/styles the file already uses, enabled libraries' variable collections, and — with a token stored (`npx figma-relai login`) — the FULL published catalog of every library this file consumes, resolved automatically. What the file already uses is never the whole library: a component the file has not placed yet is invisible until this catalog is read. A library the file has drawn from NOTHING at all cannot be resolved either — those are named under librariesNotCatalogued, with the one step that fixes it. Results are cached per session — pass refresh:true after big library changes.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -804,7 +804,7 @@
     {
       "name": "import_from_library",
       "category": "design-system",
-      "description": "Import a component, style, or variable from an enabled team library by its key. Component keys come from the design system or get_local_components; imported components can then be instantiated with manage_components.",
+      "description": "Import a component, style, or variable from an enabled team library by its key. Keys come from get_design_system's libraryCatalog, which resolves each library this file draws from and lists everything it publishes — not just what the file already uses. If the library you want is not in that catalog, it is listed under librariesNotCatalogued with what to do about it. Imported components can then be instantiated with manage_components.",
       "inputSchema": {
         "type": "object",
         "properties": {

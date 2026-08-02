@@ -13,7 +13,7 @@ import { loadToken, noteAuthFailure } from "../../credentials.js";
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "get_design_system",
-    "Inventory the design system available to this file — call this BEFORE building UI, then prefer instantiating existing components (manage_components action:instantiate takes local and library keys) and binding existing variables over drawing raw shapes. Reports: local components/styles/variable collections with usage counts, remote components/styles the file already uses, enabled libraries' variable collections, and — with a token stored (`npx figma-relai login`) — the FULL published catalog of every library this file consumes, resolved automatically. What the file already uses is never the whole library: a component the file has not placed yet is invisible until this catalog is read. Results are cached per session — pass refresh:true after big library changes.",
+    "Inventory the design system available to this file — call this BEFORE building UI, then prefer instantiating existing components (manage_components action:instantiate takes local and library keys) and binding existing variables over drawing raw shapes. Reports: local components/styles/variable collections with usage counts, remote components/styles the file already uses, enabled libraries' variable collections, and — with a token stored (`npx figma-relai login`) — the FULL published catalog of every library this file consumes, resolved automatically. What the file already uses is never the whole library: a component the file has not placed yet is invisible until this catalog is read. A library the file has drawn from NOTHING at all cannot be resolved either — those are named under librariesNotCatalogued, with the one step that fixes it. Results are cached per session — pass refresh:true after big library changes.",
     {
       refresh: z.boolean().optional().describe("Rescan instead of using the session cache"),
       libraryFileUrl: z
@@ -33,6 +33,10 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
         )) as Record<string, unknown>;
 
         data.libraryCatalog = await fetchLibraryCatalogs(libraryFileUrl, data);
+        if (!libraryFileUrl) {
+          const missed = librariesNotCatalogued(data);
+          if (missed.length) data.librariesNotCatalogued = missedNote(missed);
+        }
 
         // Truncation must be impossible to miss: lists are usage-sorted, so a
         // cap silently hides exactly the newest zero-usage components.
@@ -159,10 +163,22 @@ function apiFor(token: string): Api {
   };
 }
 
-/** 403 on every probe is a dead token, not twelve missing components. */
-function authFailure(statuses: readonly number[]): string | null {
-  if (statuses.length === 0 || !statuses.every((s) => s === 401 || s === 403)) return null;
-  return "Figma rejected the token on every probe (401/403) — it is expired or lacks the file content read scope. Re-run `npx -y figma-relai@latest login`, then retry.";
+/**
+ * A refusal is not an absence. Two different failures wear 401/403, and they
+ * need opposite responses — one is "your token is dead", the other is "your
+ * token is fine and that library is not yours to read".
+ *
+ * Requiring EVERY status to be 401/403 never fired in practice: each key is
+ * tried on two endpoints, and the one that does not match its kind answers 404
+ * by design. So one guaranteed 404 per asset buried every permission error
+ * under "every candidate 404'd".
+ */
+export function probeFailureNote(statuses: readonly number[]): string | null {
+  const denied = statuses.filter((s) => s === 401 || s === 403).length;
+  if (denied === 0) return null;
+  return denied === statuses.length
+    ? "Figma rejected the token on every probe (401/403) — it is expired or lacks the file content read scope. Re-run `npx -y figma-relai@latest login`, then retry."
+    : `Figma refused ${denied} of ${statuses.length} probes with 401/403 — the token works, but it cannot read the libraries this file draws from (they belong to a team or organisation it has no access to). Ask for access to that library file, or pass libraryFileUrl for one you can read.`;
 }
 
 const metaOf = (r: { json: Record<string, unknown> }) =>
@@ -202,7 +218,7 @@ export async function discoverLibraryFiles(
     }
   }
   if (found.size === 0) {
-    const denied = authFailure(statuses);
+    const denied = probeFailureNote(statuses);
     if (denied) throw new Error(denied);
   }
   return [...found].map(([fileKey, via]) => ({ fileKey, via }));
@@ -252,6 +268,41 @@ async function catalogOne(api: Api, fileKey: string): Promise<Record<string, unk
   };
 }
 
+/**
+ * Discovery starts from assets the file already USES, so a library that is
+ * enabled but not yet drawn from has nothing to probe — it is invisible, and
+ * an agent reading the catalog concludes it is the whole design system.
+ *
+ * The enabled libraries are known by name (teamLibrary reports them), so the
+ * gap can at least be named. There is no public route from a variable
+ * collection to its file key, which is why this reports rather than resolves.
+ */
+export function librariesNotCatalogued(data: Record<string, unknown>): string[] {
+  const catalog = data.libraryCatalog as { libraries?: Array<{ name?: string }> } | undefined;
+  if (!catalog?.libraries) return []; // no token, or nothing resolved — other notes cover it
+  const norm = (s: string) => s.trim().toLowerCase();
+  const seen = new Set(catalog.libraries.map((l) => norm(l.name ?? "")));
+  const enabled = (data.variables as { libraryCollections?: Array<{ libraryName?: string }> })
+    ?.libraryCollections;
+  const names = new Set<string>();
+  for (const c of enabled ?? []) {
+    const name = c.libraryName?.trim();
+    if (name && !seen.has(norm(name))) names.add(name);
+  }
+  return [...names];
+}
+
+function missedNote(names: string[]): Record<string, unknown> {
+  return {
+    libraries: names,
+    why: "Enabled, but absent from the catalog above — usually because this file has not placed a single component or style from them, so there is no key to resolve their file from.",
+    // The remedy is the designer's, not the agent's: one instance is enough,
+    // and only while the scan runs — the keys it yields stay valid after.
+    how: "Ask the designer to drag any one component from that library onto the canvas (any page), then call this tool again with refresh:true. The instance can be deleted once the catalog is read — the keys remain valid. Or pass libraryFileUrl with the library file's figma.com URL.",
+    ignoreIf: "A library that publishes only variables always lands here; its contents are already in variables.libraryCollections.",
+  };
+}
+
 async function fetchLibraryCatalogs(
   libraryFileUrl: string | undefined,
   scan: Record<string, unknown>
@@ -276,8 +327,16 @@ async function fetchLibraryCatalogs(
       return { note: (err as Error).message };
     }
     if (!targets.length) {
+      // "Every candidate failed" and "there were no candidates" are different
+      // facts, and a file that publishes its own library has the second one.
+      const remote =
+        ((scan.components as { remoteUsed?: { items?: unknown[] } })?.remoteUsed?.items?.length ??
+          0) +
+        ((scan.styles as { remoteUsed?: { items?: unknown[] } })?.remoteUsed?.items?.length ?? 0);
       return {
-        note: "No library file could be resolved from the keys this file holds — every candidate 404'd (unpublished, or from a library this token cannot read). Pass libraryFileUrl explicitly.",
+        note: remote
+          ? "No library file could be resolved from the keys this file holds — every candidate 404'd (unpublished, or from a library this token cannot read). Pass libraryFileUrl explicitly."
+          : "This file uses no remote components or styles, so there is no key to resolve a library from. Either it draws from none, or it publishes its own — check components.local. Pass libraryFileUrl to catalog a specific library anyway.",
       };
     }
   }

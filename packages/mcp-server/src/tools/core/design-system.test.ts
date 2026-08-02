@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { discoverLibraryFiles } from "./design-system.js";
+import {
+  discoverLibraryFiles,
+  librariesNotCatalogued,
+  probeFailureNote,
+} from "./design-system.js";
 
 // Resolving a library file from the keys a file already holds is the thing that
 // removed "paste a library URL" from the workflow. These pin the three rules the
@@ -86,5 +90,64 @@ describe("discoverLibraryFiles", () => {
   test("returns nothing rather than guessing when every candidate 404s", async () => {
     const api = fakeApi({}, []);
     expect(await discoverLibraryFiles(api, scan([{ key: "a", name: "A" }]))).toEqual([]);
+  });
+});
+
+// Measured on the real API (2026-08-02): a component-set key answers 403 at
+// /component_sets and 404 at /components, so a mixed run is what a permission
+// problem actually looks like — never an all-403 one.
+describe("probeFailureNote", () => {
+  test("calls a mixed 403/404 run a permission problem, not a dead token", () => {
+    const note = probeFailureNote([403, 404, 404, 403]);
+    expect(note).toContain("2 of 4");
+    expect(note).toContain("the token works");
+    expect(note).not.toContain("expired");
+  });
+
+  test("calls an all-403 run a dead token", () => {
+    expect(probeFailureNote([403, 403])).toContain("expired");
+  });
+
+  test("says nothing when every probe simply missed", () => {
+    expect(probeFailureNote([404, 404])).toBeNull();
+    expect(probeFailureNote([])).toBeNull();
+  });
+});
+
+// Discovery starts from what the file already uses, so a library it has drawn
+// nothing from leaves no trace at all — and a catalog that silently omits it
+// reads as the whole design system.
+describe("librariesNotCatalogued", () => {
+  test("names an enabled library the catalog could not reach", () => {
+    expect(
+      librariesNotCatalogued({
+        libraryCatalog: { libraries: [{ name: "[MASTER] Gin" }] },
+        variables: {
+          libraryCollections: [
+            { libraryName: "[MASTER] Gin" },
+            { libraryName: "Gin Foundations" },
+            { libraryName: "Gin Foundations" }, // two collections, one library
+          ],
+        },
+      })
+    ).toEqual(["Gin Foundations"]);
+  });
+
+  test("says nothing when every enabled library was catalogued", () => {
+    expect(
+      librariesNotCatalogued({
+        libraryCatalog: { libraries: [{ name: "  gin  " }] },
+        variables: { libraryCollections: [{ libraryName: "Gin" }] },
+      })
+    ).toEqual([]);
+  });
+
+  test("stays quiet when nothing was catalogued at all — the token note covers that", () => {
+    expect(
+      librariesNotCatalogued({
+        libraryCatalog: { note: "needs a token" },
+        variables: { libraryCollections: [{ libraryName: "Gin" }] },
+      })
+    ).toEqual([]);
   });
 });
