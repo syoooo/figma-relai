@@ -478,6 +478,8 @@
       font-size: 10px; color: var(--faint);
       display: flex; align-items: center; justify-content: center; gap: 6px;
     }
+    /* The mark leads, as it does on every other row of the feed. Trailing the
+       words made this the one line in the column whose mark was on the right. */
     .feed-empty .cursor { flex-shrink: 0; color: var(--amber-dim); line-height: 0; }
     .feed-entry {
       display: flex; align-items: baseline; gap: var(--sp-8);
@@ -974,7 +976,7 @@
     <!-- Activity feed -->
     <div class="rule"><span data-i18n="activity">Activity</span><span class="feed-head-extra" style="margin-left:auto"><span class="view-link" onclick="openHistModal()" data-i18n="history">history</span><button class="stop-btn" id="stopBtn" onclick="stopAll()">&#9632; <span data-i18n="stop">STOP</span></button></span></div>
     <div class="feed" id="feed">
-      <div class="feed-row in" id="feedEmptyRow"><div class="feed-clip"><div class="feed-empty" id="feedEmpty"><span data-i18n="feed_empty">awaiting commands</span> <span class="cursor"><span class="pulsor" role="status" aria-label="Loading"><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span></span></span></div></div></div>
+      <div class="feed-row in" id="feedEmptyRow"><div class="feed-clip"><div class="feed-empty" id="feedEmpty"><span class="cursor"><span class="pulsor" role="status" aria-label="Loading"><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span></span></span><span data-i18n="feed_empty">awaiting commands</span></div></div></div>
     </div>
 
     <!-- Settings -->
