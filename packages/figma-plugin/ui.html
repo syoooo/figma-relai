@@ -257,16 +257,26 @@
       margin-bottom: var(--sp-6);
       display: flex; align-items: baseline; gap: var(--sp-6); min-width: 0;
     }
-    /* The file name yields first: the branch is the part that changes, so it
-       stays legible even when the panel is narrow. */
+    /* The file name yields first — the branch is the part that changes, so it
+       stays legible when the panel is narrow. But yielding first is not
+       yielding entirely: a long name beside a long branch used to leave the
+       card showing no file name at all, which is worse than a shortened
+       branch. The branch takes at most half the row and truncates past it. */
     .file-display .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .file-display .branch {
-      flex-shrink: 0; display: none; align-items: center; gap: 3px;
-      font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+      flex-shrink: 0; max-width: 50%; min-width: 0;
+      display: none; align-items: center; gap: 3px;
+      /* Smaller than the file name, because the name is the subject and the
+         branch qualifies it — but not so much smaller that it reads as a
+         footnote. Size carries the hierarchy here rather than parity, and it
+         also keeps the room: the FILE NAME is the part that ellipsises, so
+         every point the branch gains it takes from the name. */
+      font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
       color: var(--amber-dim); text-shadow: none;
     }
     .file-display .branch.show { display: inline-flex; }
-    .file-display .branch svg { display: block; }
+    .file-display .branch svg { display: block; flex-shrink: 0; }
+    .file-display .branch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .room-line {
       display: flex; align-items: center; gap: var(--sp-6);
       margin-top: var(--sp-8);
@@ -679,13 +689,19 @@
     .guard-row .gname { flex: 1; min-width: 0; overflow-wrap: anywhere; }
     .guard-row.on { color: var(--text); }
     .feed-entry.evidence { color: var(--amber-dim); }
-    /* Same trouble the status cell had: a block with no text offers the row no
-       baseline, so the row took its bottom edge and dragged the words down to
-       meet it. It sits on the first line's box like .st does, and the text
-       stays where the neighbouring rows put it. */
+    /* The mark is 6px and the tick's cell is 10px, so drawing the square AS the
+       cell pulled this row's words 4px left of every other row's. The square
+       now sits INSIDE a cell of the same width, centred the same way — one
+       column for every kind of mark, and no hand-computed offset to drift. */
     .feed-entry.evidence .sq {
-      width: 6px; height: 6px; background: var(--amber); flex-shrink: 0;
-      align-self: flex-start; margin-top: calc((1.7em - 6px) / 2);
+      flex-shrink: 0; width: 10px;
+      align-self: flex-start;
+      height: 1.7em;
+      height: 1lh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .feed-entry.evidence .sq::before {
+      content: ""; width: 6px; height: 6px; background: var(--amber);
     }
 
     /* ── Tools list ─────────────────────────────────────── */
@@ -818,7 +834,7 @@
     <div class="panel file-card">
       <div class="file-display">
         <span class="fname" id="connectedFile"></span>
-        <span class="branch" id="branchTag" title=""><svg viewBox="0 0 256 256" width="9" height="9" fill="currentColor" aria-hidden="true"><path d="M236,64a36,36,0,1,0-48,33.94V112a4,4,0,0,1-4,4H96a27.8,27.8,0,0,0-4,.29V97.94a36,36,0,1,0-24,0v60.12a36,36,0,1,0,24,0V144a4,4,0,0,1,4-4h88a28,28,0,0,0,28-28V97.94A36.07,36.07,0,0,0,236,64ZM80,52A12,12,0,1,1,68,64,12,12,0,0,1,80,52Zm0,152a12,12,0,1,1,12-12A12,12,0,0,1,80,204ZM200,76a12,12,0,1,1,12-12A12,12,0,0,1,200,76Z"/></svg><span id="branchName"></span></span>
+        <span class="branch" id="branchTag" title=""><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M236,64a36,36,0,1,0-48,33.94V112a4,4,0,0,1-4,4H96a27.8,27.8,0,0,0-4,.29V97.94a36,36,0,1,0-24,0v60.12a36,36,0,1,0,24,0V144a4,4,0,0,1,4-4h88a28,28,0,0,0,28-28V97.94A36.07,36.07,0,0,0,236,64ZM80,52A12,12,0,1,1,68,64,12,12,0,0,1,80,52Zm0,152a12,12,0,1,1,12-12A12,12,0,0,1,80,204ZM200,76a12,12,0,1,1,12-12A12,12,0,0,1,200,76Z"/></svg><span id="branchName"></span></span>
       </div>
       <div class="leader-row conv-row" id="convRow" onclick="openConvModal()">
         <span class="key">RULES</span>
@@ -1019,7 +1035,7 @@
   </div>
 
   <!-- Footer -->
-  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.7.3 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
+  <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.7.4 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
 
   <script>
     // ---------- i18n ----------

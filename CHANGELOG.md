@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.4
+
+Three ways of saying "there is nothing here" about something that is there.
+
+- **A library you cannot read is not a library that isn't there.** Discovery tries each asset key on two endpoints, and the one that does not match its kind answers 404 by design — so the rule that recognised a permission failure, which required *every* status to be 401/403, could never fire. Every refusal came back as "every candidate 404'd". A real design system was reporting no libraries while Figma was refusing twelve of twenty-four probes. The two failures are now told apart: a dead token, or a token that simply is not a member of that library's team.
+- **A library the file has drawn nothing from cannot be resolved at all** — there is no key to probe, and no public route from a variable collection to its file key. Those are named now, with the one step that fixes it: drop a single component from that library onto the canvas and rescan. It can be deleted straight after; the keys it yields stay valid.
+- **And a file that uses no remote assets was told its candidates had 404'd.** It had none.
+- **The panel: the evidence row's mark was 6px in a 10px column,** so a bulk-write row's text sat four pixels left of every other row's. The square now sits inside the same cell as the tick, centred the same way. The branch name grew from 10px to 12px — small enough to stay the file name's qualifier, large enough to read — and the file card can no longer lose the file name entirely to a long branch.
+
 ## 0.7.3
 
 0.7.2 fixed the half of the lookup that could not find the keys. This is the other half, which found them and then threw the answer away.
