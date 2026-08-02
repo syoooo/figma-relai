@@ -406,19 +406,60 @@
 
     /* ── Activity feed ──────────────────────────────────── */
     .feed-head-extra { display: flex; align-items: center; gap: var(--sp-8); }
-    .stop-btn {
-      display: none;
-      font-family: var(--mono); font-size: 8px; font-weight: 700;
-      letter-spacing: 0.16em;
-      padding: 1px var(--sp-8);
-      background: transparent;
-      border: 1px solid var(--err);
-      color: var(--err);
-      cursor: pointer;
+    /* STOP — a word set into the leader rule.
+       It used to be a bordered box that flicked in and out with `display`,
+       inside a group pinned to the right edge: every command start shoved
+       HISTORY 62.6px sideways and every settle shoved it back, for 0.1s reads
+       as much as for anything worth stopping. Both halves of that are gone.
+       WHERE. The slot sits between the label and the elastic dashed filler, so
+       the filler pays for its width out of its own dashes. Measured across
+       idle / armed / armed-with-count / hovered: HISTORY's left edge does not
+       move by a thousandth of a pixel, and the row height is the CONFIG rule's
+       to three decimals, so the feed below never shifts either.
+       HOW. grid-template-columns 0fr→1fr — .feed-row's own row-open trick
+       turned on its side — so this obeys the ruling the feed already obeys:
+       things open and close, they do not appear.
+       WHAT IT LOOKS LIKE. No box. The panel's only bordered control is deleted;
+       what is left is the action typography already in use for .view-link and
+       for a clickable command name, plus the one colour nothing else in this
+       header uses. No ■ either — a filled square is .lamp's, and it means
+       status, not stop. */
+    .feed-label { display: flex; align-items: center; min-width: 0; }
+    .halt {
+      display: grid; grid-template-columns: 0fr;
+      transition: grid-template-columns var(--dur-med) var(--ease-out);
     }
-    .stop-btn.show { display: inline-block; }
-    .stop-btn:hover { background: var(--err); color: var(--bg); }
-    .stop-btn:focus-visible { outline: 1px dashed var(--err); outline-offset: 2px; }
+    .halt.armed { grid-template-columns: 1fr; }
+    .halt-clip { overflow: hidden; min-width: 0; }
+    /* The ring belongs on the clip: on the button it is painted inside
+       overflow:hidden and cut off on all four sides. */
+    .halt-clip:has(:focus-visible) { outline: 1px dashed var(--err); outline-offset: 2px; }
+    .halt-btn {
+      display: flex; align-items: center; white-space: nowrap;
+      /* The rule's own 8px gap, carried INSIDE the clip — which is what makes
+         the collapsed slot genuinely zero-width, with no negative margin and
+         nothing coupled to .rule's gap. */
+      padding: 0 0 0 var(--sp-8);
+      font-family: var(--mono); font-size: 8px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      background: none; border: none;
+      color: var(--err); cursor: pointer;
+    }
+    .halt-btn:focus-visible { outline: none; }
+    /* line-height:1 keeps the inner box under the row's own line box, so this
+       can never be what sets the rule's height. */
+    .halt-lbl { line-height: 1; padding: 3px 0 2px; border-bottom: 1px dotted; }
+    /* stopAll() is global. Say so when it would take more than the one row you
+       can already see pulsing — suppressed at n<=1, where "×1" is noise. */
+    .halt-n { margin-left: 0.2em; }
+    .halt-n:empty { display: none; }
+    /* Approach lights the filler from the control to the right edge: the span
+       that lights is the section, and the section is what stopAll() kills.
+       HISTORY's own colour is untouched, so it reads as outside the blast. */
+    .halt-btn:hover .halt-lbl,
+    .halt-btn:focus-visible .halt-lbl { border-bottom-style: solid; }
+    .rule:has(.halt-btn:hover)::after,
+    .rule:has(.halt-btn:focus-visible)::after { border-top-color: var(--err); }
 
     .feed {
       max-height: 300px; overflow-y: auto;
@@ -974,7 +1015,13 @@
     </div>
 
     <!-- Activity feed -->
-    <div class="rule"><span data-i18n="activity">Activity</span><span class="feed-head-extra" style="margin-left:auto"><span class="view-link" onclick="openHistModal()" data-i18n="history">history</span><button class="stop-btn" id="stopBtn" onclick="stopAll()">&#9632; <span data-i18n="stop">STOP</span></button></span></div>
+    <!-- .feed-label is deliberately not the [data-i18n] element: applyI18n sets
+         textContent, which would delete the button nested inside it. The inline
+         margin-left:auto is gone with the old markup — `.rule .feed-head-extra`
+         overrides it with `margin-left: 0 !important`, so it had been dead for
+         some time while reading as load-bearing. HISTORY is pinned by the
+         elastic ::after, which is also what makes the slot's width free. -->
+    <div class="rule"><span class="feed-label"><span data-i18n="activity">Activity</span><span class="halt" id="haltSlot"><span class="halt-clip"><button class="halt-btn" id="stopBtn" type="button" tabindex="-1" aria-hidden="true" onclick="stopAll()"><span class="halt-lbl"><span data-i18n="stop">STOP</span><span class="halt-n" id="stopN"></span></span></button></span></span></span><span class="feed-head-extra"><span class="view-link" onclick="openHistModal()" data-i18n="history">history</span></span></div>
     <div class="feed" id="feed">
       <div class="feed-row in" id="feedEmptyRow"><div class="feed-clip"><div class="feed-empty" id="feedEmpty"><span class="cursor"><span class="pulsor" role="status" aria-label="Loading"><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span></span></span><span data-i18n="feed_empty">awaiting commands</span></div></div></div>
     </div>
@@ -2337,8 +2384,69 @@
       }
     }
 
+    // The control was bound to "is something running", and that binding is what
+    // made it fussy: a 0.1s read raised a stop button and put it away again.
+    // It is bound to "has this been running long enough to be worth stopping",
+    // measured over a BUSY STREAK rather than over one command — so twenty
+    // serial 400ms calls, which drive runningCount 1→0→1 twenty times, are one
+    // streak that opens the slot once instead of blinking twenty times.
+    var ARM_MS = 2000;    // clear of this panel's own command durations
+    var LINGER_MS = 600;  // quiet this long to end a streak; also bridges the
+                          // stagger as a batch's sub-commands settle
+    var busyAt = 0;       // when the current streak began (0 = idle)
+    var armTimer = null, goTimer = null, stopArmed = false;
+
+    function setStopArmed(on) {
+      if (stopArmed === on) return;
+      stopArmed = on;
+      document.getElementById('haltSlot').classList.toggle('armed', on);
+      var b = document.getElementById('stopBtn');
+      b.tabIndex = on ? 0 : -1;
+      if (on) {
+        b.removeAttribute('aria-hidden');
+      } else {
+        // Clicking it is what makes it leave — don't strand focus, and a focus
+        // ring, on a box that is about to be zero-width.
+        if (document.activeElement === b) b.blur();
+        b.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    function setStopCount() {
+      // One running row is already visible and pulsing; three is the difference
+      // between stopping a command and stopping a batch.
+      document.getElementById('stopN').textContent = runningCount > 1 ? '×' + runningCount : '';
+    }
+
+    function armStop() {
+      armTimer = null;
+      // Landed in a gap between two commands: arming over an empty feed would
+      // be a one-frame flash. The next command recomputes from busyAt, finds
+      // the remainder already negative, and arms on the spot.
+      if (runningCount > 0) setStopArmed(true);
+    }
+
+    function endStreak() {
+      goTimer = null;
+      if (armTimer) { clearTimeout(armTimer); armTimer = null; }
+      busyAt = 0;
+      setStopArmed(false);
+    }
+
     function updateStopBtn() {
-      document.getElementById('stopBtn').className = 'stop-btn' + (runningCount > 0 ? ' show' : '');
+      if (runningCount > 0) {
+        if (goTimer) { clearTimeout(goTimer); goTimer = null; }
+        if (!busyAt) busyAt = Date.now();
+        setStopCount();                      // written before the slot opens, so
+        if (stopArmed || armTimer) return;   // the reveal has no stale frame
+        var left = ARM_MS - (Date.now() - busyAt);
+        if (left <= 0) setStopArmed(true);
+        else armTimer = setTimeout(armStop, left);
+        return;
+      }
+      // Zero is a gap until proven otherwise: the arm clock keeps running
+      // across it, and only LINGER_MS of real quiet ends the streak.
+      if (!goTimer) goTimer = setTimeout(endStreak, LINGER_MS);
     }
 
     function stopAll() {
@@ -2356,6 +2464,12 @@
         }
         feedSettle(id, false, t('cancelled'));
       }
+      // The designer has answered. Close now rather than idling out the linger
+      // grace with a live control sitting over a feed that has already stopped.
+      if (armTimer) { clearTimeout(armTimer); armTimer = null; }
+      if (goTimer) { clearTimeout(goTimer); goTimer = null; }
+      busyAt = 0;
+      setStopArmed(false);
     }
 
     // ---------- Connection ----------
