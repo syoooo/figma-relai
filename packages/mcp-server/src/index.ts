@@ -14,8 +14,7 @@ import { resolveFileIdentity } from "./tools/core/file-identity.js";
 import { loadState, saveState } from "./state.js";
 import { registerPrompts } from "./prompts.js";
 import { recordCommand, getSessionLog } from "./session-log.js";
-
-const VERSION = "0.7.4";
+import { VERSION } from "./version.js";
 
 // Parse CLI arguments
 const args = process.argv.slice(2);

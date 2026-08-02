@@ -1,11 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { VERSION } from "./version.js";
 
 // Create and configure the MCP server instance
 export function createServer(): McpServer {
   return new McpServer(
     {
       name: "Relai",
-      version: "0.7.4",
+      version: VERSION,
     },
     {
       instructions: `

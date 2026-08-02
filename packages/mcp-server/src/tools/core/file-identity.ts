@@ -1,5 +1,6 @@
 import type { SendCommandFn } from "../../tool-registry.js";
 import { loadToken, noteAuthFailure } from "../../credentials.js";
+import { VERSION } from "../../version.js";
 
 // Resolving "which file am I looking at" without the private plugin API.
 //
@@ -22,6 +23,8 @@ export interface FileIdentity {
   fileName: string;
   branchKey?: string;
   branchName?: string;
+  /** Which server release worked this out. Absent on anything cached before 0.7.5. */
+  by?: string;
 }
 
 interface Candidate {
@@ -59,6 +62,14 @@ export class FileIdentityError extends Error {}
  * Cached answer first, then the probe. Anything resolved is handed back to the
  * plugin, which keeps it in clientStorage — the designer's file has no
  * business carrying an environment fact through a merge.
+ *
+ * The cache is only trusted when THIS release computed what is in it. Two
+ * servers can share one plugin — an old session still running beside a new
+ * one, or a plugin reloaded mid-session — and the cache is read before
+ * anything else, so a wrong answer written by older code outlives the fix that
+ * corrects it. That is not hypothetical: 0.7.3 shipped a fix that a stale
+ * process kept overwriting, and the cache had to be cleared by hand three
+ * times in one afternoon. Re-resolving costs two REST calls, once.
  */
 export async function resolveFileIdentity(sendCommand: SendCommandFn): Promise<FileIdentity> {
   const probe = (await sendCommand("get_file_identity", {})) as {
@@ -67,11 +78,18 @@ export async function resolveFileIdentity(sendCommand: SendCommandFn): Promise<F
     identity?: FileIdentity;
     candidates?: Candidate[];
   };
-  if (probe?.identity?.fileKey) return probe.identity;
+  const cached = probe?.identity?.fileKey ? probe.identity : null;
+  if (cached && cached.by === VERSION) return cached;
 
   const rootName = probe?.rootName ?? "";
   const candidates = probe?.candidates ?? [];
   if (candidates.length === 0) {
+    // The server updates itself (npx) and the plugin does not — it changes only
+    // when the designer re-imports it — so a new server meeting an older plugin
+    // is the ordinary case, not the rare one. An older plugin sends no
+    // candidates alongside a cache hit, and rejecting the only answer available
+    // would turn an improvement into a regression.
+    if (cached) return cached;
     throw new FileIdentityError(
       "This file publishes no components, so its key cannot be resolved from the plugin (figma.fileKey is private-plugin-only)."
     );
@@ -123,6 +141,7 @@ export async function resolveFileIdentity(sendCommand: SendCommandFn): Promise<F
   const identity: FileIdentity = {
     fileKey: main.fileKey,
     fileName: typeof file.json.name === "string" ? file.json.name : rootName,
+    by: VERSION,
   };
   if (rootName && rootName !== identity.fileName) {
     const branches = (file.json.branches as Array<{ key?: string; name?: string }>) ?? [];

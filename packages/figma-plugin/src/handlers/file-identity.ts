@@ -27,6 +27,12 @@ export interface FileIdentity {
   branchKey?: string;
   branchName?: string;
   resolvedAt?: string;
+  /**
+   * Which server release worked this out. The plugin never reads it — it is
+   * stored and handed back so the server can tell its own answers from those
+   * of another release still talking to this same plugin.
+   */
+  by?: string;
 }
 
 type Store = Record<string, FileIdentity>;
@@ -111,18 +117,18 @@ function loadedPageKeys(): Candidate[] {
 
 registerHandler("get_file_identity", async () => {
   const rootName = figma.root.name;
+  // Nothing published means nothing to probe — the caller must ask for a URL
   const candidates = await publishedKeys();
   const store = await readStore();
   for (const c of candidates) {
     const hit = store[cacheKey(c.key, rootName)];
-    if (hit) return { cached: true, rootName, identity: hit };
+    // The candidates travel WITH the hit. Deciding whether a cached answer is
+    // still worth having belongs to the caller that knows which code computed
+    // it — and a caller that rejects it must be able to redo the work without
+    // asking again.
+    if (hit) return { cached: true, rootName, identity: hit, candidates };
   }
-  return {
-    cached: false,
-    rootName,
-    // Nothing published means nothing to probe — the caller must ask for a URL
-    candidates,
-  };
+  return { cached: false, rootName, candidates };
 });
 
 registerHandler("set_file_identity", async (params) => {
