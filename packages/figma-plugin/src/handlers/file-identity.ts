@@ -108,12 +108,6 @@ async function publishedKeys(): Promise<Candidate[]> {
   return out;
 }
 
-/** Whatever is readable without loading anything — for the panel's first paint. */
-function loadedPageKeys(): Candidate[] {
-  const out: Candidate[] = [];
-  harvest(figma.currentPage, out, new Set());
-  return out;
-}
 
 registerHandler("get_file_identity", async () => {
   const rootName = figma.root.name;
@@ -152,25 +146,26 @@ registerHandler("set_file_identity", async (params) => {
 });
 
 /**
- * Panel boot: paint the lineage if it happens to be one lookup away.
+ * Panel boot: paint the lineage the file card is meant to show.
  *
- * Deliberately cheap — it reads only the page already open. Loading pages to
- * find a cache key would make every plugin launch pay for a label. When this
- * finds nothing the panel simply shows what it always did, and the first
- * agent contact of the session resolves and posts the real answer.
+ * Matched on the document's name alone, deliberately. Storing by component key
+ * is right — the key is what proves which file this is — but looking up that
+ * way at boot meant reading the open page for keys, and only the open page:
+ * the label appeared or vanished depending on which page the designer happened
+ * to leave open, with the correct answer sitting in the cache the whole time.
+ * Loading every page to find a key would make each launch pay for a label.
+ *
+ * Two files can share a name, so the newest entry wins and this stays a label:
+ * the identity that gets addressed is the one the session's own probe resolves.
  */
 export async function postFileIdentity(): Promise<void> {
   const rootName = figma.root.name;
-  const candidates = loadedPageKeys();
-  if (candidates.length === 0) return;
   const store = await readStore();
-  for (const c of candidates) {
-    const hit = store[cacheKey(c.key, rootName)];
-    if (hit) {
-      figma.ui.postMessage({ type: "file-identity", rootName, identity: hit });
-      return;
-    }
-  }
+  const suffix = `::${rootName}`;
+  const hit = Object.entries(store)
+    .filter(([k]) => k.endsWith(suffix))
+    .sort((a, b) => (b[1].resolvedAt ?? "").localeCompare(a[1].resolvedAt ?? ""))[0]?.[1];
+  if (hit) figma.ui.postMessage({ type: "file-identity", rootName, identity: hit });
 }
 
 /**

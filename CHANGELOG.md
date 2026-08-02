@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.6
+
+- **The file-and-branch line depended on which page you left open.** The cache holds the answer under the key of a component that proved it — but at boot the panel could only look for keys on the page already loaded, because loading every page to print a label is not a trade worth making. Open the file on a page whose components were not the ones that resolved it, and the lineage was simply absent, with the right answer sitting in storage the whole time. It is matched on the document's name now: a label, painted from whatever the cache last learned, while the identity that actually gets addressed stays the one this session resolves for itself.
+
 ## 0.7.5
 
 - **A cached answer now says which release worked it out.** The plugin's cache is read before anything else, so a wrong answer written by an older server outlives the fix that corrects it — 0.7.3's lineage fix was overwritten by a still-running older process three times in one afternoon before anyone noticed the cache was the culprit. Answers are stamped, and only this release's own are trusted; the plugin sends its candidate keys alongside a cache hit so a rejected answer can be redone in the same round trip. When it can't — the server updates itself and the plugin only changes when the designer re-imports it, so meeting an older plugin is ordinary — the foreign answer is kept rather than failing outright.
