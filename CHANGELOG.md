@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.5
+
+- **A cached answer now says which release worked it out.** The plugin's cache is read before anything else, so a wrong answer written by an older server outlives the fix that corrects it — 0.7.3's lineage fix was overwritten by a still-running older process three times in one afternoon before anyone noticed the cache was the culprit. Answers are stamped, and only this release's own are trusted; the plugin sends its candidate keys alongside a cache hit so a rejected answer can be redone in the same round trip. When it can't — the server updates itself and the plugin only changes when the designer re-imports it, so meeting an older plugin is ordinary — the foreign answer is kept rather than failing outright.
+- **The idle row's mark moved to the front.** Every row in the activity feed leads with its mark; the "awaiting commands" line trailed its cursor, the one line in that column facing the other way.
+- **The panel screenshots show the panel that exists now.** Re-rendering them produced byte-identical files, which was the finding: the seeded state showed none of what the panel had learned to say. They now carry the file-and-branch line, the kit the rules came from, law counts belonging to a file that has been worked rather than opened yesterday, and a live top row with a real progress message.
+
 ## 0.7.4
 
 Three ways of saying "there is nothing here" about something that is there.
