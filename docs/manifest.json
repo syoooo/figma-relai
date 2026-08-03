@@ -911,7 +911,7 @@
     {
       "name": "manage_rulesets",
       "category": "design-system",
-      "description": "Kits (rulesets) — named common-ancestor law the plugin keeps on the designer's machine, spanning every file it opens (one designer usually runs one product; its files share the same law). The panel shows this as the KIT row in the connection cluster — when speaking to the designer, call it a kit, not a ruleset. A file LINKS to one ruleset; the file's own carried conventions stay the working copy. Figma DISCARDS file-carried law on branch→main merges — a linked ruleset is the recovery: status shows 'file-empty' after a merge, restore (or the set's autoRestore switch) re-seeds it. Actions: list / status (this file's state: in-sync, file-empty, drifted…) / save (name + conventions, or fromFile:true to capture this file's law) / link (optionally restore:true) / unlink / restore (ruleset→file, also seeds promoted precedents) / push (file→ruleset — the file's law becomes the ancestor) / promote (id — copy one precedent into the linked ruleset so every linked file inherits it) / delete / export (markdown package with provenance frontmatter) / import (markdown). Pass only the fields the action needs.",
+      "description": "Kits (rulesets) — named common-ancestor law the plugin keeps on the designer's machine, spanning every file it opens (one designer usually runs one product; its files share the same law). The panel shows this as the KIT row in the connection cluster — when speaking to the designer, call it a kit, not a ruleset. A file LINKS to one ruleset; the file's own carried conventions stay the working copy. Figma DISCARDS file-carried law on branch→main merges — a linked ruleset is the recovery: status shows 'file-empty' after a merge, restore (or the set's autoRestore switch) re-seeds it. Actions: list / status (this file's state: in-sync, file-empty, drifted…) / save (name + conventions, or fromFile:true to capture this file's law) / link (optionally restore:true) / unlink / restore (ruleset→file, also seeds promoted precedents; REFUSED when the file's law is newer than the kit's — status.newer says which side is, and push is usually the fix — pass force:true to override) / push (file→ruleset — the file's law becomes the ancestor) / promote (id — copy one precedent into the linked ruleset so every linked file inherits it) / delete / export (markdown package with provenance frontmatter) / import (markdown). Pass only the fields the action needs.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -954,6 +954,10 @@
           "restore": {
             "type": "boolean",
             "description": "link: immediately restore the ruleset into the file"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "restore/link: replace the file's law even when it is NEWER than the kit's. Without this, a restore that would walk backwards is refused — say which side you mean to keep."
           },
           "id": {
             "type": "string",

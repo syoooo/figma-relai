@@ -1151,6 +1151,8 @@
         moment_wound_yes: 'Restore',
         moment_drift: 'My rules differ from “{kit}” now.',
         moment_drift_pull: 'Update from {kit}',
+        moment_drift_mine: 'My rules are newer than “{kit}” ({mine} vs {kit_chars} chars).',
+        moment_drift_push: 'Send mine to {kit}',
         moment_first: 'I have no rules yet. Use “{kit}”?',
         moment_first_yes: 'Use it',
         moment_kit_gone: 'Kit “{kit}” was deleted. My rules are my own — they stay.',
@@ -1254,6 +1256,8 @@
         moment_wound_yes: '復元',
         moment_drift: 'この規約は「{kit}」と違っています。',
         moment_drift_pull: '「{kit}」から更新',
+        moment_drift_mine: 'この規約のほうが「{kit}」より新しいです({mine} 字 / 向こうは {kit_chars} 字)。',
+        moment_drift_push: '「{kit}」へ送る',
         moment_first: 'まだ規約がありません。「{kit}」を使いますか?',
         moment_first_yes: '使う',
         moment_kit_gone: 'キット「{kit}」を削除しました。規約はファイル自身のものなので、そのまま残ります。',
@@ -1357,6 +1361,8 @@
         moment_wound_yes: '恢复',
         moment_drift: '我的规矩和「{kit}」不一样了。',
         moment_drift_pull: '从 {kit} 更新',
+        moment_drift_mine: '我的规矩比「{kit}」新({mine} 字,那边 {kit_chars} 字)。',
+        moment_drift_push: '送到 {kit}',
         moment_first: '我还没有规矩。用「{kit}」吗？',
         moment_first_yes: '使用',
         moment_kit_gone: 'kit「{kit}」删掉了。规矩是文件自己的，还留着。',
@@ -2068,10 +2074,22 @@
         return;
       }
       if (s.state === 'drifted' && !momentAnswered.drift) {
-        showMomentCard(fill('moment_drift', s.linked), [
-          { label: fill('moment_drift_pull', s.linked), fn: function () { momentAnswered.drift = true; rsPost('restore'); hideMomentCard(); } },
-          { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.drift = true; hideMomentCard(); } }
-        ]);
+        // Direction matters. Offering only "update from the kit" once replaced
+        // a freshly written law with a month-old ancestor, because nothing
+        // said which side was newer. Lead with the side that was written last.
+        var mineNewer = s.newer === 'file';
+        var head = mineNewer
+          ? t('moment_drift_mine')
+              .replace(/\{kit\}/g, s.linked)
+              .replace('{mine}', s.fileChars)
+              .replace('{kit_chars}', s.setChars)
+          : fill('moment_drift', s.linked);
+        // Choosing to pull AFTER being told yours is newer IS the confirmation,
+        // so carry it through rather than bouncing off the safety and saying nothing.
+        var pull = { label: fill('moment_drift_pull', s.linked), fn: function () { momentAnswered.drift = true; rsPost('restore', mineNewer ? { force: true } : null); hideMomentCard(); } };
+        var push = { label: fill('moment_drift_push', s.linked), fn: function () { momentAnswered.drift = true; rsPost('push'); hideMomentCard(); } };
+        var later = { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.drift = true; hideMomentCard(); } };
+        showMomentCard(head, mineNewer ? [push, pull, later] : [pull, push, later]);
         return;
       }
       if (s.state === 'unlinked' && s.fileChars === 0 && rsList.length > 0 && !momentAnswered.first) {

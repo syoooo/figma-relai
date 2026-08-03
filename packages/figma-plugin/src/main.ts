@@ -255,7 +255,7 @@ figma.ui.onmessage = async (msg: any) => {
       if (op === "save-from-file") await dispatch("save_ruleset", { name, fromFile: true });
       else if (op === "link") await dispatch("link_ruleset", { name, restore: msg.restore === true });
       else if (op === "unlink") await dispatch("unlink_ruleset", {});
-      else if (op === "restore") await dispatch("restore_from_ruleset", {});
+      else if (op === "restore") await dispatch("restore_from_ruleset", { force: msg.force === true });
       else if (op === "push") await dispatch("push_to_ruleset", {});
       else if (op === "delete") await dispatch("delete_ruleset", { name });
       else if (op === "set-auto") await dispatch("save_ruleset", { name, autoRestore: msg.autoRestore === true });

@@ -9,10 +9,10 @@ const ACTIONS: Record<string, [string, string[]]> = {
   list: ["list_rulesets", []],
   save: ["save_ruleset", ["name", "conventions", "fromFile", "autoRestore", "provenance"]],
   delete: ["delete_ruleset", ["name"]],
-  link: ["link_ruleset", ["name", "restore"]],
+  link: ["link_ruleset", ["name", "restore", "force"]],
   unlink: ["unlink_ruleset", []],
   status: ["ruleset_status", []],
-  restore: ["restore_from_ruleset", []],
+  restore: ["restore_from_ruleset", ["force"]],
   push: ["push_to_ruleset", []],
   promote: ["promote_precedent", ["id"]],
   export: ["export_ruleset", ["name"]],
@@ -22,7 +22,7 @@ const ACTIONS: Record<string, [string, string[]]> = {
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_rulesets",
-    "Kits (rulesets) — named common-ancestor law the plugin keeps on the designer's machine, spanning every file it opens (one designer usually runs one product; its files share the same law). The panel shows this as the KIT row in the connection cluster — when speaking to the designer, call it a kit, not a ruleset. A file LINKS to one ruleset; the file's own carried conventions stay the working copy. Figma DISCARDS file-carried law on branch→main merges — a linked ruleset is the recovery: status shows 'file-empty' after a merge, restore (or the set's autoRestore switch) re-seeds it. Actions: list / status (this file's state: in-sync, file-empty, drifted…) / save (name + conventions, or fromFile:true to capture this file's law) / link (optionally restore:true) / unlink / restore (ruleset→file, also seeds promoted precedents) / push (file→ruleset — the file's law becomes the ancestor) / promote (id — copy one precedent into the linked ruleset so every linked file inherits it) / delete / export (markdown package with provenance frontmatter) / import (markdown). Pass only the fields the action needs.",
+    "Kits (rulesets) — named common-ancestor law the plugin keeps on the designer's machine, spanning every file it opens (one designer usually runs one product; its files share the same law). The panel shows this as the KIT row in the connection cluster — when speaking to the designer, call it a kit, not a ruleset. A file LINKS to one ruleset; the file's own carried conventions stay the working copy. Figma DISCARDS file-carried law on branch→main merges — a linked ruleset is the recovery: status shows 'file-empty' after a merge, restore (or the set's autoRestore switch) re-seeds it. Actions: list / status (this file's state: in-sync, file-empty, drifted…) / save (name + conventions, or fromFile:true to capture this file's law) / link (optionally restore:true) / unlink / restore (ruleset→file, also seeds promoted precedents; REFUSED when the file's law is newer than the kit's — status.newer says which side is, and push is usually the fix — pass force:true to override) / push (file→ruleset — the file's law becomes the ancestor) / promote (id — copy one precedent into the linked ruleset so every linked file inherits it) / delete / export (markdown package with provenance frontmatter) / import (markdown). Pass only the fields the action needs.",
     {
       action: z.enum(Object.keys(ACTIONS) as [string, ...string[]]),
       name: z.string().optional().describe("Ruleset name (save/link/delete/export; import fallback)"),
@@ -34,6 +34,12 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
         .describe("save: restore without asking when a linked file's law is found wiped"),
       provenance: z.string().optional().describe("save: where this law comes from (author/repo)"),
       restore: z.boolean().optional().describe("link: immediately restore the ruleset into the file"),
+      force: z
+        .boolean()
+        .optional()
+        .describe(
+          "restore/link: replace the file's law even when it is NEWER than the kit's. Without this, a restore that would walk backwards is refused — say which side you mean to keep."
+        ),
       id: z.string().optional().describe("promote: precedent id (list_precedents shows them)"),
       markdown: z.string().optional().describe("import: a ruleset package exported earlier"),
     },

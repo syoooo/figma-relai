@@ -8,7 +8,7 @@ import {
   type LintTarget,
 } from "../utils/sandbox-helpers.js";
 import { ancestorComponentSet, collectComponentSet } from "../utils/component-set-scan.js";
-import { isScopeLocked, isInLockedScope, scopeLockState } from "../write-guard.js";
+import { isScopeLocked, isInLockedScope, scopeLockState, nodeIdsInText } from "../write-guard.js";
 import { guardedNodesAmong } from "./guards.js";
 
 // The execute_figma escape hatch: runs AI-authored JavaScript against the
@@ -124,12 +124,18 @@ registerHandler("execute_code", async (params) => {
   for (const node of relaiCreated) {
     if (node?.id) lintTargets.set(node.id, node);
   }
-  const returnedIds = [...new Set((asText ?? "").match(/\b\d+:\d+\b/g) ?? [])].slice(0, 20);
+  const returnedIds = nodeIdsInText(asText ?? "");
   for (const nodeId of returnedIds) {
     if (lintTargets.has(nodeId)) continue;
     try {
       const node = await figma.getNodeByIdAsync(nodeId);
-      if (node) lintTargets.set(nodeId, node as unknown as LintTarget);
+      // Scene nodes only. A returned PAGE or DOCUMENT id is data the script
+      // reported (a page list, the guards value), not something it edited —
+      // and pageOfNode(pageId) answers "itself", so keeping them made every
+      // script that merely NAMED a guarded page look like it had written to it.
+      if (node && node.type !== "PAGE" && node.type !== "DOCUMENT") {
+        lintTargets.set(nodeId, node as unknown as LintTarget);
+      }
     } catch {
       // Not a real node id — the regex casts a wide net on purpose
     }

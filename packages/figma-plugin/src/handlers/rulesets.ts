@@ -10,11 +10,19 @@
 import { registerHandler } from "../dispatcher.js";
 import { readMemory, writeMemory } from "./memory.js";
 import type { PrecedentEntry } from "../memory-core.js";
+import { contentHash, newerSide, restoreWouldLoseWork } from "../ruleset-core.js";
+
+export { contentHash } from "../ruleset-core.js";
 
 const RS_KEY = "relai.rulesets";
 const LINK_NS = "relai";
 const LINK_KEY = "rulesetLink";
 const CONVENTIONS_KEY = "conventions";
+// When the file's law was last written HERE. Without it, drift has no
+// direction: the panel could only say "these differ" and offer the one button
+// it had — restore — which happily replaces a fresh file law with an older
+// ancestor. The stamp lets both sides be dated and the wrong way refused.
+const CONVENTIONS_AT_KEY = "conventionsAt";
 const MAX_RULESETS = 30;
 const MAX_CONVENTIONS = 20000;
 
@@ -33,13 +41,6 @@ interface RulesetLink {
   lastSyncHash: string;
 }
 
-// djb2 — cheap, stable content hash for sync comparison
-export function contentHash(s: string): string {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(16);
-}
-
 export async function readRulesets(): Promise<Ruleset[]> {
   try {
     const raw = (await figma.clientStorage.getAsync(RS_KEY)) as Ruleset[] | undefined;
@@ -51,6 +52,21 @@ export async function readRulesets(): Promise<Ruleset[]> {
 
 async function writeRulesets(list: Ruleset[]): Promise<void> {
   await figma.clientStorage.setAsync(RS_KEY, list);
+  // Read back. clientStorage has quietly failed to keep a write before (a set
+  // reported saved, then reappeared at its previous size after the plugin
+  // restarted), and a kit that silently refuses writes is worse than no kit —
+  // it looks like a backup while being a stale copy waiting to overwrite you.
+  const back = (await figma.clientStorage.getAsync(RS_KEY)) as Ruleset[] | undefined;
+  const wrote = list.map((s) => `${s.name}:${s.conventions.length}:${s.updatedAt}`).join("|");
+  const read = Array.isArray(back)
+    ? back.map((s) => `${s.name}:${s.conventions.length}:${s.updatedAt}`).join("|")
+    : "";
+  if (wrote !== read) {
+    throw new Error(
+      "The ruleset store did not keep that write — clientStorage read back different content. " +
+        "Nothing was saved to the kit. Keep your own copy of the conventions before retrying."
+    );
+  }
 }
 
 export function readLink(): RulesetLink | null {
@@ -72,6 +88,19 @@ function fileConventions(): string {
   return figma.root.getSharedPluginData(LINK_NS, CONVENTIONS_KEY);
 }
 
+function fileConventionsAt(): string {
+  return figma.root.getSharedPluginData(LINK_NS, CONVENTIONS_AT_KEY);
+}
+
+/**
+ * The one place the file's law is written. Always stamps the time, so drift
+ * can be adjudicated by date instead of guessed at.
+ */
+export function writeFileConventions(content: string): void {
+  figma.root.setSharedPluginData(LINK_NS, CONVENTIONS_KEY, content);
+  figma.root.setSharedPluginData(LINK_NS, CONVENTIONS_AT_KEY, content ? nowIso() : "");
+}
+
 export type RulesetState =
   | "none" // no rulesets exist at all
   | "unlinked" // rulesets exist, this file uses none
@@ -87,6 +116,9 @@ export interface RulesetStatus {
   fileChars: number;
   setChars?: number;
   setUpdatedAt?: string;
+  fileUpdatedAt?: string;
+  /** Which side of a drift is the more recent writing. */
+  newer?: "file" | "set" | "same" | "unknown";
 }
 
 export async function rulesetStatus(): Promise<RulesetStatus> {
@@ -98,16 +130,18 @@ export async function rulesetStatus(): Promise<RulesetStatus> {
   }
   const set = sets.find((s) => s.name === link.name);
   if (!set) return { state: "missing-set", linked: link.name, fileChars: file.length };
+  const fileAt = fileConventionsAt();
   const base = {
     linked: set.name,
     autoRestore: set.autoRestore,
     fileChars: file.length,
     setChars: set.conventions.length,
     setUpdatedAt: set.updatedAt,
+    ...(fileAt ? { fileUpdatedAt: fileAt } : {}),
   };
   if (file.length === 0 && set.conventions.length > 0) return { state: "file-empty", ...base };
   if (contentHash(file) === contentHash(set.conventions)) return { state: "in-sync", ...base };
-  return { state: "drifted", ...base };
+  return { state: "drifted", ...base, newer: newerSide(fileAt, set.updatedAt) };
 }
 
 function nowIso(): string {
@@ -122,16 +156,37 @@ async function requireSet(name: unknown): Promise<{ sets: Ruleset[]; set: Rulese
   return { sets, set: sets[index], index };
 }
 
-/** Pull: ancestor → file. Writes conventions, merges seed precedents (by id). */
-export async function restoreFromRuleset(): Promise<{
+/**
+ * Pull: ancestor → file. Writes conventions, merges seed precedents (by id).
+ *
+ * Refuses to walk backwards. Restore exists to heal a file whose law was
+ * wiped by a branch merge; it is not a merge. When the file's law is newer
+ * than the ancestor's, replacing it destroys the newer writing — which is
+ * exactly what "update from the kit" did on 2026-08-03, silently, because
+ * nothing compared the two dates. `force` is the way to say you mean it.
+ */
+export async function restoreFromRuleset(force = false): Promise<{
   restored: string;
   conventionsChars: number;
   precedentsSeeded: number;
+  replaced?: { chars: number; at: string };
 }> {
   const link = readLink();
   if (!link) throw new Error("This file is not linked to a ruleset. Use link_ruleset first.");
   const { set } = await requireSet(link.name);
-  figma.root.setSharedPluginData(LINK_NS, CONVENTIONS_KEY, set.conventions);
+  const before = fileConventions();
+  const beforeAt = fileConventionsAt();
+  if (!force && restoreWouldLoseWork(before, beforeAt, set.conventions, set.updatedAt)) {
+    {
+      throw new Error(
+        `Restore would overwrite newer law. This file's conventions (${before.length} chars, written ${beforeAt}) ` +
+          `are more recent than ruleset "${set.name}" (${set.conventions.length} chars, ${set.updatedAt}). ` +
+          `If the file's law is the one to keep, push it up instead (file → kit). ` +
+          `To replace the file anyway, restore with force: true.`
+      );
+    }
+  }
+  writeFileConventions(set.conventions);
   let seeded = 0;
   if (set.seedPrecedents.length) {
     const existing = readMemory();
@@ -151,7 +206,16 @@ export async function restoreFromRuleset(): Promise<{
     content: set.conventions,
   });
   postRulesetState();
-  return { restored: set.name, conventionsChars: set.conventions.length, precedentsSeeded: seeded };
+  return {
+    restored: set.name,
+    conventionsChars: set.conventions.length,
+    precedentsSeeded: seeded,
+    // Say what was displaced, so a wrong-direction restore is visible in the
+    // transcript rather than discovered days later.
+    ...(before.length > 0 && contentHash(before) !== contentHash(set.conventions)
+      ? { replaced: { chars: before.length, at: beforeAt || "unknown" } }
+      : {}),
+  };
 }
 
 /** Push: file → ancestor. The file's current conventions become the set's. */
@@ -190,8 +254,12 @@ export async function reconcileOnLoad(): Promise<
 > {
   const status = await rulesetStatus();
   if (status.state === "file-empty" && status.autoRestore) {
-    const r = await restoreFromRuleset();
-    figma.notify(`Relai: restored conventions from ruleset "${r.restored}"`);
+    // Only ever fires when the file's law is GONE, so there is nothing newer
+    // to destroy — but say how old the kit is, because a merge wound healed
+    // with a stale ancestor still leaves the designer a day behind.
+    const r = await restoreFromRuleset(true);
+    const age = status.setUpdatedAt ? ` (kit last written ${status.setUpdatedAt.slice(0, 10)})` : "";
+    figma.notify(`Relai: restored conventions from ruleset "${r.restored}"${age}`);
     return { healed: true, name: r.restored };
   }
   return { healed: false, status };
@@ -333,7 +401,7 @@ registerHandler("link_ruleset", async (params) => {
   const { set } = await requireSet(params.name);
   writeLink({ name: set.name, lastSyncHash: contentHash(set.conventions) });
   let restored: unknown = null;
-  if (params.restore === true) restored = await restoreFromRuleset();
+  if (params.restore === true) restored = await restoreFromRuleset(params.force === true);
   await postRulesetState();
   return { linked: set.name, restored };
 });
@@ -348,7 +416,7 @@ registerHandler("unlink_ruleset", async () => {
 
 registerHandler("ruleset_status", async () => rulesetStatus());
 
-registerHandler("restore_from_ruleset", async () => restoreFromRuleset());
+registerHandler("restore_from_ruleset", async (params) => restoreFromRuleset(params.force === true));
 
 registerHandler("push_to_ruleset", async () => pushToRuleset());
 

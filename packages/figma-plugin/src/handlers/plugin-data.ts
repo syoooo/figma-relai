@@ -1,7 +1,7 @@
 import { registerHandler } from "../dispatcher.js";
 import { getNodeById } from "../utils/node-helpers.js";
 import { readMemory } from "./memory.js";
-import { postRulesetState } from "./rulesets.js";
+import { postRulesetState, writeFileConventions } from "./rulesets.js";
 
 registerHandler("set_plugin_data", async (params) => {
   const node = await getNodeById(params.nodeId as string);
@@ -44,7 +44,9 @@ registerHandler("set_conventions", async (params) => {
       `Conventions doc is ${content.length} chars — keep it under ${CONVENTIONS_MAX_CHARS} (it's loaded into every session's context).`
     );
   }
-  figma.root.setSharedPluginData(CONVENTIONS_NS, CONVENTIONS_KEY, content);
+  // Through the stamping writer: an unstamped law has no date, and drift with
+  // no date can only be resolved by guessing which side to keep.
+  writeFileConventions(content);
   figma.ui.postMessage({ type: "conventions-state", present: content.length > 0, content });
   // New law content also moves the kit needle (in-sync ↔ drifted, file-empty)
   await postRulesetState();

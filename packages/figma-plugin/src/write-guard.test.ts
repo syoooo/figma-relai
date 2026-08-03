@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   isWriteCommand,
   collectNodeRefs,
+  nodeIdsInText,
   needsApproval,
   describeScale,
   migrateConfirmLevel,
@@ -114,5 +115,38 @@ describe("describeScale", () => {
     expect(describeScale("set_instance_overrides", { targetNodeIds: ["a", "b"] })).toBe("2 nodes");
     expect(describeScale("delete_node", { nodeId: "1:1" })).toBe("1 node");
     expect(describeScale("execute_code", {})).toBe("");
+  });
+});
+
+describe("nodeIdsInText", () => {
+  test("plain ids", () => {
+    expect(nodeIdsInText('{"id":"1234:5678"}')).toEqual(["1234:5678"]);
+  });
+
+  test("an instance sublayer is ONE id, not two", () => {
+    // The bug: /\d+:\d+/ also matched 4866:4085 — the MAIN COMPONENT — out of
+    // the middle. The component lives on the Icon page, so editing an override
+    // on the Date Field page was reported as touching a guarded page.
+    expect(nodeIdsInText('"I4518:19131;4866:4085"')).toEqual(["I4518:19131;4866:4085"]);
+  });
+
+  test("deeply nested instance paths stay whole", () => {
+    expect(nodeIdsInText('"I5059:9802;2318:18444;2318:18844;5739:9613"')).toEqual([
+      "I5059:9802;2318:18444;2318:18844;5739:9613",
+    ]);
+  });
+
+  test("real ids next to an instance path are all found, once each", () => {
+    const text = '{"a":"6839:27488","b":"I6172:21334;4901:4576","c":"6839:27488"}';
+    expect(nodeIdsInText(text)).toEqual(["6839:27488", "I6172:21334;4901:4576"]);
+  });
+
+  test("respects the cap", () => {
+    const many = Array.from({ length: 30 }, (_, i) => `"${i}:${i}"`).join(",");
+    expect(nodeIdsInText(many, 5)).toHaveLength(5);
+  });
+
+  test("text with no ids yields nothing", () => {
+    expect(nodeIdsInText('{"ok":true,"ratio":4.02}')).toEqual([]);
   });
 });

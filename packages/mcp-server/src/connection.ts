@@ -49,6 +49,29 @@ export function routeResponse(
 }
 
 // Manages WebSocket connection to the relay server
+/**
+ * Given the room that went quiet and who the relay says is live, decide where
+ * to re-pair. Pure so the decision can be tested without a relay.
+ */
+export function chooseRepairRoom(
+  staleRoom: string | null,
+  rooms: RoomSummary[]
+): { room: string; error?: undefined } | { room?: undefined; error: string } {
+  const withPlugin = rooms.filter((r) => r.hasPlugin && r.room !== staleRoom);
+  if (withPlugin.length === 1) return { room: withPlugin[0].room };
+  if (withPlugin.length === 0) {
+    return {
+      error:
+        "The Figma plugin is not open. Open the Relai plugin in Figma — it will reconnect automatically.",
+    };
+  }
+  return {
+    error: `The plugin left room ${staleRoom} and several are now connected: ${withPlugin
+      .map((r) => (r.fileName ? `"${r.fileName}" (room ${r.room})` : `room ${r.room}`))
+      .join(", ")}. Call join_room with the one you want.`,
+  };
+}
+
 export class FigmaConnection {
   private ws: WebSocket | null = null;
   private currentRoom: string | null = null;
@@ -63,6 +86,11 @@ export class FigmaConnection {
   // Presence recorded per room: join-time broadcasts can arrive before
   // currentRoom is updated, so keying by room avoids the ordering race
   private presenceByRoom = new Map<string, boolean>();
+  // Did the caller NAME this room, or did we pick it for them? A room the
+  // caller aimed at is never traded for a different one — they may be waiting
+  // for that file to open, and silently following the only live plugin would
+  // send their writes into somebody else's file.
+  private roomWasChosenByCaller = false;
   // Designer activity piggybacked on plugin responses (selection changes etc.)
   private eventQueue: unknown[] = [];
 
@@ -252,7 +280,8 @@ export class FigmaConnection {
   }
 
   // Join a room for communication
-  async joinRoom(roomName: string): Promise<void> {
+  async joinRoom(roomName: string, chosenByCaller = true): Promise<void> {
+    this.roomWasChosenByCaller = chosenByCaller;
     await this.sendCommand("join", { room: roomName });
     this.currentRoom = roomName;
     this.options.onRoomChanged?.(roomName);
@@ -279,10 +308,10 @@ export class FigmaConnection {
     const saved = this.options.initialRoom;
 
     if (saved && withPlugin.some((r) => r.room === saved)) {
-      return this.joinRoom(saved);
+      return this.joinRoom(saved, false);
     }
     if (withPlugin.length === 1) {
-      return this.joinRoom(withPlugin[0].room);
+      return this.joinRoom(withPlugin[0].room, false);
     }
     if (withPlugin.length === 0) {
       throw new Error(
@@ -320,6 +349,35 @@ export class FigmaConnection {
     } catch {
       // Unreachable relay is the caller's problem, not this cache's
     }
+  }
+
+  /**
+   * The paired room went quiet. Ask the relay who is actually there and, if
+   * exactly one plugin is connected, move to it.
+   *
+   * A plugin that is closed and reopened — or a file switched to one of its
+   * branches — comes back under a NEW room name. ensureRoom() only picks a
+   * room when there is none, so without this the session stays pinned to the
+   * dead room and every command reports "the plugin is not open" while
+   * join_room cheerfully lists the live one.
+   */
+  private async repairPairing(): Promise<void> {
+    const stale = this.currentRoom;
+    let rooms: RoomSummary[] = [];
+    try {
+      rooms = await this.listRooms();
+    } catch {
+      throw new Error(
+        "The Figma plugin is not open, and the relay could not be asked which rooms are live. Open the Relai plugin in Figma and try again."
+      );
+    }
+    const choice = chooseRepairRoom(stale, rooms);
+    if (choice.room) {
+      await this.joinRoom(choice.room, false);
+      logger.info(`Re-paired: ${stale} → ${choice.room} (plugin moved rooms)`);
+      return;
+    }
+    throw new Error(choice.error);
   }
 
   // Send a command to Figma plugin via the relay
@@ -361,9 +419,21 @@ export class FigmaConnection {
         await this.waitForPlugin(2500);
       }
       if (this.currentRoom && this.presenceByRoom.get(this.currentRoom) === false) {
-        throw new Error(
-          "The Figma plugin is not open. Open the Relai plugin in Figma — it will reconnect to the same room automatically."
-        );
+        // The plugin may not be gone — it may have MOVED. Reopening it, or
+        // switching to a branch (a different file), gives it a fresh room,
+        // and ensureRoom() never looks again once currentRoom is set. Re-pair
+        // rather than reporting "not open" about a plugin sitting right there.
+        //
+        // Only for a room WE picked. When the caller named it they are aiming
+        // at one file, and quietly moving them to whichever plugin happens to
+        // be live would land their writes in the wrong document.
+        if (!this.roomWasChosenByCaller) {
+          await this.repairPairing();
+        } else {
+          throw new Error(
+            `No Figma plugin is in room ${this.currentRoom}. Open the file you want in Figma and run the plugin, or call join_room without a room to see which are live.`
+          );
+        }
       }
     }
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatFigmaError, routeResponse } from "./connection.js";
+import { chooseRepairRoom, formatFigmaError, routeResponse } from "./connection.js";
 import { RequestTracker } from "./request-tracker.js";
 
 function trackedPromise(tracker: RequestTracker, id: string): Promise<unknown> {
@@ -72,4 +72,49 @@ describe("formatFigmaError", () => {
       "[resize_node] boom"
     );
   });
+});
+
+describe("chooseRepairPairing", () => {
+  const room = (r: string, hasPlugin: boolean, fileName?: string) =>
+    ({ room: r, hasPlugin, fileName }) as never;
+
+  test("the plugin moved rooms — follow it", () => {
+    // Reopening the plugin, or switching a file to one of its branches, hands
+    // it a fresh room. ensureRoom() only picks a room when there is none, so
+    // without this every command reported "the plugin is not open" while
+    // join_room cheerfully listed the live one.
+    const got = chooseRepairRoom("prime-nexus-65c2c075", [
+      room("prime-nexus-65c2c075", false),
+      room("clear-grid-390167c5", true, "refine"),
+    ]);
+    expect(got.room).toBe("clear-grid-390167c5");
+  });
+
+  test("genuinely gone — say so, and do not invent a room", () => {
+    const got = chooseRepairRoom("old-room", [room("old-room", false)]);
+    expect(got.room).toBeUndefined();
+    expect(got.error).toContain("not open");
+  });
+
+  test("several live plugins — name them instead of guessing", () => {
+    const got = chooseRepairRoom("old-room", [
+      room("a", true, "gin"),
+      room("b", true, "other"),
+    ]);
+    expect(got.room).toBeUndefined();
+    expect(got.error).toContain('"gin" (room a)');
+    expect(got.error).toContain('"other" (room b)');
+  });
+
+  test("never re-pairs to the stale room itself", () => {
+    const got = chooseRepairRoom("old-room", [room("old-room", true)]);
+    expect(got.room).toBeUndefined();
+  });
+
+  // The guard that keeps this from becoming a different bug lives at the call
+  // site: a room the CALLER named is never traded away. Someone who joins the
+  // room of a file they are about to open is waiting for it, and following
+  // whichever plugin happens to be live would put their writes in the wrong
+  // document. Only rooms we picked for them are followed. (Caught by the
+  // adversarial smoke, W3: an explicit join to an empty room must fail fast.)
 });

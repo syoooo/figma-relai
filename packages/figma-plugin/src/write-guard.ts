@@ -27,6 +27,22 @@ const NODE_REF_KEYS = [
   "componentIds",
 ] as const;
 
+/**
+ * Node ids as they appear inside arbitrary text (an execute_code return value).
+ *
+ * Instance sublayers are `I<instance>;<mainComponent>` — sometimes several
+ * segments — and must be matched WHOLE. A bare /\d+:\d+/ slices the main
+ * component's id out of the middle, and the main component lives on a
+ * different page than the instance: that is how editing an override came to be
+ * reported against the component's page, and how a guarded page that was only
+ * ever NAMED in a result looked like it had been written to.
+ */
+const NODE_ID_IN_TEXT = /\bI?\d+:\d+(?:;\d+:\d+)*\b/g;
+
+export function nodeIdsInText(text: string, limit = 20): string[] {
+  return [...new Set(text.match(NODE_ID_IN_TEXT) ?? [])].slice(0, limit);
+}
+
 export function collectNodeRefs(params: Record<string, unknown>): string[] {
   const refs: string[] = [];
   for (const key of NODE_REF_KEYS) {
