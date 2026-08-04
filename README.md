@@ -69,7 +69,7 @@ The panel's Memory row lists every entry; delete any of them any time. Nothing i
 
 Where the law lives, and how far it reaches: it is stored as plugin data inside the file — no extra layers on the canvas, nothing teammates have to tiptoe around — and it survives duplication (branch merges drop it; kits put it back). Enforcement runs in the plugin, on the file's side of the wire, and comes in two strengths: no-go zones and Lock to selection are walls — the write itself is rejected; precedents are your recorded words arriving at the exact moment an edit touches what they reference — the agent backs off because the author shows up. Any client that connects through Relai is bound, including ones you never configured. An agent pointed at some other bridge is not — the law cannot guard a door it does not hold, which is why everything leaves receipts.
 
-None of this is setup you grind through — it accumulates. On day one the file is blank law, and the agent behaves like anyone's agent. A month in, it arrives briefed on your conventions and precedents and stops at your fences: the same prompt that produces the average of everyone's design in a fresh file produces yours in yours. Two long-time users are not holding the same tool.
+None of this is setup you grind through — it accumulates. On day one the file is blank law, and the agent behaves like anyone's agent. A month in, it arrives briefed on your conventions and precedents and stops at your fences: the same prompt that produces the average of everyone's design in a fresh file produces yours in yours. Two long-time users are not holding the same tool. They are holding two different instruments.
 
 ## Get started
 
