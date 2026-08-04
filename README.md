@@ -1,14 +1,17 @@
-<img src="assets/relai-logo.svg" alt="Relai" height="36" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/syoooo/figma-relai/main/assets/relai-logo-cream.svg">
+  <img src="https://raw.githubusercontent.com/syoooo/figma-relai/main/assets/relai-logo-ink.svg" alt="Relai" height="36">
+</picture>
 
 English | [日本語](README.ja.md) | [中文](README.zh.md)
 
 [figma-relai.vercel.app](https://figma-relai.vercel.app)
 
-**Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. Writes go through a Figma plugin rather than the paid REST API, so it works on every Figma plan — and the file itself keeps your rules and rulings as you go.
+**Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. And the file is not a bystander: it carries your conventions, your precedents, your no-go zones. Every client that opens it inherits them, and an edit that breaks them is refused before it runs — the file has a veto. That is what makes it safe to hand agents real work.
 
 Relai's position: the AI era should put designers *more* in charge, not less. Taste and judgment stay with you; the labor moves to a model you already trust, with every step visible.
 
-<img src="assets/plugin-ui.png" alt="The Relai plugin: activity feed, connection status, and a Stop button" width="380" />
+<img src="https://raw.githubusercontent.com/syoooo/figma-relai/main/assets/plugin-ui.png" alt="The Relai plugin: activity feed, connection status, and a Stop button" width="380" />
 
 ## What a session looks like
 
@@ -19,8 +22,12 @@ Relai's position: the AI era should put designers *more* in charge, not less. Ta
 > **You:** Now sweep the whole screen for dark mode.
 >
 > **AI:** `set_properties · 24 nodes · 1.2s ✓` → `analyze_design · overall → 92/100`
+>
+> **You:** Same sweep on Brand / Masters.
+>
+> **File:** `✗ blocked — "Brand / Masters" is a no-go zone`
 
-Every command shows up in the plugin as it runs, with timing and success or failure. Click an entry to jump to that layer on the canvas. Press **Stop** if you change your mind — the rest of the batch is cancelled.
+Every command shows up in the plugin as it runs, with timing and success or failure. Click an entry to jump to that layer on the canvas. Press **Stop** if you change your mind — the rest of the batch is cancelled. And some commands never run at all: pages you fenced off reject writes before they touch the canvas, with the reason on the receipt.
 
 The numbers scale. Relai is how its author maintains a production design system, and this excerpt is from one of those sessions — July 2026, unedited:
 
@@ -32,11 +39,43 @@ batch_execute    25,351 bindings rebound
 re-census        30,251 → 936 · zero visual change
 ```
 
+The gate in the middle is the point: one explicit yes from the designer licensed a 25,351-binding rebind — and every fence stayed up while it ran.
+
+## The file carries the law
+
+Code already escaped the speed-versus-standards trade, and not by making models careful: the repo pushes back. Lint flags, checks gate, protected branches refuse — which is why a developer can hand an agent real work and go do something else. Relai builds that pushback into the design file itself. Not a leash — a license.
+
+Rules you'd normally paste into every prompt live inside the Figma file, so any future session — from any MCP client, by anyone who opens the file — starts already briefed. And the load-bearing part is not prose the model might happen to read: the law runs as checks.
+
+**Conventions** are a little CLAUDE.md stored in the file: naming rules, token routing, spacing habits. The AI reads them before working. Unlike a CLAUDE.md, they belong to the file rather than to one person's agent setup — every client inherits them, configured or not. Add one by telling the AI ("new convention: colors route through Theme tokens"); the panel's RULES row shows what's stored.
+
+**Memory** holds your precedents. Rule once — the file remembers. Say "this gap is on purpose" and the ruling is recorded in the file; any later edit that touches what it references gets your words attached to its result:
+
+```text
+you        "this gap is on purpose — remember it"
+file       record_precedent · saved ✓
+
+(another session, a different AI, about to "fix" the gap)
+file       precedent attached — "…is on purpose" · the edit backs off
+```
+
+The panel's Memory row lists every entry; delete any of them any time. Nothing is recorded silently. Case law, not documentation.
+
+**Kits.** One designer usually runs one product, and its files share the same law. Save this file's rules under a name and other files can use it. Figma drops file-carried law on branch merges; the kit puts it back — one click, or automatically if you flip that kit's auto-restore on.
+
+**AI no-go zones** fence off whole pages — brand masters, legal, the one that is already pixel-perfect. Writes into a guarded page are rejected before they run, with the reason on the receipt, and only you edit the guard list. Protected branches, for the canvas.
+
+**Confirmation** is a dial with four stops — OPEN · RISK · BULK · ALL. At RISK, the default, only destructive operations ask (deleting variables or styles, detach, flatten); everything else keeps moving. Set it in the panel; agents can't move it.
+
+Where the law lives, and how far it reaches: it is stored as plugin data inside the file — no extra layers on the canvas, nothing teammates have to tiptoe around — and it survives duplication (branch merges drop it; kits put it back). Enforcement runs in the plugin, on the file's side of the wire, and comes in two strengths: no-go zones and Lock to selection are walls — the write itself is rejected; precedents are your recorded words arriving at the exact moment an edit touches what they reference — the agent backs off because the author shows up. Any client that connects through Relai is bound, including ones you never configured. An agent pointed at some other bridge is not — the law cannot guard a door it does not hold, which is why everything leaves receipts.
+
+None of this is setup you grind through — it accumulates. On day one the file is blank law, and the agent behaves like anyone's agent. A month in, it arrives briefed on your conventions and precedents and stops at your fences: the same prompt that produces the average of everyone's design in a fresh file produces yours in yours. Two long-time users are not holding the same tool.
+
 ## Get started
 
 You need [Figma Desktop](https://www.figma.com/downloads/), [Node.js](https://nodejs.org/) 18+, and an MCP client.
 
-**1. Install the plugin.** Download `relai-plugin.zip` from [the latest release](https://github.com/syoooo/figma-relai/releases/latest), unzip it, then open **Plugins → Development → Import plugin from manifest…** in the desktop app and pick `manifest.json`. It connects on its own and remembers its room across restarts.
+**1. Install the plugin.** Download `relai-plugin.zip` from [the latest release](https://github.com/syoooo/figma-relai/releases/latest), unzip it, then open **Plugins → Development → Import plugin from manifest…** in the desktop app and pick `manifest.json`. Open it in the file you want to edit and keep the panel open — writes go through it. It connects on its own and remembers its room across restarts; when a release ships a new plugin, re-import the new zip.
 
 **2. Register the server** with your AI client:
 
@@ -51,7 +90,16 @@ For Cursor, add this to `.cursor/mcp.json`:
 { "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "figma-relai"] } } }
 ```
 
-**3. Ask for something.** Pairing is automatic; there is nothing to copy between windows.
+Or hand the setup to your agent — paste this:
+
+```text
+Set up Relai: register the MCP server for this client (the command is
+`npx -y figma-relai`, e.g. `claude mcp add Relai -- npx -y figma-relai`),
+then walk me through importing the Figma plugin from
+https://github.com/syoooo/figma-relai/releases/latest — I'll do the Figma clicks.
+```
+
+**3. Ask for something.** Pairing is automatic; there is nothing to copy between windows. A good first ask: *"How is this screen put together?"*
 
 ## What it's good at
 
@@ -59,41 +107,19 @@ Understanding a design. "How is this screen put together?" gets you structure, c
 
 Bulk edits. "Translate every button label to English" or "recolor this for dark mode" become one round-trip across dozens of layers instead of an afternoon of clicking.
 
-Audits. `analyze_design` checks color-token coverage, auto-layout quality, component health, and accessibility (WCAG contrast, touch targets, text sizes) — or all four at once as a weighted 0–100 health score you can put in a review. It also scores agent-readiness (how prepared the file is for AI work, with top gaps), fingerprints the file's voice (its radius/spacing/type signature), and runs a ghost census for references to soft-deleted variables.
+Audits. `analyze_design` checks color-token coverage, auto-layout quality, component health, and accessibility (WCAG contrast, touch targets, text sizes) — or all four at once as a weighted 0–100 health score you can put in a review, with deviations you already ruled intentional staying waived instead of re-flagged. It also scores agent-readiness (how prepared the file is for AI work, with top gaps), fingerprints the file's voice (its radius/spacing/type signature), and runs a ghost census: references still pointing at soft-deleted variables.
 
 Design systems. Variable collections with modes, token binding, shared styles, components with proper variants, team-library imports. `get_design_system` inventories what the file — and the libraries it uses — already has (with a token, the library's whole catalog, including components the file has never placed), so the AI builds from your components instead of redrawing near-copies; `analyze_design`'s tokens aspect finds hardcoded values that visually match an existing variable, and one `tokenize` call binds them all. These run as declarative operations with precondition checks, so the same request behaves the same way every time, and a failure tells the AI what to do next ("call set_layout_mode first") instead of dumping a stack trace.
 
-Everything else. `execute_figma` runs JavaScript against the Figma Plugin API directly — the same escape-hatch approach as Figma's official MCP — with a `relai.*` helper library that makes the correct pattern the shortest one, hints attached to known errors, and a lint that flags silent mistakes. If you'd rather the AI never ran code, turn it off with the plugin's "Allow code execution" toggle.
-
-## The file carries the law
-
-Rules you'd normally paste into every prompt live inside the Figma file itself, so any future session — from any MCP client, by anyone who opens the file — starts already briefed.
-
-**Conventions** are a little CLAUDE.md stored in the file: naming rules, token routing, spacing habits. The AI reads them before working.
-
-**Memory** holds your precedents. Rule once — "this gap is on purpose" — and the ruling is recorded in the file; any later edit that touches what it references gets your words attached to its result:
-
-```text
-you        "this gap is on purpose — remember it"
-file       record_precedent · saved ✓
-
-(another session, a different AI, about to "fix" the gap)
-file       precedent attached — "…is on purpose" · the edit backs off
-```
-
-The panel's Memory row lists every entry; delete any of them any time. Nothing is recorded silently.
-
-**Kits.** One designer usually runs one product, and its files share the same law. Save this file’s rules under a name and other files can use it. Figma drops file-carried law on branch merges; the kit puts it back — one click, or automatically if you flip that kit’s auto-restore on.
-
-**AI no-go zones** fence off whole pages — brand masters, legal, the one that is already pixel-perfect. Writes into a guarded page are rejected before they run, with the reason on the receipt, and only you edit the guard list.
-
-**Confirmation** is one level with four stops — OPEN · RISK · BULK · ALL. At RISK, the default, only dangerous operations ask (deleting variables or styles, detach, flatten); everything else keeps moving. Set it in the panel; agents can't move it.
+Everything else. `execute_figma` runs JavaScript against the Figma Plugin API directly — the same escape-hatch approach as Figma's official MCP — with a `relai.*` helper library that makes the correct pattern the shortest one, a registry of pitfalls learned in production that attaches the fix to known errors, and a lint that flags silent mistakes. If you'd rather the AI never ran code, turn it off with the plugin's "Allow code execution" toggle.
 
 ## You stay in control
 
 The plugin is the designer's side of the deal: a live activity feed of everything the AI does, an AI-connected indicator that means an agent is actually paired (not just that a server is running), and a Stop button that cancels pending work. Selection and page changes you make flow back to the AI as events, so "now do the same to this one" works without re-explaining.
 
 **Lock to selection** rejects edits outside whatever you've selected — the AI gets a clear error, not a silent pass. The relay is local: file contents move only between Figma, your machine, and the AI client you already trust. The UI speaks English, 日本語, and 中文.
+
+When something goes wrong anyway — a bad sweep, a wrong "fix" — the feed is your reconstruction and Figma's version history is your restore path. There is no magic undo, and Relai doesn't pretend to have one: `diff_nodes` checkpoints tell you exactly what changed; version history takes you back. And when the law itself is wrong — a stale precedent guarding a gap you've since changed your mind about — tell the agent to go ahead, then delete the entry from the panel's Memory row. Rulings are one click to remove; the law stays yours to amend.
 
 ## How it works
 
@@ -107,6 +133,8 @@ Figma plugin          executes Plugin API calls
 ```
 
 The relay lives inside the MCP server, so there is no extra process to keep alive. When several MCP clients run at once, the first one hosts the relay and the others connect to it; if the host exits, a survivor takes over. Both sides remember their room, rejoin after restarts or sleep, and find each other without any copy-pasting. The `join_room` tool exists for one rare case only: two Figma files running the plugin at the same time.
+
+The receipts above are real timings: rule checks run in the plugin before each write, small edits land sub-second, and the 45,509-node audit took 3.9s.
 
 Ports are fixed by Figma's plugin sandbox: the manifest allowlists `ws://localhost:9055–9057`, and other ports cannot work without editing `manifest.json`. That's why there is no port setting in the UI.
 
@@ -131,7 +159,7 @@ Each tool is self-describing, so the AI sees full parameter docs. The same contr
 
 ## Relai and Figma's official MCP
 
-Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are reserved for full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: every plan including free, whatever model and subscription you already use, everything running on your machine, and the designer holding the controls. If you have the seats, the two coexist happily — run both.
+Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are reserved for full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: your model, your subscription, your machine — and the designer holding the controls. Writes go through the Relai Figma plugin rather than the paid REST API, which is why it works on every plan, free included. If you have the seats, the two coexist happily — run both.
 
 ## Optional: a Figma token
 
@@ -181,6 +209,8 @@ bun test
 ```
 
 Requires [Bun](https://bun.sh/) v1.0+ (the setup script is bash; on Windows use WSL). Load the plugin via **Plugins → Development → Import plugin from manifest…** → `packages/figma-plugin/manifest.json`. A standalone relay (`bun socket`) exists for the unusual case where the relay must run on another machine. More in [CONTRIBUTING.md](CONTRIBUTING.md); manual QA lives in [docs/smoke-checklist.md](docs/smoke-checklist.md).
+
+Project status: Relai is built and dogfooded daily against a production design system; releases track that work. MIT plus local-first is the longevity hedge — nothing phones home, and nothing stops working if the repo goes quiet.
 
 ## License
 
