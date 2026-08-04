@@ -39,6 +39,9 @@ export function Hero() {
               {copy.github}
             </a>
           </div>
+          <p className="reveal reveal-5 mt-6 max-w-xl font-mono text-[11px] leading-relaxed tracking-[0.04em] text-muted-foreground" style={{ overflowWrap: 'anywhere' }}>
+            {copy.mono}
+          </p>
         </div>
 
         <figure className="reveal reveal-6 mx-auto w-full max-w-[340px] lg:max-w-[360px]">
