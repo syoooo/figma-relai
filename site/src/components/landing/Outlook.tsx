@@ -10,7 +10,7 @@ export function Outlook() {
     <section className="w-full">
       <div className="mx-auto w-full max-w-6xl px-5 py-16 md:py-24">
         <Kicker>{copy.eyebrow}</Kicker>
-        <h2 className="mt-3 font-heading text-[1.7rem] font-semibold leading-tight tracking-tight md:text-[2.2rem]">{copy.title}</h2>
+        <h2 className="mt-3 font-heading text-[1.9rem] font-semibold leading-tight tracking-tight md:text-[2.5rem]">{copy.title}</h2>
         <div className="prose-col mt-8 space-y-6">
           <p className="t-lede text-[15px] text-foreground md:text-[17px]">{copy.p1}</p>
           <p className="t-lede text-[15px] text-muted-foreground md:text-[17px]">{copy.p2}</p>

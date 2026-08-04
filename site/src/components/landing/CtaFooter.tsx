@@ -4,7 +4,6 @@ import { useLanguage } from '../../lib/i18n';
 import { getCopy, VERSION } from '../../lib/translations';
 import { btnClass } from './btn';
 
-const LOGO_URL = '/logo.svg';
 
 export function CtaFooter() {
   const { language } = useLanguage();
@@ -13,11 +12,11 @@ export function CtaFooter() {
 
   return (
     <>
-      <section className="glow-close w-full border-b border-border">
+      <section className="dots-bg w-full border-y-[0.5px] border-border">
         <div className="mx-auto w-full max-w-6xl px-5 py-20 md:py-28">
           <h2
             className="max-w-3xl font-heading font-semibold leading-[1.08] tracking-tight"
-            style={{ fontSize: cjk ? 'clamp(1.6rem, 3.6vw, 2.6rem)' : 'clamp(2rem, 5vw, 3.6rem)', lineHeight: cjk ? 1.35 : 1.08 }}
+            style={{ fontSize: cjk ? 'clamp(1.6rem, 3.6vw, 2.6rem)' : 'clamp(2rem, 5vw, 3.6rem)', lineHeight: cjk ? 1.35 : 1.08, whiteSpace: 'pre-line' }}
           >
             {copy.title}
           </h2>
@@ -42,7 +41,7 @@ export function CtaFooter() {
       <footer className="w-full">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-4 px-5 py-8 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="Relai" className="h-4 w-auto" />
+            <img src="/logo-ink.svg" alt="Relai" className="h-4 w-auto" />
           </div>
           <div className="flex items-center gap-6 font-mono text-[11px] uppercase tracking-[.08em] text-muted-foreground">
             <span className="normal-case">{VERSION}</span>

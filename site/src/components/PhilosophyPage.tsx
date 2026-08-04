@@ -3,7 +3,6 @@ import { LanguageProvider, useLanguage, type Language } from '../lib/i18n';
 import { getCopy, VERSION } from '../lib/translations';
 import { Kicker } from './landing/Kicker';
 
-const LOGO_URL = '/logo.svg';
 const LANGUAGES: { code: Language; label: string }[] = [
   { code: 'en', label: 'EN' },
   { code: 'ja', label: '日' },
@@ -19,7 +18,7 @@ function Essay() {
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-xl">
         <nav aria-label="Primary" className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between px-5">
           <a href="/" className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="Relai" className="h-4 w-auto" />
+            <img src="/logo-ink.svg" alt="Relai" className="h-[18px] w-auto" />
           </a>
           <div className="flex items-center" role="group" aria-label="Language">
             {LANGUAGES.map((item) => (
@@ -67,7 +66,7 @@ function Essay() {
       <footer className="w-full border-t border-border">
         <div className="mx-auto flex w-full max-w-2xl flex-col items-start justify-between gap-4 px-5 py-8 sm:flex-row sm:items-center">
           <a href="/" className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="Relai" className="h-4 w-auto" />
+            <img src="/logo-ink.svg" alt="Relai" className="h-4 w-auto" />
           </a>
           <div className="flex items-center gap-6 font-mono text-[11px] uppercase tracking-[.08em] text-muted-foreground">
             <span>{VERSION}</span>

@@ -95,7 +95,7 @@ export function StripRow({ row }: { row: string }) {
 
 export function Strip({ label, rows }: { label: string; rows: readonly string[] }) {
   return (
-    <div className="border border-border bg-card px-4 pb-3 pt-3">
+    <div className="record border border-border px-4 pb-3 pt-3">
       <div className="flex items-center gap-2">
         <span aria-hidden className="w-3 border-t border-border" />
         <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{label}</span>

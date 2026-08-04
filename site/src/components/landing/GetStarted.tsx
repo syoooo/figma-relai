@@ -16,11 +16,11 @@ export function GetStarted() {
   const copy = getCopy(language).start;
 
   return (
-    <section id="get-started" className="dots-bg w-full border-b border-t border-border bg-[#0d0c09]">
+    <section id="get-started" className="dots-bg w-full border-y-[0.5px] border-border">
       <div className="mx-auto w-full max-w-6xl px-5 py-16 md:py-24">
         <div className="max-w-2xl">
           <Kicker>{copy.eyebrow}</Kicker>
-          <h2 className="mt-3 font-heading text-[1.7rem] font-semibold leading-tight tracking-tight md:text-[2.2rem]">{copy.title}</h2>
+          <h2 className="mt-3 font-heading text-[1.9rem] font-semibold leading-tight tracking-tight md:text-[2.5rem]">{copy.title}</h2>
           <p className="t-prose mt-4 text-sm text-muted-foreground">{copy.body}</p>
         </div>
         <ol className="mt-12 max-w-3xl space-y-10">

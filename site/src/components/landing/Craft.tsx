@@ -10,20 +10,20 @@ export function Craft() {
   const copy = getCopy(language).craft;
 
   return (
-    <section id="craft" className="w-full border-b border-border">
+    <section id="craft" className="w-full">
       <div className="mx-auto w-full max-w-6xl px-5 py-16 md:py-24">
         <div className="max-w-2xl">
           <Kicker>{copy.eyebrow}</Kicker>
-          <h2 className="mt-3 font-heading text-[1.7rem] font-semibold leading-tight tracking-tight md:text-[2.2rem]">{copy.title}</h2>
+          <h2 className="mt-3 font-heading text-[1.9rem] font-semibold leading-tight tracking-tight md:text-[2.5rem]">{copy.title}</h2>
           <p className="t-prose mt-4 max-w-2xl text-[15px] text-muted-foreground">{copy.body}</p>
         </div>
-        <div className="mt-12 grid gap-px overflow-hidden border border-border bg-border lg:grid-cols-2">
+        <div className="mt-12 grid gap-[0.5px] overflow-hidden border-[0.5px] border-border bg-border lg:grid-cols-2">
           {copy.items.map((item, i) => (
             <article key={item.title} className="flex flex-col bg-background p-7 md:p-9">
               <p className="font-mono text-xs text-primary">0{i + 1} · {item.kicker}</p>
               <h3 className="mt-3 font-heading text-xl font-semibold tracking-tight md:text-[1.35rem]">{item.title}</h3>
               <p className="t-prose mt-3 text-sm text-muted-foreground">{codeText(item.body)}</p>
-              <div className="mt-6 border border-border bg-[#0d0c09] px-4 pb-4 pt-3">
+              <div className="well mt-6 border border-border px-4 pb-4 pt-3">
                 <div className="flex items-center gap-2">
                   <span aria-hidden className="w-3 border-t border-border" />
                   <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{item.tag}</span>

@@ -19,7 +19,7 @@ export function AccordionItem({ value, className, children }: { value: string; c
   const root = useContext(Ctx)!;
   return (
     <ItemCtx.Provider value={{ value, open: root.open === value }}>
-      <div className={`border-b ${className ?? ''}`}>{children}</div>
+      <div className={`border-b-[0.5px] ${className ?? ''}`}>{children}</div>
     </ItemCtx.Provider>
   );
 }

@@ -47,7 +47,7 @@ export default {content: [
         'destructive-foreground': 'var(--destructive-foreground)'
       },
       fontFamily: {
-        heading: 'var(--font-serif)',
+        heading: 'var(--font-display)',
         serif: 'var(--font-serif)',
         mono: 'var(--font-mono)'
       }

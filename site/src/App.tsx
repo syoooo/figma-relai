@@ -6,6 +6,7 @@ import { Hero } from './components/landing/Hero';
 import { Belief } from './components/landing/Belief';
 import { Workflows } from './components/landing/Workflows';
 import { Law } from './components/landing/Law';
+import { Instrument } from './components/landing/Instrument';
 import { Changes } from './components/landing/Changes';
 import { Craft } from './components/landing/Craft';
 import { Outlook } from './components/landing/Outlook';
@@ -26,8 +27,9 @@ export function App() {
         <main id="main">
           <Hero />
           <Belief />
-          <Workflows />
+          <Instrument />
           <Law />
+          <Workflows />
           <Changes />
           <Craft />
           <Outlook />

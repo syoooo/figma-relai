@@ -4,7 +4,6 @@ import { useLanguage, type Language } from '../../lib/i18n';
 import { getCopy, VERSION } from '../../lib/translations';
 import { btnClass } from './btn';
 
-const LOGO_URL = '/logo.svg';
 const LANGUAGES: { code: Language; label: string }[] = [
   { code: 'en', label: 'EN' },
   { code: 'ja', label: '日' },
@@ -23,10 +22,10 @@ export function Nav() {
 
   return (
     <><a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-[60] focus:border focus:border-primary focus:bg-background focus:px-3 focus:py-2 focus:font-mono focus:text-xs focus:text-primary">skip to content</a>
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 w-full border-b-[0.5px] border-border bg-background/90 backdrop-blur-xl">
       <nav aria-label="Primary" className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5">
-        <a href="#top" className="flex items-end gap-3" aria-label={copy.nav.home}>
-          <img src={LOGO_URL} alt="Relai" className="h-5 w-auto" />
+        <a href="#top" className="flex items-baseline gap-3" aria-label={copy.nav.home}>
+          <img src="/logo-ink.svg" alt="Relai" className="h-5 w-auto" />
           <span className="hidden font-mono text-[11px] leading-none text-muted-foreground sm:block">{VERSION}</span>
         </a>
         <div className="hidden items-center gap-6 md:flex">
@@ -67,7 +66,7 @@ export function Nav() {
         </button>
       </nav>
       {open && (
-        <div className="border-t border-border bg-background px-5 py-4 md:hidden">
+        <div className="border-t-[0.5px] border-border bg-background px-5 py-4 md:hidden">
           <div className="mb-3 flex" role="group" aria-label="Language">
             {LANGUAGES.map((item) => (
               <button

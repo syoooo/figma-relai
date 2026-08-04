@@ -6,8 +6,8 @@ const base =
 'inline-flex items-center justify-center gap-2 whitespace-nowrap border font-mono text-xs font-semibold uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
 
 const variants: Record<Variant, string> = {
-  default: 'border-primary bg-primary text-primary-foreground hover:bg-[#ffce45] hover:border-[#ffce45]',
-  outline: 'border-border bg-background text-[#ffce45] hover:border-primary hover:bg-secondary hover:text-primary',
+  default: 'border-primary bg-primary text-primary-foreground hover:bg-[#3a3128] hover:border-[#3a3128]',
+  outline: 'border-border bg-transparent text-foreground hover:border-foreground hover:bg-secondary',
   ghost: 'border-transparent text-muted-foreground hover:border-border hover:bg-secondary hover:text-primary'
 };
 

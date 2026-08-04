@@ -1,8 +1,12 @@
-/* Hallmark · pre-emit critique: P5 H4 E4 S5 R5 V4
- * direction: instrument, not billboard — session-ledger page, brand amber on warm black,
- * IBM Plex Mono structural display + IBM Plex Sans body; one orchestrated reveal (hero+ledger);
- * signature element: the wire/ledger band with real session numbers; everything else hairline-quiet. */
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V5
+ * direction: the casebook — statute paper carries the brand, the dark instrument well
+ * carries the machine; one law, two grounds (dual-ground contract). Newsreader display
+ * over IBM Plex Serif text and Plex Mono receipts; Shippori Mincho B1 carries JA display.
+ * Vermilion is rationed: the seal (display shu) once per page, text-shu for small accents.
+ * Amber lives only inside dark wells and highlighter chips. No italics anywhere. */
 
+@import '@fontsource-variable/newsreader/opsz.css';
+@import '@fontsource/shippori-mincho-b1/700.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
@@ -22,34 +26,89 @@
 
 :root,
 :root.dark {
-  --background: #0b0a08;
-  --foreground: #ebe4d4;
-  --card: #12100a;
-  --card-foreground: #ebe4d4;
-  --popover: #12100a;
-  --popover-foreground: #ebe4d4;
-  --primary: #ffb000;
-  --primary-foreground: #191204;
-  --secondary: #171309;
-  --secondary-foreground: #ebe4d4;
-  --muted: #14110a;
-  --muted-foreground: #97906f;
-  --accent: #241b06;
-  --accent-foreground: #ffce45;
-  --destructive: #ff675b;
-  --destructive-foreground: #17100d;
-  --border: #272212;
-  --input: #272212;
-  --ring: #ffb000;
+  /* statute paper — the light ground. Paper is the cream that used to be the dark
+     theme's text: the letters of the night become the page of the day. */
+  --background: #ebe4d4;
+  --foreground: #1a1613;
+  --card: #f4efe6;
+  --card-foreground: #1a1613;
+  --popover: #f4efe6;
+  --popover-foreground: #1a1613;
+  --primary: #1a1613;
+  --primary-foreground: #ebe4d4;
+  --secondary: #e3dbc9;
+  --secondary-foreground: #1a1613;
+  --muted: #e3dbc9;
+  --muted-foreground: #6b6353;
+  --accent: #ded5c1;
+  --accent-foreground: #1a1613;
+  --destructive: #9f2b1c;
+  --destructive-foreground: #f4efe6;
+  --border: rgba(26, 22, 19, 0.11);
+  --input: rgba(26, 22, 19, 0.11);
+  --ring: #1a1613;
   --radius: 0;
+
+  /* the law's own colors */
+  --shu: #c9422f;          /* display vermilion — the seal, once per page */
+  --shu-text: #9f2b1c;     /* deepened text vermilion — small accents, 5.8:1 on paper */
+  --amber: #ffb000;        /* lives only inside dark wells and highlighter chips */
+  --paper-lo: #ded5c1;
+  --paper-deep: #e5dbc5;
+
+  /* the dark instrument well — the plugin's ground, embedded in the page */
+  --well: #12100a;
+  --well-border: rgba(255, 236, 200, 0.12);
 
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, 'Hiragino Sans', 'PingFang SC', 'Noto Sans JP', monospace;
   --font-serif: 'IBM Plex Serif', 'Noto Serif JP', 'Noto Serif SC', 'Hiragino Mincho ProN', 'Songti SC', Georgia, serif;
+  --font-display: 'Newsreader Variable', 'IBM Plex Serif', Georgia, serif;
 }
 
-/* per-language serif: ZH must not fall through the JP-first fallback into Japanese glyph forms */
+/* per-language faces: ZH must not fall through the JP-first fallback; the display
+   voice changes script by script (Newsreader / Shippori Mincho B1 / Noto Serif SC) */
 :root:lang(zh-CN) {
   --font-serif: 'IBM Plex Serif', 'Noto Serif SC', 'Songti SC', Georgia, serif;
+  --font-display: 'Noto Serif SC', 'Songti SC', serif;
+}
+:root:lang(ja) {
+  --font-display: 'Shippori Mincho B1', 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
+}
+
+/* printed record — a session transcript set in ink on one-step-deeper paper,
+   the way a casebook prints proceedings. The file's voice takes text-vermilion. */
+.record {
+  --foreground: #1a1613;
+  --muted-foreground: #6b6353;
+  --primary: #1a1613;
+  --primary-foreground: #e5dbc5;
+  --accent-foreground: #9f2b1c;
+  --destructive: #9f2b1c;
+  --border: rgba(26, 22, 19, 0.16);
+  --secondary: #dbd2bc;
+  background: #e5dbc5;
+  color: #1a1613;
+}
+
+/* inside a dark well the same semantic tokens resolve to instrument values —
+   components keep one vocabulary, the ground decides the register */
+.well {
+  --background: #12100a;
+  --foreground: #ebe4d4;
+  --card: #12100a;
+  --card-foreground: #ebe4d4;
+  --primary: #ffb000;
+  --primary-foreground: #191204;
+  --secondary: #241f15;
+  --secondary-foreground: #ebe4d4;
+  --muted-foreground: #97906f;
+  --accent-foreground: #ffce45;
+  --destructive: #e04a47;
+  --border: rgba(255, 236, 200, 0.12);
+  --input: rgba(255, 236, 200, 0.12);
+  --ring: #ffb000;
+  background: #12100a;
+  color: #ebe4d4;
 }
 
 @layer base {
@@ -63,9 +122,22 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  ::selection { background: #ffb000; color: #191204; }
+  ::selection { background: #1a1613; color: #ebe4d4; }
   :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
   html, body { overflow-x: clip; }
+
+  /* paper grain — multiply on cream; kills the flat-slab feel, invisible as grain */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+    opacity: 0.35;
+  }
+
   :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) dd,
   :lang(zh-CN) h1, :lang(zh-CN) h2, :lang(zh-CN) h3, :lang(zh-CN) dd {
     font-feature-settings: 'palt' 1;
@@ -87,10 +159,7 @@
      Latin and CJK want opposite corrections from one shared markup:
      · leading — Latin body sits at 1.6–1.7; full-width CJK needs 1.9–2.0
      · measure — 65ch of Latin (~36rem) is NARROWER than 37 kanji (~40rem)
-     · kinsoku strict + hung punctuation are CJK-only niceties
-     .t-lede  = the quiet essays (belief / outlook / philosophy)
-     .t-prose = standard body text (section intros, cards, FAQ)
-     .prose-col = a reading column sized per script */
+     · kinsoku strict + hung punctuation are CJK-only niceties */
   .t-lede { line-height: 1.7; }
   .t-prose { line-height: 1.62; }
   .prose-col { max-width: 36rem; }
@@ -114,6 +183,14 @@
 }
 
 @layer components {
+  /* the wordmark is always Newsreader, whatever the page language */
+  .wordmark {
+    font-family: 'Newsreader Variable', 'IBM Plex Serif', Georgia, serif;
+    font-weight: 620;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+  }
+
   /* structural label — the page's recurring small voice */
   .t-label {
     font-family: var(--font-mono);
@@ -122,7 +199,12 @@
     text-transform: uppercase;
     color: var(--muted-foreground);
   }
-  .t-label--amber { color: var(--primary); }
+  /* the accent register of labels: text-vermilion on paper, amber inside wells */
+  .t-label--amber { color: var(--shu-text); }
+  .well .t-label--amber { color: var(--amber); }
+
+  /* highlighter chip — the one place amber may touch paper, always under ink text */
+  .hl-chip { background: var(--amber); color: #1a1613; padding: 0 0.3em; }
 
   /* the wire — ledger gutter line */
   .wire {
@@ -134,7 +216,7 @@
   .cursor-blink { animation: relai-blink 1.1s steps(1) infinite; }
   @keyframes relai-blink { 50% { opacity: 0; } }
 
-  /* panel-DNA: corner ticks (the plugin frame's + marks) */
+  /* corner ticks framing real screenshots — ink on paper, amber inside wells */
   .ticks { position: relative; }
   .ticks::before, .ticks::after {
     content: '+';
@@ -142,37 +224,43 @@
     font-family: var(--font-mono);
     font-size: 13px;
     line-height: 1;
-    color: var(--primary);
+    color: var(--muted-foreground);
   }
+  .well .ticks::before, .well .ticks::after { color: var(--amber); }
   .ticks::before { top: -8px; left: -8px; }
   .ticks::after { bottom: -8px; right: -8px; }
 
-  /* panel-DNA: dashed section rule — like the panel's "— ACTIVITY ┈┈┈" */
+  /* dashed section rule — like the panel's "— ACTIVITY ┈┈┈" */
   .kicker { display: flex; align-items: center; gap: 12px; }
   .kicker-line { flex: none; width: 88px; border-top: 1px dashed var(--border); transform: translateY(1px); }
 
-  /* panel-DNA: scan-dot texture — drifts a cell every ~9s, dead under reduced motion */
+  /* scan-dot texture — ink dots on paper; drifts a cell every ~9s, dead under reduced motion */
   .dots-bg {
-    background-image: radial-gradient(rgba(255, 176, 0, 0.05) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(26, 22, 19, 0.06) 1px, transparent 1px);
     background-size: 14px 14px;
     animation: relai-drift 90s linear infinite;
   }
   @keyframes relai-drift { to { background-position: 140px 140px; } }
 
-  /* faint amber warmth bracketing the page — hero (top right) and the closing CTA (bottom left) */
-  .glow-open { background-image: radial-gradient(90rem 42rem at 80% -12%, rgba(255, 176, 0, 0.05), transparent 62%); }
-  .glow-close { background-image: radial-gradient(80rem 38rem at 20% 112%, rgba(255, 176, 0, 0.045), transparent 62%); }
+  /* paper does not glow — the old bracketing warmth retires with the dark ground */
+  .glow-open { background-image: none; }
+  .glow-close { background-image: none; }
 
   /* kicker glyph — section-enter docking */
   .kdock { position: relative; flex: none; width: 12px; height: 12px; }
   .kdock i { position: absolute; width: 5px; height: 5px; transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.55s; }
-  .kdock i:first-child { left: 0; top: 0; background: var(--primary); }
+  .kdock i:first-child { left: 0; top: 0; background: var(--shu-text); }
   .kdock i:last-child { right: 0; bottom: 0; background: var(--foreground); }
+  .well .kdock i:first-child { background: var(--amber); }
   .kdock.undocked i:first-child { transform: translate(-7px, -7px); opacity: 0; }
   .kdock.undocked i:last-child { transform: translate(7px, 7px); opacity: 0; }
 
+  /* the seal — fine red linework, frame intact; ink take-up is uneven on purpose */
+  .seal-impression {
+    mask-image: radial-gradient(circle at 42% 38%, rgba(0, 0, 0, 0.94), rgba(0, 0, 0, 0.68) 66%, rgba(0, 0, 0, 0.88));
+  }
 
-  /* case-law dial — one ruling traveling the ring (freezes under reduced motion) */
+  /* the compounding loop — one ruling traveling the ring (still under reduced motion) */
   .loop-dot {
     stroke-dasharray: 0.5 941.9;
     animation: relai-orbit 28s linear infinite;
