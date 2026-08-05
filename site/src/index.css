@@ -1,12 +1,12 @@
 /* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V5
  * direction: the casebook — statute paper carries the brand, the dark instrument well
  * carries the machine; one law, two grounds (dual-ground contract). Newsreader display
- * over IBM Plex Serif text and Plex Mono receipts; Shippori Mincho B1 carries JA display.
+ * over IBM Plex Serif text and Plex Mono receipts; Zen Old Mincho carries JA display.
  * Vermilion is rationed: the seal (display shu) once per page, text-shu for small accents.
  * Amber lives only inside dark wells and highlighter chips. No italics anywhere. */
 
 @import '@fontsource-variable/newsreader/opsz.css';
-@import '@fontsource/shippori-mincho-b1/700.css';
+@import '@fontsource/zen-old-mincho/500.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
 @import '@fontsource/ibm-plex-mono/600.css';
@@ -66,13 +66,13 @@
 }
 
 /* per-language faces: ZH must not fall through the JP-first fallback; the display
-   voice changes script by script (Newsreader / Shippori Mincho B1 / Noto Serif SC) */
+   voice changes script by script (Newsreader / Zen Old Mincho / Noto Serif SC) */
 :root:lang(zh-CN) {
   --font-serif: 'IBM Plex Serif', 'Noto Serif SC', 'Songti SC', Georgia, serif;
   --font-display: 'Noto Serif SC', 'Songti SC', serif;
 }
 :root:lang(ja) {
-  --font-display: 'Shippori Mincho B1', 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
+  --font-display: 'Zen Old Mincho', 'Noto Serif JP', 'Hiragino Mincho ProN', serif;
 }
 
 /* printed record — a session transcript set in ink on one-step-deeper paper,
@@ -138,7 +138,17 @@
     opacity: 0.35;
   }
 
-  :lang(ja) h1, :lang(ja) h2, :lang(ja) h3, :lang(ja) dd,
+  /* JA display sets Zen Old Mincho at 500 — one notch under the Latin semibold,
+     because a bold mincho thickens its horizontals and turns leaden at display
+     sizes. No 'palt' here: the Google Fonts webfont builds ship without the
+     feature, so spacing is real tracking plus text-spacing-trim (Chromium),
+     which closes the full-width hole after 。 and 、 mid-line. */
+  :lang(ja) h1, :lang(ja) h2, :lang(ja) h3 {
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-spacing-trim: trim-start;
+  }
+  :lang(ja) dd,
   :lang(zh-CN) h1, :lang(zh-CN) h2, :lang(zh-CN) h3, :lang(zh-CN) dd {
     font-feature-settings: 'palt' 1;
     letter-spacing: 0.035em;
