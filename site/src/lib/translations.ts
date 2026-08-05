@@ -173,7 +173,7 @@ export const translations = {
     hero: {
       eyebrow: 'FIGMA × ANY AGENT',
       title: '好きにやらせる。\n勝手はさせない。',
-      body: 'RelaiはClaude CodeもCursorもCodexも、どのMCPクライアントもFigmaにつなぎます。規約も、判例も、触らせない場所も、ファイル自身が持ち、開いたクライアントがそのすべてを引き継ぐ。だから、全速で任せきれます。',
+      body: 'RelaiはClaude CodeもCursorもCodexも、どのMCPクライアントもFigmaにつなぎます。規約も、判例も、触らせない場所も、デザインファイル自身が持ち、開いたクライアントがそのすべてを引き継ぐ。だから、全速で任せきれます。',
       mono: 'open source · local · node-level read/write/delete',
       install: 'プラグインを導入',
       github: 'GitHub',
@@ -338,7 +338,7 @@ export const translations = {
     hero: {
       eyebrow: 'FIGMA × ANY AGENT',
       title: '放手。\n不放任。',
-      body: 'Relai把Claude Code、Cursor、Codex —— 任意MCP客户端 —— 接进Figma。规约、判例、圈起的禁区,文件自己带着,打开它的客户端全部继承。所以,才敢让它全速跑。',
+      body: 'Relai把Claude Code、Cursor、Codex —— 任意MCP客户端 —— 接进Figma。规约、判例、圈起的禁区,设计文件自己带着,打开它的客户端全部继承。所以,才敢让它全速跑。',
       mono: 'open source · local · node-level read/write/delete',
       install: '安装插件',
       github: 'GitHub',
