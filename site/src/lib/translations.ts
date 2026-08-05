@@ -8,8 +8,8 @@ export const translations = {
     hero: {
       eyebrow: 'FIGMA × ANY AGENT',
       title: 'Everyone gave agents the pen.\nRelai gave the file a veto.',
-      body: 'The file itself carries your conventions, your rulings, your fences — and every MCP client that opens it, Claude Code, Cursor, Codex, inherits them. Which is why you can finally let the agents run.',
-      mono: 'open source · local · node-level read/write/delete',
+      body: 'Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma. The file carries your conventions, your rulings, your fences; every client that opens it inherits them. Which is why you can finally let the agents run.',
+      mono: 'MCP server + Figma plugin · open source · local · node-level read/write/delete',
       install: 'Install the plugin',
       github: 'GitHub',
       anyClient: 'any MCP client'
@@ -173,8 +173,8 @@ export const translations = {
     hero: {
       eyebrow: 'FIGMA × ANY AGENT',
       title: '好きにやらせる。\n勝手はさせない。',
-      body: '規約も、判例も、触らせない場所も、ファイル自身が持っています。開いたクライアントは、Claude CodeでもCursorでもCodexでも、そのすべてを引き継ぎます。だから、全速で任せきれます。',
-      mono: 'open source · local · node-level read/write/delete',
+      body: 'RelaiはClaude CodeもCursorもCodexも、どのMCPクライアントもFigmaにつなぎます。規約も、判例も、触らせない場所も、ファイル自身が持ち、開いたクライアントがそのすべてを引き継ぐ。だから、全速で任せきれます。',
+      mono: 'MCP server + Figma plugin · open source · local · node-level read/write/delete',
       install: 'プラグインを導入',
       github: 'GitHub',
       anyClient: 'すべてのMCPクライアント'
@@ -338,8 +338,8 @@ export const translations = {
     hero: {
       eyebrow: 'FIGMA × ANY AGENT',
       title: '放手。\n不放任。',
-      body: '规约、判例、圈起的禁区,文件自己带着;打开它的客户端 —— Claude Code、Cursor、Codex —— 全部继承。所以,才敢让它全速跑。',
-      mono: 'open source · local · node-level read/write/delete',
+      body: 'Relai把Claude Code、Cursor、Codex —— 任意MCP客户端 —— 接进Figma。规约、判例、圈起的禁区,文件自己带着,打开它的客户端全部继承。所以,才敢让它全速跑。',
+      mono: 'MCP server + Figma plugin · open source · local · node-level read/write/delete',
       install: '安装插件',
       github: 'GitHub',
       anyClient: '任意MCP客户端'
