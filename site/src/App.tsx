@@ -27,8 +27,8 @@ export function App() {
         <main id="main">
           <Hero />
           <Belief />
-          <Instrument />
           <Law />
+          <Instrument />
           <Workflows />
           <Changes />
           <Craft />
