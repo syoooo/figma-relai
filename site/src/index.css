@@ -173,8 +173,10 @@
   .t-lede { line-height: 1.7; }
   .t-prose { line-height: 1.62; }
   .prose-col { max-width: 36rem; }
-  :lang(ja) .t-lede, :lang(zh-CN) .t-lede { line-height: 2; letter-spacing: 0.01em; }
-  :lang(ja) .t-prose, :lang(zh-CN) .t-prose { line-height: 1.88; letter-spacing: 0.015em; }
+  :lang(zh-CN) .t-lede { line-height: 2; letter-spacing: 0.01em; }
+  :lang(zh-CN) .t-prose { line-height: 1.88; letter-spacing: 0.015em; }
+  :lang(ja) .t-lede { line-height: 2; letter-spacing: 0.005em; }
+  :lang(ja) .t-prose { line-height: 1.88; letter-spacing: 0.005em; }
   :lang(ja) .prose-col, :lang(zh-CN) .prose-col { max-width: 40rem; }
   /* strict kinsoku (no small kana / dashes opening a line) + hanging 、。 (Safari) */
   :lang(ja), :lang(zh-CN) { line-break: strict; hanging-punctuation: allow-end; }
