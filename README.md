@@ -3,8 +3,6 @@
   <img src="https://raw.githubusercontent.com/syoooo/figma-relai/main/assets/relai-logo-ink.svg" alt="Relai" height="36">
 </picture>
 
-English | [日本語](README.ja.md) | [中文](README.zh.md)
-
 [figma-relai.vercel.app](https://figma-relai.vercel.app)
 
 **Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. And the file is not a bystander: it carries your conventions, your precedents, your no-go zones. Every client that opens it inherits them, and an edit that breaks them is refused before it runs — the file has a veto. That is what makes it safe to hand agents real work.
