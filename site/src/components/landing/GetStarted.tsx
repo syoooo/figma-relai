@@ -1,6 +1,5 @@
 
 import { ArrowUpRight, Download } from 'lucide-react';
-import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
 import { CopyBlock } from './CopyBlock';
@@ -12,8 +11,7 @@ const CURSOR = `{ "mcpServers": { "Relai": { "command": "npx", "args": ["-y", "f
 const DOWNLOAD_URL = 'https://github.com/syoooo/figma-relai/releases/latest';
 
 export function GetStarted() {
-  const { language } = useLanguage();
-  const copy = getCopy(language).start;
+  const copy = getCopy().start;
 
   return (
     <section id="get-started" className="dots-bg w-full border-y-[0.5px] border-border">

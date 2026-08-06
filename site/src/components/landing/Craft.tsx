@@ -1,13 +1,11 @@
 import { X } from '@phosphor-icons/react';
-import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
 import { StripRow } from './Strip';
 import { codeText } from './inline';
 
 export function Craft() {
-  const { language } = useLanguage();
-  const copy = getCopy(language).craft;
+  const copy = getCopy().craft;
 
   return (
     <section id="craft" className="w-full">

@@ -1,10 +1,8 @@
-import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
 
 export function Belief() {
-  const { language } = useLanguage();
-  const copy = getCopy(language).belief;
+  const copy = getCopy().belief;
 
   return (
     <section className="w-full">

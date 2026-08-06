@@ -1,4 +1,3 @@
-import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
 
@@ -100,8 +99,7 @@ function LoopDiagram({ loop }: { loop: Loop }) {
 }
 
 export function Instrument() {
-  const { language } = useLanguage();
-  const copy = getCopy(language);
+  const copy = getCopy();
 
   return (
     <section className="w-full border-y-[0.5px] border-border bg-card">

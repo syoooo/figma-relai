@@ -1,19 +1,11 @@
 import { useState } from 'react';
 import { Figma, Github, Menu, X } from 'lucide-react';
-import { useLanguage, type Language } from '../../lib/i18n';
 import { getCopy, VERSION } from '../../lib/translations';
 import { btnClass } from './btn';
 
-const LANGUAGES: { code: Language; label: string }[] = [
-  { code: 'en', label: 'EN' },
-  { code: 'ja', label: '日' },
-  { code: 'zh', label: '中' }
-];
-
 export function Nav() {
   const [open, setOpen] = useState(false);
-  const { language, setLanguage } = useLanguage();
-  const copy = getCopy(language);
+  const copy = getCopy();
   const links = [
     { label: copy.nav.changes, href: '#changes' },
     { label: copy.nav.start, href: '#get-started' },
@@ -36,19 +28,6 @@ export function Nav() {
           ))}
         </div>
         <div className="hidden items-center gap-2 md:flex">
-          <div className="flex items-center" role="group" aria-label="Language">
-            {LANGUAGES.map((item) => (
-              <button
-                key={item.code}
-                type="button"
-                onClick={() => setLanguage(item.code)}
-                className={`h-8 px-2 font-mono text-xs ${language === item.code ? 'text-primary underline decoration-2 underline-offset-[6px]' : 'text-muted-foreground hover:text-primary'}`}
-                aria-pressed={language === item.code}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
           <a href="https://github.com/syoooo/figma-relai" target="_blank" rel="noreferrer" className={btnClass({ variant: 'ghost', size: 'sm' })}>
             <Github className="h-4 w-4" />
             {copy.nav.github}
@@ -67,19 +46,6 @@ export function Nav() {
       </nav>
       {open && (
         <div className="border-t-[0.5px] border-border bg-background px-5 py-4 md:hidden">
-          <div className="mb-3 flex" role="group" aria-label="Language">
-            {LANGUAGES.map((item) => (
-              <button
-                key={item.code}
-                type="button"
-                onClick={() => setLanguage(item.code)}
-                className={`h-9 flex-1 font-mono text-xs ${language === item.code ? 'text-primary underline decoration-2 underline-offset-[6px]' : 'text-muted-foreground'}`}
-                aria-pressed={language === item.code}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
           <div className="flex flex-col gap-1">
             {links.map((l) => (
               <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="px-2 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground hover:bg-secondary hover:text-primary">

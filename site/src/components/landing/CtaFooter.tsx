@@ -1,14 +1,11 @@
 
 import { Figma, Github } from 'lucide-react';
-import { useLanguage } from '../../lib/i18n';
 import { getCopy, VERSION } from '../../lib/translations';
 import { btnClass } from './btn';
 
 
 export function CtaFooter() {
-  const { language } = useLanguage();
-  const copy = getCopy(language).cta;
-  const cjk = language !== 'en';
+  const copy = getCopy().cta;
 
   return (
     <>
@@ -16,7 +13,7 @@ export function CtaFooter() {
         <div className="mx-auto w-full max-w-6xl px-5 py-20 md:py-28">
           <h2
             className="max-w-3xl font-heading font-semibold leading-[1.08] tracking-tight"
-            style={{ fontSize: cjk ? 'clamp(1.6rem, 3.6vw, 2.6rem)' : 'clamp(2rem, 5vw, 3.6rem)', lineHeight: cjk ? 1.35 : 1.08, whiteSpace: 'pre-line' }}
+            style={{ fontSize: 'clamp(2rem, 5vw, 3.6rem)', lineHeight: 1.08 }}
           >
             {copy.title}
           </h2>

@@ -1,12 +1,10 @@
 
-import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
 import { StripRow } from './Strip';
 
 export function Changes() {
-  const { language } = useLanguage();
-  const copy = getCopy(language).changes;
+  const copy = getCopy().changes;
 
   return (
     <section id="changes" className="w-full">

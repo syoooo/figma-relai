@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/react';
-import { LanguageProvider } from './lib/i18n';
 import { Nav } from './components/landing/Nav';
 import { Hero } from './components/landing/Hero';
 import { Belief } from './components/landing/Belief';
@@ -21,24 +20,22 @@ export function App() {
   }, []);
 
   return (
-    <LanguageProvider>
-      <div className="dark min-h-full w-full bg-background text-foreground antialiased">
-        <Nav />
-        <main id="main">
-          <Hero />
-          <Belief />
-          <Law />
-          <Instrument />
-          <Workflows />
-          <Changes />
-          <Craft />
-          <Outlook />
-          <GetStarted />
-          <Faq />
-        </main>
-        <CtaFooter />
-        <Analytics />
-      </div>
-    </LanguageProvider>
+    <div className="dark min-h-full w-full bg-background text-foreground antialiased">
+      <Nav />
+      <main id="main">
+        <Hero />
+        <Belief />
+        <Law />
+        <Instrument />
+        <Workflows />
+        <Changes />
+        <Craft />
+        <Outlook />
+        <GetStarted />
+        <Faq />
+      </main>
+      <CtaFooter />
+      <Analytics />
+    </div>
   );
 }

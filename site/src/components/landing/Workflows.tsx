@@ -1,11 +1,9 @@
-import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
 import { Strip } from './Strip';
 
 export function Workflows() {
-  const { language } = useLanguage();
-  const copy = getCopy(language).flows;
+  const copy = getCopy().flows;
 
   return (
     <section id="flows" className="w-full">

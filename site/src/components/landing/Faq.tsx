@@ -1,13 +1,11 @@
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../Accordion';
-import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
 import { codeText } from './inline';
 
 export function Faq() {
-  const { language } = useLanguage();
-  const copy = getCopy(language).faq;
+  const copy = getCopy().faq;
 
   return (
     <section id="faq" className="w-full">

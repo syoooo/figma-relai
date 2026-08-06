@@ -1,10 +1,8 @@
-import { useLanguage } from '../../lib/i18n';
 import { Kicker } from './Kicker';
 import { getCopy } from '../../lib/translations';
 
 export function Outlook() {
-  const { language } = useLanguage();
-  const copy = getCopy(language).outlook;
+  const copy = getCopy().outlook;
 
   return (
     <section className="w-full">

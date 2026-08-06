@@ -1,17 +1,9 @@
 import { useEffect } from 'react';
-import { LanguageProvider, useLanguage, type Language } from '../lib/i18n';
 import { getCopy, VERSION } from '../lib/translations';
 import { Kicker } from './landing/Kicker';
 
-const LANGUAGES: { code: Language; label: string }[] = [
-  { code: 'en', label: 'EN' },
-  { code: 'ja', label: '日' },
-  { code: 'zh', label: '中' }
-];
-
 function Essay() {
-  const { language, setLanguage } = useLanguage();
-  const copy = getCopy(language).philosophy;
+  const copy = getCopy().philosophy;
 
   return (
     <div className="dark min-h-full w-full bg-background text-foreground antialiased">
@@ -20,19 +12,6 @@ function Essay() {
           <a href="/" className="flex items-center gap-3">
             <img src="/logo-ink.svg" alt="Relai" className="h-[18px] w-auto" />
           </a>
-          <div className="flex items-center" role="group" aria-label="Language">
-            {LANGUAGES.map((item) => (
-              <button
-                key={item.code}
-                type="button"
-                onClick={() => setLanguage(item.code)}
-                className={`h-8 px-2 font-mono text-xs ${language === item.code ? 'text-primary underline decoration-2 underline-offset-[6px]' : 'text-muted-foreground hover:text-primary'}`}
-                aria-pressed={language === item.code}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
         </nav>
       </header>
 
@@ -86,8 +65,6 @@ export function PhilosophyPage() {
   }, []);
 
   return (
-    <LanguageProvider>
-      <Essay />
-    </LanguageProvider>
+    <Essay />
   );
 }
