@@ -59,12 +59,14 @@ import { reconcileOnLoad, rulesetStatus, postRulesetState } from "./handlers/rul
 import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timeline.js";
 import { pendingProposals } from "./handlers/proposals.js";
 import { postFileIdentity } from "./handlers/file-identity.js";
+import { createWindowControls, DEFAULT_WINDOW_SIZE } from "./window-controls.js";
 
 // Commands that count as a full check-up for the gentle reminder
 const CHECKUP_COMMANDS = new Set(["audit_readiness", "audit_ghosts"]);
 
 // Show the plugin UI
-figma.showUI(__html__, { width: 380, height: 850, themeColors: true });
+figma.showUI(__html__, { ...DEFAULT_WINDOW_SIZE, themeColors: true });
+const handleWindowMessage = createWindowControls(figma.ui);
 
 // Designer-facing settings persisted across plugin restarts
 interface RelaiSettings {
@@ -218,6 +220,8 @@ function describeIntent(command: string, params: Record<string, unknown>): strin
 
 // Handle messages from the UI
 figma.ui.onmessage = async (msg: any) => {
+  if (handleWindowMessage(msg)) return;
+
   if (msg.type === "save-settings") {
     const current = await loadSettings();
     currentSettings = { ...current, ...(msg.settings as RelaiSettings) };

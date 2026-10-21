@@ -84,6 +84,35 @@
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: var(--sp-16);
     }
+    .header-actions { display: flex; align-items: center; gap: var(--sp-8); }
+    .window-button {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; flex-shrink: 0;
+      border: 1px solid var(--line); background: var(--panel);
+      color: var(--muted); cursor: pointer;
+    }
+    .window-button:hover { color: var(--amber); border-color: var(--amber-dim); }
+    .window-button:focus-visible, .resize-handle:focus-visible, .compact-stop:focus-visible {
+      outline: 1px dashed var(--amber); outline-offset: 2px;
+    }
+    .compact-stop {
+      display: none; padding: 3px 8px; border: 1px solid var(--err);
+      background: var(--panel); color: var(--err); font: inherit; cursor: pointer;
+    }
+    html.minimized { overflow: hidden; }
+    body.minimized > :not(.header) { display: none !important; }
+    body.minimized .header { margin-bottom: 0; }
+    body.minimized .seg { display: none; }
+    body.minimized .compact-stop.busy { display: inline-flex; }
+    body.resizing { user-select: none; cursor: nwse-resize; }
+    .resize-handle {
+      position: fixed; right: 0; bottom: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border: none;
+      background: var(--panel); color: var(--muted);
+      cursor: nwse-resize; touch-action: none;
+    }
+    .resize-handle:hover { color: var(--amber); }
     .logo { display: flex; align-items: flex-end; gap: 8px; }
     .logo svg { display: block; }
     /* Baseline-matched to the wordmark: the svg keeps a 0.7px inset under its
@@ -829,10 +858,16 @@
       </svg>
       <span class="hdr-ver" id="hdrVer"></span>
     </div>
-    <div class="seg" role="group" aria-label="Language">
-      <button id="langEn" onclick="setLang('en')">EN</button>
-      <button id="langJa" onclick="setLang('ja')">日</button>
-      <button id="langZh" onclick="setLang('zh')">中</button>
+    <div class="header-actions">
+      <button class="compact-stop" id="compactStop" type="button" onclick="stopAll()" data-i18n="stop">STOP</button>
+      <div class="seg" role="group" aria-label="Language">
+        <button id="langEn" onclick="setLang('en')">EN</button>
+        <button id="langJa" onclick="setLang('ja')">日</button>
+        <button id="langZh" onclick="setLang('zh')">中</button>
+      </div>
+      <button class="window-button" id="minimizeBtn" type="button" onclick="setWindowMinimized(!windowMinimized)" aria-label="Minimize window" title="Minimize window" aria-expanded="true">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path id="windowIcon" d="M2 9h8"/></svg>
+      </button>
     </div>
   </div>
 
@@ -1106,11 +1141,17 @@
 
   <!-- Footer -->
   <div class="footer"><span class="dockpair" aria-hidden="true"><i></i><i></i></span> Relai v0.7.10 <span class="dockpair flip" aria-hidden="true"><i></i><i></i></span></div>
+  <button class="resize-handle" id="resizeHandle" type="button" data-i18n-title="resize_window" aria-label="Resize window" title="Resize window">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path d="M3 10l7-7M7 10l3-3"/></svg>
+  </button>
 
   <script>
     // ---------- i18n ----------
     var I18N = {
       en: {
+        minimize_window: 'Minimize window',
+        restore_window: 'Restore window',
+        resize_window: 'Resize window (drag or use arrow keys)',
         status_label: 'STATUS',
         status_disconnected: 'OFFLINE',
         status_connecting: 'DIALING…',
@@ -1216,6 +1257,9 @@
         promote_title: 'promote into the kit'
       },
       ja: {
+        minimize_window: 'ウィンドウを最小化',
+        restore_window: 'ウィンドウを元に戻す',
+        resize_window: 'ウィンドウのサイズ変更（ドラッグまたは矢印キー）',
         status_label: 'STATUS',
         status_disconnected: 'OFFLINE',
         status_connecting: '接続中…',
@@ -1321,6 +1365,9 @@
         promote_title: 'キットへ昇格'
       },
       zh: {
+        minimize_window: '最小化窗口',
+        restore_window: '还原窗口',
+        resize_window: '调整窗口大小（拖动或使用方向键）',
         status_label: 'STATUS',
         status_disconnected: 'OFFLINE',
         status_connecting: '连接中…',
@@ -1467,6 +1514,7 @@
       // Re-render state-dependent labels
       refreshStatusTexts();
       renderClient();
+      renderWindowControls();
     }
     function setLang(l) {
       locale = l;
@@ -1475,6 +1523,86 @@
       renderRulesetRow();
       saveSettings({ locale: locale });
     }
+
+    // ---------- Window controls (keep the iframe and its connection alive) ----------
+    var windowMinimized = false;
+    var expandedScrollTop = 0;
+    var windowRevealTarget = null;
+    var resizeDrag = null;
+    var resizeFrame = null;
+    var resizeHandle = document.getElementById('resizeHandle');
+
+    function renderWindowControls() {
+      var button = document.getElementById('minimizeBtn');
+      button.title = t(windowMinimized ? 'restore_window' : 'minimize_window');
+      button.setAttribute('aria-label', button.title);
+      button.setAttribute('aria-expanded', String(!windowMinimized));
+      document.getElementById('windowIcon').setAttribute('d', windowMinimized ? 'M2 2h8v8H2z' : 'M2 9h8');
+      resizeHandle.setAttribute('aria-label', t('resize_window'));
+    }
+
+    function setWindowMinimized(minimized) {
+      parent.postMessage({ pluginMessage: { type: 'window-minimize', minimized: minimized } }, '*');
+    }
+
+    function applyWindowState(minimized) {
+      if (minimized && !windowMinimized) {
+        expandedScrollTop = window.scrollY;
+        document.getElementById('minimizeBtn').focus();
+      }
+      var restoring = windowMinimized && !minimized;
+      windowMinimized = minimized;
+      document.documentElement.classList.toggle('minimized', minimized);
+      document.body.classList.toggle('minimized', minimized);
+      if (minimized) window.scrollTo(0, 0);
+      else if (restoring) window.scrollTo(0, expandedScrollTop);
+      renderWindowControls();
+    }
+
+    function sendWindowResize(width, height) {
+      parent.postMessage({ pluginMessage: { type: 'window-resize', width: width, height: height } }, '*');
+    }
+
+    function flushWindowResize() {
+      resizeFrame = null;
+      if (resizeDrag) sendWindowResize(resizeDrag.width, resizeDrag.height);
+    }
+
+    resizeHandle.addEventListener('pointerdown', function (event) {
+      if (event.button !== 0 || windowMinimized || resizeDrag) return;
+      event.preventDefault();
+      resizeDrag = {
+        id: event.pointerId, x: event.screenX, y: event.screenY,
+        startWidth: window.innerWidth, startHeight: window.innerHeight,
+        width: window.innerWidth, height: window.innerHeight
+      };
+      resizeHandle.setPointerCapture(event.pointerId);
+      document.body.classList.add('resizing');
+    });
+    resizeHandle.addEventListener('pointermove', function (event) {
+      if (!resizeDrag || event.pointerId !== resizeDrag.id) return;
+      resizeDrag.width = resizeDrag.startWidth + event.screenX - resizeDrag.x;
+      resizeDrag.height = resizeDrag.startHeight + event.screenY - resizeDrag.y;
+      if (resizeFrame === null) resizeFrame = requestAnimationFrame(flushWindowResize);
+    });
+    function endWindowResize(event) {
+      if (!resizeDrag || event.pointerId !== resizeDrag.id) return;
+      if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+      flushWindowResize();
+      resizeDrag = null;
+      document.body.classList.remove('resizing');
+    }
+    resizeHandle.addEventListener('pointerup', endWindowResize);
+    resizeHandle.addEventListener('pointercancel', endWindowResize);
+    resizeHandle.addEventListener('lostpointercapture', endWindowResize);
+    resizeHandle.addEventListener('keydown', function (event) {
+      var step = event.shiftKey ? 100 : 20;
+      var dx = event.key === 'ArrowRight' ? step : event.key === 'ArrowLeft' ? -step : 0;
+      var dy = event.key === 'ArrowDown' ? step : event.key === 'ArrowUp' ? -step : 0;
+      if ((!dx && !dy) || windowMinimized) return;
+      event.preventDefault();
+      sendWindowResize(window.innerWidth + dx, window.innerHeight + dy);
+    });
 
     // ---------- AI client picker (setup hint) ----------
     var CLIENTS = {
@@ -2458,6 +2586,7 @@
     function setStopArmed(on) {
       if (stopArmed === on) return;
       stopArmed = on;
+      document.getElementById('compactStop').classList.toggle('busy', on);
       document.getElementById('haltSlot').classList.toggle('armed', on);
       var b = document.getElementById('stopBtn');
       b.tabIndex = on ? 0 : -1;
@@ -2677,6 +2806,15 @@
       var msg = event.data.pluginMessage;
       if (!msg) return;
 
+      if (msg.type === 'window-state') {
+        applyWindowState(msg.minimized === true);
+        if (!windowMinimized && windowRevealTarget) {
+          document.getElementById(windowRevealTarget).scrollIntoView({ block: 'center' });
+          windowRevealTarget = null;
+        }
+        return;
+      }
+
       if (msg.type === 'init-settings') {
         settingsReady = true;
         fileName = msg.fileName || '';
@@ -2773,12 +2911,14 @@
       }
 
       if (msg.type === 'rule-proposal') {
+        if (windowMinimized) { windowRevealTarget = 'proposalCard'; setWindowMinimized(false); }
         proposalQueue.push({ id: msg.id, reason: msg.reason, pages: msg.pages || [] });
         showNextProposal();
         return;
       }
 
       if (msg.type === 'approval-request') {
+        if (windowMinimized) { windowRevealTarget = 'approvalCard'; setWindowMinimized(false); }
         approvalQueue.push({ id: msg.id, command: msg.command, scale: msg.scale, intent: msg.intent });
         showNextApproval();
         return;
