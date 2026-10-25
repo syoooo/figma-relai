@@ -98,3 +98,8 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 55. **A fully tokenized set is not accused of 0%**: `get_selection_context` on a COMPONENT_SET whose variants are fully bound → the container reports no coverage metric rather than a zero averaged in from its own dashed frame.
 56. **Icon glyphs are not clip risks**: run dimension stability on a page full of icon-font ligatures → they land in `iconGlyphsExcluded`, and `fixedText` carries only boxes that can actually clip.
 57. **A scoped search stays in scope**: `search_nodes` with a `parentId` whose subtree does not contain the match → no results; the same query without `parentId` finds it.
+
+### Plugin window controls
+
+58. **Resize and restore**: drag the panel's bottom-right grip in both directions → the window follows, stays between 320×320 and 960×1200, and its content scrolls at small sizes. Focus the grip and use arrow keys (20 px; Shift: 100 px). Minimize with the header button → only the header remains; restore → the previous expanded size and scroll position return. Repeat while disconnected and while connected; the room and activity feed stay intact. Switch EN/日/中 → control tooltips follow the language. Size is remembered for the current plugin session only.
+59. **Minimized work stays controllable**: minimize during a long command → the compact header exposes Stop once it is armed; Stop cancels the command. Trigger an approval request or a no-go proposal while minimized → the panel expands to show the request, and Approve/Deny still work. Close and reopen the plugin → the normal 380×850 panel opens.
