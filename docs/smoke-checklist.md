@@ -3,7 +3,7 @@
 Run against a real Figma file after changing plugin handlers, the transport, or pairing.
 Setup: MCP client (Claude Code / Cursor) started — the relay is embedded, no `bun socket` needed. Figma plugin installed.
 
-Items 1–39 are the core sheet (~25 min). Items 40–57 cover 0.5–0.7 and need things a driver cannot fake: two files open at once, a branch, a REST token, and a component set that is genuinely broken. Run the section that matches what you touched; run all of it before a release that changes pairing, the kit, or the transport.
+Items 1–39 are the core sheet (~25 min). Items 40–57 cover 0.5–0.7 and need things a driver cannot fake: two files open at once, a branch, a REST token, and a component set that is genuinely broken. Items 58–66 cover what 0.7.11 changed. Run the section that matches what you touched; run all of it before a release that changes pairing, the kit, or the transport.
 
 ## Pairing & connection
 
@@ -99,7 +99,17 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 56. **Icon glyphs are not clip risks**: run dimension stability on a page full of icon-font ligatures → they land in `iconGlyphsExcluded`, and `fixedText` carries only boxes that can actually clip.
 57. **A scoped search stays in scope**: `search_nodes` with a `parentId` whose subtree does not contain the match → no results; the same query without `parentId` finds it.
 
+## 0.7.11 additions
+
+58. **Annotations land**: `annotate set` on a frame → Dev Mode's sidebar shows the markdown label. Add a second one to the same frame → the first is still there. `set` on a GROUP → an error that names `GROUP`. `set_multiple` with one frame, one group and one deleted id → per item: success, the group's type, "Not found".
+59. **A restore into a full memory keeps the law and says what it skipped**: fill the file memory close to its cap, then restore from a kit with seed precedents, and again with link + restore → the conventions come back, no seed precedent is written, and the panel's notice gives the skipped count. The automatic heal after a merge uses the same words.
+60. **A token ref has to name a variable**: record a precedent with a token ref written as a bare `N:M` → a later write to that variable surfaces it. Record one with an id that names no variable → an error, and nothing is saved.
+61. **diff_nodes leaves the file alone**: save a checkpoint, edit, compare → the differences are listed, and the node carries no `relai.checkpoint` plugin data. Restart the MCP server and compare again → "no checkpoint … in this server session".
+62. **join_room names the file**: with two files open, `join_room` to the second file's room → the reply names that file, and the next command lands there. `join_room` to a room with no plugin → the reply says no plugin is there yet.
+63. **execute_figma returns rows whole and nodes as summaries**: a script returning `{ id, type, parent, extra }` → `extra` is still there. A script returning `figma.currentPage.selection[0]` → a node summary, as before. A script returning a paint style → its fields, not a node summary.
+64. **token_debt counts every borrow**: on a file with more than 40 borrowed tokens → the summary's number equals `borrowCount`, says "(showing 40)", and `borrowsTruncated` is true.
+
 ### Plugin window controls
 
-58. **Resize and restore**: drag the panel's bottom-right grip in both directions → the window follows, stays between 320×320 and 960×1200, and its content scrolls at small sizes. Focus the grip and use arrow keys (20 px; Shift: 100 px). Minimize with the header button → only the header remains; restore → the previous expanded size and scroll position return. Repeat while disconnected and while connected; the room and activity feed stay intact. Switch EN/日/中 → control tooltips follow the language. Size is remembered for the current plugin session only.
-59. **Minimized work stays controllable**: minimize during a long command → the compact header exposes Stop once it is armed; Stop cancels the command. Trigger an approval request or a no-go proposal while minimized → the panel expands to show the request, and Approve/Deny still work. Close and reopen the plugin → the normal 380×850 panel opens.
+65. **Resize and restore**: drag the panel's bottom-right grip in both directions → the window follows, stays between 320×320 and 960×1200, and its content scrolls at small sizes. Focus the grip and use arrow keys (20 px; Shift: 100 px). Minimize with the header button → only the header remains; restore → the previous expanded size and scroll position return. Repeat while disconnected and while connected; the room and activity feed stay intact. Switch EN/日/中 → control tooltips follow the language. Size is remembered for the current plugin session only.
+66. **Minimized work stays controllable**: minimize during a long command → the compact header exposes Stop once it is armed; Stop cancels the command. Trigger an approval request or a no-go proposal while minimized → the panel expands to show the request, and Approve/Deny still work. Close and reopen the plugin → the normal 380×850 panel opens.
