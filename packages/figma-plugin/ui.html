@@ -609,9 +609,9 @@
        longer the panel's live concern, so the mark steps back a shade. */
     .feed-entry .st.cancelling { color: var(--amber-dim); }
     /* Law rejections wear vermilion, not error red: the file speaking, not the
-       machine failing. Detection keys on the wall messages ("no-go zone" in
-       guards.ts, "Scope lock:" in write-guard.ts) — reword those and this
-       must follow. The inset rule sits inside the entry's own box, so the
+       machine failing. Detection keys on the error code the plugin sends
+       (guard_blocked, scope_locked), so rewording a wall message leaves the
+       colour alone. The inset rule sits inside the entry's own box, so the
        timestamp column never shifts. */
     .feed-entry .st.shu { color: var(--shu); }
     .feed-entry.law { background: rgba(224, 86, 60, 0.05); box-shadow: inset 2px 0 0 var(--shu-dim); }
@@ -2578,7 +2578,7 @@
     // A row settles only on the plugin's real answer. A row that Stop already
     // marked 'cancelling' was taken off the running count then, so it is not
     // counted down twice.
-    function feedSettle(id, ok, errMsg) {
+    function feedSettle(id, ok, errMsg, code) {
       var e = entries[id];
       if (!e || (e.status !== 'running' && e.status !== 'cancelling')) return;
       var wasCancelling = e.status === 'cancelling';
@@ -2591,7 +2591,7 @@
       var ICON_OK = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>';
       var ICON_ERR = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg>';
       var st = e.el.querySelector('.st');
-      var isLaw = !ok && errMsg && (String(errMsg).indexOf('no-go zone') !== -1 || String(errMsg).indexOf('Scope lock:') !== -1);
+      var isLaw = !ok && (code === 'guard_blocked' || code === 'scope_locked');
       if (isLaw) e.el.classList.add('law');
       st.className = 'st ' + (ok ? 'ok' : (isLaw ? 'shu' : 'err'));
       st.innerHTML = ok ? ICON_OK : ICON_ERR;
@@ -3036,7 +3036,8 @@
 
       if (msg.type === 'command-error') {
         var errText = typeof msg.error === 'string' ? msg.error : (msg.error && msg.error.message);
-        feedSettle(msg.id, false, errText);
+        var errCode = msg.error && typeof msg.error === 'object' ? msg.error.code : undefined;
+        feedSettle(msg.id, false, errText, errCode);
         relayAnswer(msg.id, { id: msg.id, error: msg.error });
       }
 

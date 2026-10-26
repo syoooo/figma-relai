@@ -185,6 +185,30 @@ describe("a plugin answer", () => {
   });
 });
 
+describe("law colour", () => {
+  test("keys on the guard and scope codes", () => {
+    const rows = { g: row("set_properties"), s: row("create_node"), o: row("set_text") };
+    const f = feed(rows);
+    f.feedSettle("g", false, "Page is a no-go zone", "guard_blocked");
+    f.feedSettle("s", false, "outside the lock", "scope_locked");
+    f.feedSettle("o", false, "Node not found", "node_not_found");
+    expect(rows.g.el.classList.contains("law")).toBe(true);
+    expect(rows.g.el.querySelector(".st")!.className).toBe("st shu");
+    expect(rows.s.el.classList.contains("law")).toBe(true);
+    expect(rows.o.el.classList.contains("law")).toBe(false);
+    expect(rows.o.el.querySelector(".st")!.className).toBe("st err");
+  });
+
+  test("ignores the wording of the message", () => {
+    const rows = { a: row("set_properties") };
+    const f = feed(rows);
+    f.feedSettle("a", false, "Page is a no-go zone. Scope lock: on");
+    expect(rows.a.el.classList.contains("law")).toBe(false);
+    expect(script).not.toContain("'no-go zone'");
+    expect(script).not.toContain("'Scope lock:'");
+  });
+});
+
 describe("feed text", () => {
   test("every literal t() key exists in all three locales", () => {
     const keys = [...new Set([...script.matchAll(/\bt\('([a-z_0-9]+)'\)/g)].map((m) => m[1]))];
