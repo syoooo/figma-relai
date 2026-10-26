@@ -31,4 +31,22 @@ describe("ui.html", () => {
       }
     }
   });
+
+  // setLang runs from the EN/日/中 buttons. Every function the script declares
+  // is stubbed, so a call to one that no longer exists throws here as it does
+  // in the panel, before the locale is saved.
+  test("switching the language saves it", () => {
+    const script = html.match(/<script>([\s\S]*)<\/script>/)![1];
+    const setLang = script.match(/function setLang\(l\) \{[\s\S]*?\n {4}\}/)![0];
+    const declared = [
+      ...new Set([...script.matchAll(/function ([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1])),
+    ].filter((name) => name !== "setLang");
+    const saved: unknown[] = [];
+    const stubs = declared.map((name) =>
+      name === "saveSettings" ? (patch: unknown) => saved.push(patch) : () => {}
+    );
+    const run = new Function(...declared, `var locale = 'en';\n${setLang}\nsetLang('ja');`);
+    run(...stubs);
+    expect(saved).toEqual([{ locale: "ja" }]);
+  });
 });
