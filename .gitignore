@@ -14,3 +14,11 @@ dist-plugin/
 # prepack copies (never committed)
 packages/mcp-server/README.md
 packages/mcp-server/LICENSE
+
+# stray captures at the repository root (screenshots, logs, exports);
+# images that ship live under assets/ and site/public/, which this leaves alone
+/*.png
+/*.log
+/*.tsv
+/*.html
+/undefined/
