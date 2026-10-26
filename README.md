@@ -5,7 +5,7 @@
 
 [figma-relai.vercel.app](https://figma-relai.vercel.app)
 
-**Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. And the file is not a bystander: it carries your conventions, your precedents, your no-go zones. Every client that opens it inherits them, and an edit that breaks them is refused before it runs — the file has a veto. That is what makes it safe to hand agents real work.
+**Your AI, on the canvas.** Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma, so you can read, edit, audit, and build design systems by talking to the model you already use. And the file is not a bystander: it carries your conventions, your precedents, your no-go zones, and every client that connects through Relai inherits them. A write through Relai into a page you fenced off is refused before it runs, and your recorded rulings arrive the moment an edit touches what they cover. That is what makes it safer to hand agents real work.
 
 Relai's position: the AI era should put designers *more* in charge, not less. Taste and judgment stay with you; the labor moves to a model you already trust, with every step visible.
 
@@ -43,7 +43,7 @@ The gate in the middle is the point: one explicit yes from the designer licensed
 
 Code already escaped the speed-versus-standards trade, and not by making models careful: the repo pushes back. Lint flags, checks gate, protected branches refuse — which is why a developer can hand an agent real work and go do something else. Relai builds that pushback into the design file itself. Not a leash — a license.
 
-Rules you'd normally paste into every prompt live inside the Figma file, so any future session — from any MCP client, by anyone who opens the file — starts already briefed. And the load-bearing part is not prose the model might happen to read: the law runs as checks.
+Rules you'd normally paste into every prompt live inside the Figma file, so any future session — from any MCP client, by anyone who opens the file — starts already briefed. Part of that law is guidance the agent reads. Part of it is enforced: no-go zones and Lock to selection refuse writes that come through Relai, and the confirmation dial holds a command until you answer.
 
 **Conventions** are a little CLAUDE.md stored in the file: naming rules, token routing, spacing habits. The AI reads them before working. Unlike a CLAUDE.md, they belong to the file rather than to one person's agent setup — every client inherits them, configured or not. Add one by telling the AI ("new convention: colors route through Theme tokens"); the panel's RULES row shows what's stored.
 
@@ -61,11 +61,21 @@ The panel's Memory row lists every entry; delete any of them any time. Nothing i
 
 **Kits.** One designer usually runs one product, and its files share the same law. Save this file's rules under a name and other files can use it. Figma drops file-carried law on branch merges; the kit puts it back — one click, or automatically if you flip that kit's auto-restore on.
 
-**AI no-go zones** fence off whole pages — brand masters, legal, the one that is already pixel-perfect. Writes into a guarded page are rejected before they run, with the reason on the receipt, and only you edit the guard list. Protected branches, for the canvas.
+**AI no-go zones** fence off whole pages — brand masters, legal, the one that is already pixel-perfect. Writes through Relai into a guarded page are rejected before they run, with the reason on the receipt. You set them in the panel; an agent can also add or lift one with `manage_pages`, and that command shows in your activity feed like any other. Protected branches, for the canvas.
 
-**Confirmation** is a dial with four stops — OPEN · RISK · BULK · ALL. At RISK, the default, only destructive operations ask (deleting variables or styles, detach, flatten); everything else keeps moving. Set it in the panel; agents can't move it.
+**Confirmation** is a dial with four stops — OPEN · RISK · BULK · ALL. At RISK, the default, only destructive operations ask (deleting variables or styles, detach, flatten); everything else keeps moving. Set it in the panel; no Relai tool changes it. It reads the command it receives, so a destructive operation wrapped in `batch_execute` asks only at ALL, or at BULK when the batch is large. While code execution is on, a script could also rewrite the panel's settings — see below.
 
-Where the law lives, and how far it reaches: it is stored as plugin data inside the file — no extra layers on the canvas, nothing teammates have to tiptoe around — and it survives duplication (branch merges drop it; kits put it back). Enforcement runs in the plugin, on the file's side of the wire, and comes in two strengths: no-go zones and Lock to selection are walls — the write itself is rejected; precedents are your recorded words arriving at the exact moment an edit touches what they reference — the agent backs off because the author shows up. Any client that connects through Relai is bound, including ones you never configured. An agent pointed at some other bridge is not — the law cannot guard a door it does not hold, which is why everything leaves receipts.
+### How far the law reaches
+
+The law is stored as plugin data inside the file — no extra layers on the canvas, nothing teammates have to tiptoe around — and it survives duplication (branch merges drop it; kits put it back). Any plugin that runs in the file can read that data, and code that knows where it lives can rewrite it, so keep secrets out of your conventions.
+
+What the law can stop depends on how a write arrives:
+
+- **Commands sent through Relai's tools** are checked in the plugin, on the file's side of the wire, before they run. A write aimed at a node on a fenced page, or outside your selection lock, is refused. Commands that carry their node ids inside a list — a multi-node `set_text`, `annotate set_multiple` — are checked against the current page only. Variables and modes belong to no page, so no-go zones do not cover them.
+- **Scripts sent through `execute_figma`** run in the same plugin sandbox as Relai's checks, so they cannot be screened before they run. Relai refuses a script outright when the current page is fenced off. Afterwards, the result warns the agent about nodes the script created through the `relai` helpers or returned that sit on a fenced page or outside your lock. While code execution is on, a script can also rewrite Relai's settings and law. Turn code execution off when you want every write to go through checked commands.
+- **Writes that never pass through Relai** — another plugin, another MCP server, someone editing by hand, anything done while Relai is closed — are outside its reach. Relai neither refuses them nor notices them.
+
+Precedents work at a different strength: they are your recorded words, arriving at the exact moment an edit touches what they reference. The agent backs off because the author shows up, not because anything blocked it. Any client that connects through Relai is bound by all of this, including ones you never configured — and everything it does leaves receipts.
 
 None of this is setup you grind through — it accumulates. On day one the file is blank law, and the agent behaves like anyone's agent. A month in, it arrives briefed on your conventions and precedents and stops at your fences: the same prompt that produces the average of everyone's design in a fresh file produces yours in yours. Two long-time users are not holding the same tool. They are holding two different instruments.
 
@@ -109,7 +119,7 @@ Audits. `analyze_design` checks color-token coverage, auto-layout quality, compo
 
 Design systems. Variable collections with modes, token binding, shared styles, components with proper variants, team-library imports. `get_design_system` inventories what the file — and the libraries it uses — already has (with a token, the library's whole catalog, including components the file has never placed), so the AI builds from your components instead of redrawing near-copies; `analyze_design`'s tokens aspect finds hardcoded values that visually match an existing variable, and one `tokenize` call binds them all. These run as declarative operations with precondition checks, so the same request behaves the same way every time, and a failure tells the AI what to do next ("call set_layout_mode first") instead of dumping a stack trace.
 
-Everything else. `execute_figma` runs JavaScript against the Figma Plugin API directly — the same escape-hatch approach as Figma's official MCP — with a `relai.*` helper library that makes the correct pattern the shortest one, a registry of pitfalls learned in production that attaches the fix to known errors, and a lint that flags silent mistakes. If you'd rather the AI never ran code, turn it off with the plugin's "Allow code execution" toggle.
+Everything else. `execute_figma` runs JavaScript against the Figma Plugin API directly, with a `relai.*` helper library that makes the correct pattern the shortest one, a registry of pitfalls learned in production that attaches the fix to known errors, and a lint that flags silent mistakes. Scripts run alongside Relai's checks rather than behind them — see "How far the law reaches". If you'd rather the AI never ran code, turn it off with the plugin's "Allow code execution" toggle.
 
 ## You stay in control
 
@@ -155,9 +165,11 @@ Ports are fixed by Figma's plugin sandbox: the manifest allowlists `ws://localho
 
 Each tool is self-describing, so the AI sees full parameter docs. The same contract also exists as a file: `npx figma-relai manifest` prints a machine-readable JSON of every tool schema, plugin command, and known pitfall — generated from the running code on every build (committed as `docs/manifest.json`), so it cannot drift — and `npx figma-relai docs <tool>` renders it for humans. Eleven skill documents ship alongside as MCP prompts: token strategy, component conventions, audit workflows, the QA gate, a Plugin API cheat sheet for `execute_figma`, file memory & precedents, and recipes for design-system-first building, bulk cleanup, and comment-driven collaboration. Your own skills load too: drop markdown files with a name/description frontmatter into `~/.figma-relai/skills/` and they register as `user:` prompts.
 
-## Relai and Figma's official MCP
+## Relai and Figma's MCP server
 
-Figma's own AI has grown fast — the official MCP server now writes to the canvas, and the Figma Design Agent collaborates right inside the editor. Both are reserved for full seats on paid plans, with usage metered in AI credits and models chosen by Figma. Relai is the open-source counterpart on the other side of that line: your model, your subscription, your machine — and the designer holding the controls. Writes go through the Relai Figma plugin rather than the paid REST API, which is why it works on every plan, free included. If you have the seats, the two coexist happily — run both.
+Relai can run alongside Figma's MCP server. Its rules apply only to writes that go through Relai; work done through another server is not checked by Relai.
+
+Relai runs on your machine, works with whichever model your MCP client uses, and writes through the Relai Figma plugin.
 
 ## Optional: a Figma token
 
@@ -195,7 +207,7 @@ Start with `npx figma-relai doctor` — one command that checks Node, the relay 
 
 ## Security
 
-The relay binds to `127.0.0.1` only and has no authentication beyond room names, which carry a crypto-random suffix. `execute_figma` runs AI-written code inside Figma's plugin sandbox; it is on by default, every run is visible in the activity feed, and the designer can disable it. Scripts are not atomic — a failed script's earlier changes persist. Full threat model: [SECURITY.md](SECURITY.md).
+The relay binds to `127.0.0.1` only and has no authentication: any process on your machine that can reach it can list the open rooms, with each room's file name, and join one. `execute_figma` runs AI-written code inside Figma's plugin sandbox; it is on by default, every run is visible in the activity feed, and the designer can disable it. Scripts are not atomic — a failed script's earlier changes persist. Full threat model: [SECURITY.md](SECURITY.md).
 
 ## For contributors
 
