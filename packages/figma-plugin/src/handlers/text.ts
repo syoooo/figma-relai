@@ -3,6 +3,8 @@ import { getNodeById, serializeNode } from "../utils/node-helpers.js";
 import { resolveNode, assertSupports } from "../utils/preconditions.js";
 import { loadNodeFonts, loadFont } from "../utils/font-loader.js";
 import { sendProgressUpdate, delay } from "../progress.js";
+import { ERROR_DEFAULTS } from "@figma-relai/shared";
+import { classifyError, SKIPPED_ITEM } from "../call-outcome.js";
 
 registerHandler("scan_text_nodes", async (params) => {
   const parentNode = await resolveNode(params.nodeId as string);
@@ -50,28 +52,33 @@ registerHandler("set_multiple_text_contents", async (params) => {
   const commandId = params.commandId as string;
   const results = [];
 
+  // Each item reports its own outcome: a Stop part-way leaves the earlier
+  // texts written, and the skipped ones are listed one by one.
   for (let i = 0; i < texts.length; i++) {
-    if (isCancelled(commandId)) {
-      results.push({
-        nodeId: texts[i].nodeId,
-        success: false,
-        error: `Cancelled by designer (${texts.length - i} items skipped)`,
-      });
-      break;
-    }
     const { nodeId, text } = texts[i];
+    if (isCancelled(commandId)) {
+      results.push({ nodeId, success: false, error: "Cancelled by designer: skipped", ...SKIPPED_ITEM });
+      continue;
+    }
     try {
       const node = await getNodeById(nodeId);
       if (node && node.type === "TEXT") {
         const textNode = node as TextNode;
         await loadNodeFonts(textNode);
         textNode.characters = text;
-        results.push({ nodeId, success: true });
+        results.push({ nodeId, success: true, outcome: "applied" });
       } else {
-        results.push({ nodeId, success: false, error: "Not a text node" });
+        // Checked before writing, so this item changed nothing
+        const code = node ? "precondition_failed" : "node_not_found";
+        results.push({ nodeId, success: false, error: "Not a text node", code, ...ERROR_DEFAULTS[code] });
       }
     } catch (err) {
-      results.push({ nodeId, success: false, error: String(err) });
+      results.push({
+        nodeId,
+        success: false,
+        error: String(err),
+        ...classifyError(err, { phase: "handler", write: true }),
+      });
     }
 
     sendProgressUpdate({
