@@ -1,5 +1,5 @@
 
-export const VERSION = 'v0.7.11';
+export const VERSION = 'v0.8.0';
 
 export const translations = {
   en: {
@@ -83,9 +83,9 @@ export const translations = {
     craft: {
       eyebrow: 'CRAFT',
       title: 'Why the results come out better.',
-      body: 'Connecting an AI to Figma is the easy part. Most of Relai is the unglamorous work that decides whether the output is production-grade or plausible-looking noise — and two hundred and thirty-nine tests written to break it gate every release that touches logic.',
+      body: 'Connecting an AI to Figma is the easy part. Most of Relai is the unglamorous work that decides whether the output is production-grade or plausible-looking noise — and three hundred and seventy-four tests written to break it gate every release that touches logic.',
       items: [
-        { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'The minefield, mapped', body: 'The Plugin API is full of traps. Relai ships 78 of them, learned in production — trip one, and the raw error comes back with the fix attached; the same registry becomes the cheat sheet the AI reads before writing code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
+        { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'The minefield, mapped', body: 'The Plugin API is full of traps. Relai ships 79 of them, learned in production — trip one, and the raw error comes back with the fix attached; the same registry becomes the cheat sheet the AI reads before writing code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', tag: 'RECEIPT', title:'It checks its own work', body: 'After a write, the AI looks: screenshot, compare against intent, re-read the result. The difference between “done” and “actually done”.', rows: ['set_properties · 24 nodes · 0.6s ✓', 'export_asset · 1 png ✓', 'verify_visual · match ✓'] },
         { kicker: 'conventions', tag: 'CARRIED BY THE FILE', title:'Your system comes first', body: 'Before building, the AI inventories the file — and the rules you store in the file itself ride into its context: naming, token routing, no-go zones, your precedents. It builds from your components, not near-copies.', artifact: '# conventions — carried by the file\n· colors route through Theme tokens, no raw hex\n· props camelCase · states hovered/pressed/…\n· never detach; reuse atoms from /components\n# memory — precedents, e.g.\n· "Badge border=1 is intent"' },
         { kicker: 'navigation', tag: 'TOOL RESULT', title:'A map, not a maze', body: 'Thirty-three tools, each answering with a summary, honest notes on what got truncated, and a recommended next step. The AI arrives briefed, too — eleven skills as MCP prompts, your own from `~/.figma-relai/skills`, the whole contract as a `manifest` regenerated from running code, and one `doctor` command that diagnoses the chain end to end.', artifact: '{\n  "summary": "3 pages · 45 component sets",\n  "note": "components truncated (top 40)",\n  "recommended_next": "get_node_details\n    on the set you plan to extend"\n}' }

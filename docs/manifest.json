@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.7.11",
+  "version": "0.8.0",
   "tools": [
     {
       "name": "batch_execute",
@@ -9,6 +9,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "commands": {
             "type": "array",
             "items": {
@@ -50,6 +58,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "code": {
             "type": "string",
             "description": "JavaScript source. May use await. Return a JSON-serializable value."
@@ -95,6 +111,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "aspect": {
             "type": "string",
             "enum": [
@@ -144,6 +168,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeIdA": {
             "type": "string",
             "description": "First node ID (or the checkpoint target)"
@@ -175,6 +207,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -232,6 +272,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "url": {
             "type": "string",
             "description": "Image URL — creates a new node"
@@ -282,6 +330,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeId": {
             "type": "string",
             "description": "Node to export"
@@ -316,6 +372,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -371,6 +435,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -486,7 +558,17 @@
       "description": "Get an overview of the design token system: variable collections, modes, variable counts, and style counts. Use to understand the design system before binding tokens or creating new variables. Follow with manage_variables.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          }
+        },
+        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
@@ -496,14 +578,24 @@
       "description": "Get the full document structure: pages, component/style/variable counts. Always call this first to understand the file. Follow with get_selection_context or search_nodes.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          }
+        },
+        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
     {
       "name": "get_events",
       "category": "context",
-      "description": "Activity since the last check. scope 'designer' (default): the designer's selection/node/page changes (also piggybacked as designer_events on command results). scope 'agent': this session's own command log — every plugin command sent, with success/duration — useful for summarizing what was changed. 'all': both.",
+      "description": "Activity since the last check. scope 'designer' (default): the designer's selection/node/page changes (also piggybacked as designer_events on command results). scope 'agent': this session's own command log — every plugin command sent, with success/duration, outcome (applied/not_applied/unknown) and error code — useful for summarizing what was changed. 'all': both.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -527,6 +619,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeId": {
             "type": "string",
             "description": "The node ID to inspect"
@@ -545,7 +645,17 @@
       "description": "Get full context for the current Figma selection: node properties, fills, layout, token bindings, and children summary. Use as the starting point for any inspection or modification workflow. Follow with analyze_design or set_properties.",
       "inputSchema": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          }
+        },
+        "additionalProperties": false,
         "$schema": "http://json-schema.org/draft-07/schema#"
       }
     },
@@ -556,6 +666,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeId": {
             "type": "string",
             "description": "Node ID to screenshot (default: current view)"
@@ -572,6 +690,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "query": {
             "type": "string",
             "description": "Name substring to search for"
@@ -599,6 +725,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "type": {
             "type": "string",
             "enum": [
@@ -788,6 +922,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "refresh": {
             "type": "boolean",
             "description": "Rescan instead of using the session cache"
@@ -808,6 +950,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "kind": {
             "type": "string",
             "enum": [
@@ -836,6 +986,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -915,6 +1073,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -982,6 +1148,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -1157,6 +1331,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -1274,6 +1456,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -1355,6 +1545,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "action": {
             "type": "string",
             "enum": [
@@ -1406,6 +1604,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "operation": {
             "type": "string",
             "enum": [
@@ -1481,6 +1687,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeIds": {
             "type": "array",
             "items": {
@@ -1852,6 +2066,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeId": {
             "type": "string",
             "description": "Target text node (single / range mode)"
@@ -1924,6 +2146,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeIds": {
             "type": "array",
             "items": {
@@ -1968,6 +2198,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeId": {
             "type": "string",
             "description": "Root node to validate (default: current selection)"
@@ -1992,6 +2230,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeId": {
             "type": "string",
             "description": "Node ID to verify"
@@ -2017,6 +2263,14 @@
       "inputSchema": {
         "type": "object",
         "properties": {
+          "room": {
+            "type": "string",
+            "description": "Target this plugin room for this call only (see join_room)."
+          },
+          "expect_file": {
+            "type": "string",
+            "description": "Refuse unless the target file's name is exactly this."
+          },
           "nodeId": {
             "type": "string",
             "description": "Node to verify"
@@ -2653,6 +2907,11 @@
       "pattern": null,
       "hint": "",
       "doc": "**Renaming a variant axis with `editComponentProperty` unbinds the instances, and can reset their plain overrides too.** Instances bound to that property keep their value but lose the `boundVariables.componentProperties` alias, nested explicit overrides included. In one measured rename, 71 instances whose value for the axis was a plain override — not bound to anything — fell back to the set's default variant. Right after rebinding, some instances kept an old value that disagreed with what the mode resolves to; writing the value first and then rebinding fixed them. Before renaming an axis, record every instance's value and binding for it; afterwards write the values back, rebind, and read both back."
+    },
+    {
+      "pattern": null,
+      "hint": "",
+      "doc": "**`figma.skipInvisibleInstanceChildren` is plugin-wide, not per script.** Setting it to `true` — a common speed-up for `findAll` — hides invisible sublayers of instances from every search that runs while it is set, not only the script that set it. Relai puts the previous value back after each `execute_figma` script, so it does not leak into later commands; set it again in every script that wants it, and while it is on, do not read an instance sublayer missing from a search as deleted."
     }
   ]
 }
