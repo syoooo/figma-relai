@@ -37,7 +37,6 @@ import { dispatch, hasHandler, cancelCommand, clearCancelled } from "./dispatche
 import { beginCommand, endCommand, pushEvent, drainEvents } from "./event-buffer.js";
 import {
   needsApproval,
-  describeScale,
   migrateConfirmLevel,
   setScopeLock,
   clearScopeLock,
@@ -46,6 +45,7 @@ import {
   type ConfirmLevel,
 } from "./write-guard.js";
 import { sendProgressUpdate } from "./progress.js";
+import { createApprovalGate } from "./approval-gate.js";
 import {
   attachPrecedents,
   readMemory,
@@ -165,64 +165,25 @@ loadSettings().then(async (settings) => {
 // ── Approval gate ───────────────────────────────────────────────────
 // While a command waits for the designer, periodic progress keeps the MCP
 // side's timeout alive; deny resolves into the cancelled-error envelope.
-const pendingApprovals = new Map<string, (approved: boolean, reason?: string) => void>();
-const APPROVAL_TIMEOUT_MS = 120000;
-
-function requestApproval(
-  id: string,
-  command: string,
-  params: Record<string, unknown>
-): Promise<boolean> {
-  return new Promise((resolve) => {
-    const keepalive = setInterval(() => {
-      sendProgressUpdate({
-        commandId: (params.commandId as string) ?? id,
-        commandType: command,
-        status: "in_progress",
-        progress: 0,
-        totalItems: 1,
-        processedItems: 0,
-        message: "Awaiting designer approval",
-      });
-    }, 10000);
-    const timeout = setTimeout(() => settle(false), APPROVAL_TIMEOUT_MS);
-    const settle = (approved: boolean, reason?: string) => {
-      clearInterval(keepalive);
-      clearTimeout(timeout);
-      pendingApprovals.delete(id);
-      // A typed reason becomes a decision precedent in file memory
-      if (reason && reason.trim().length > 0) {
-        void recordGatePrecedent(command, params, approved, reason.trim());
-      }
-      resolve(approved);
-    };
-    pendingApprovals.set(id, settle);
-    figma.ui.postMessage({
-      type: "approval-request",
-      id,
-      command,
-      scale: describeScale(command, params),
-      intent: describeIntent(command, params),
-    });
-  });
-}
-
-// The approval card leads with the agent's stated intent, not the command
-// name — a designer can't judge "execute_code", they can judge "rebuild the
-// pricing table from library components".
-function describeIntent(command: string, params: Record<string, unknown>): string {
-  if (typeof params.description === "string" && params.description.trim()) {
-    return params.description.trim();
-  }
-  if (command === "batch_execute" && Array.isArray(params.commands)) {
-    const names = (params.commands as Array<{ command?: string }>)
-      .map((c) => c.command)
-      .filter(Boolean);
-    const head = names.slice(0, 3).join(", ");
-    return `${names.length} commands: ${head}${names.length > 3 ? ", …" : ""}`;
-  }
-  return "";
-}
+const approvalGate = createApprovalGate({
+  timeoutMs: 120000,
+  keepaliveMs: 10000,
+  post: (message) => figma.ui.postMessage(message),
+  keepalive: (id, command, params) =>
+    sendProgressUpdate({
+      commandId: (params.commandId as string) ?? id,
+      commandType: command,
+      status: "in_progress",
+      progress: 0,
+      totalItems: 1,
+      processedItems: 0,
+      message: "Awaiting designer approval",
+    }),
+  // A typed reason becomes a decision precedent in file memory
+  onSettled: ({ command, params, approved, reason }) => {
+    if (reason) void recordGatePrecedent(command, params, approved, reason);
+  },
+});
 
 // Handle messages from the UI
 figma.ui.onmessage = async (msg: any) => {
@@ -240,7 +201,8 @@ figma.ui.onmessage = async (msg: any) => {
   }
 
   if (msg.type === "approval-response") {
-    pendingApprovals.get(msg.id as string)?.(
+    approvalGate.answer(
+      msg.id as string,
       msg.approved === true,
       typeof msg.reason === "string" ? msg.reason : undefined
     );
@@ -389,7 +351,7 @@ figma.ui.onmessage = async (msg: any) => {
   if (msg.type === "cancel-command") {
     cancelCommand(msg.id as string);
     // Stop also answers any approval card still waiting on this command
-    pendingApprovals.get(msg.id as string)?.(false);
+    approvalGate.answer(msg.id as string, false, undefined, "stop");
     return;
   }
 
@@ -407,7 +369,8 @@ figma.ui.onmessage = async (msg: any) => {
       }
 
       if (needsApproval(effectiveConfirmLevel(currentSettings), command, params ?? {})) {
-        const approved = await requestApproval(id, command, params ?? {});
+        const verdict = await approvalGate.request(id, command, params ?? {});
+        const approved = verdict.verdict === "approved";
         figma.ui.postMessage({ type: "approval-settled", id, approved });
         if (!approved) {
           figma.ui.postMessage({
