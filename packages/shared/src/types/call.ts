@@ -180,7 +180,12 @@ export interface PeerMeta {
   [key: string]: unknown;
 }
 
-/** Per-call information the server attaches to a command message. */
+/**
+ * Per-call information the server attaches to a command message. The plugin
+ * passes `protocol` on to command handlers as `params.callProtocol` (absent
+ * when the server sent no call info, which means protocol 1); handlers that
+ * size their result for the server read it there.
+ */
 export interface WsCallInfo {
   protocol: 2;
   // Refuse unless the plugin's live figma.root.name equals this exactly

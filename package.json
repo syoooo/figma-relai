@@ -16,7 +16,7 @@
     "start": "node packages/mcp-server/dist/index.js",
     "setup": "bash scripts/setup.sh",
     "test": "bun test",
-    "typecheck": "cd packages/shared && bun x tsc --noEmit && cd ../mcp-server && bun x tsc --noEmit && cd ../figma-plugin && bun x tsc --noEmit"
+    "typecheck": "cd packages/shared && bun x tsc --noEmit && cd ../mcp-server && bun x tsc --noEmit && cd ../figma-plugin && bun x tsc --noEmit && bun x tsc --noEmit -p ../relay"
   },
   "license": "MIT",
   "devDependencies": {
