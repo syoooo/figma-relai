@@ -120,7 +120,7 @@ export function routeResponse(
     tracker.reject(response.id, pluginError(response.error));
   } else if ("result" in response) {
     if (response.meta && onMeta) onMeta(response.id, response.meta);
-    tracker.resolve(response.id, response.result);
+    tracker.resolve(response.id, response.result, response.meta);
   }
 }
 
@@ -305,7 +305,12 @@ export class FigmaConnection {
             const progressData = json.message?.data as CommandProgressUpdate;
             const requestId = json.id || "";
 
-            if (requestId && this.tracker.has(requestId)) {
+            if (requestId && this.tracker.has(requestId) && progressData?.status === "cancel_requested") {
+              // Both the panel and the plugin report a Stop; the first one
+              // starts the grace period and the second changes nothing
+              this.tracker.markCancelRequested(requestId);
+              logger.info(`Stop requested for ${progressData.commandType}; waiting for its result`);
+            } else if (requestId && this.tracker.has(requestId)) {
               this.tracker.resetTimeout(requestId);
               logger.info(
                 `Progress: ${progressData.commandType} ${progressData.progress}% - ${progressData.message}`
@@ -348,6 +353,9 @@ export class FigmaConnection {
         logger.info(`Disconnected from relay (close code ${code})`);
         this.ws = null;
         this.joinedRooms.clear();
+        // Presence comes back with the rejoin; a plugin that left while the
+        // link was down must not still read as present
+        this.presenceByRoom.clear();
         // A command that was already on the wire may have run to completion in
         // Figma before the socket dropped — so say so instead of implying it
         // failed. Retrying a write on the caller's behalf could apply it twice.
@@ -441,7 +449,7 @@ export class FigmaConnection {
               : `The relay did not answer ${what} in time. Nothing changed in Figma.`
           )
         );
-      }, timeoutMs);
+      }, timeoutMs, "relay_unresponsive");
       try {
         this.ws!.send(JSON.stringify(payload));
       } catch (err) {
@@ -752,7 +760,18 @@ export class FigmaConnection {
         this.inflight.add(id);
         logger.info(`Sending command: ${command}`);
         logger.debug(`Request: ${JSON.stringify(request)}`);
-        this.ws!.send(JSON.stringify(request));
+        try {
+          this.ws!.send(JSON.stringify(request));
+        } catch (sendError) {
+          // The command never left this process, so nothing ran
+          this.tracker.reject(
+            id,
+            new RelaiError(
+              "not_connected",
+              `The command could not be sent to the relay (${sendError instanceof Error ? sendError.message : String(sendError)}). Nothing changed in Figma.`
+            )
+          );
+        }
       });
     } catch (err) {
       // Anything that is not already coded is the tracker giving up on a

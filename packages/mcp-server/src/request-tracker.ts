@@ -95,11 +95,14 @@ export class RequestTracker {
   /**
    * The designer pressed Stop on this request. The plugin may still finish
    * it, so keep waiting, but only for the grace period: a real result inside
-   * it resolves as usual; silence becomes `cancel_unconfirmed`.
+   * it resolves as usual; silence becomes `cancel_unconfirmed`. The panel and
+   * the plugin both report a Stop, so a second call keeps the first grace
+   * period instead of starting a new one.
    */
   markCancelRequested(id: string, graceMs: number = 10000): boolean {
     const request = this.pending.get(id);
     if (!request) return false;
+    if (request.cancelRequested) return true;
     request.cancelRequested = true;
     clearTimeout(request.timeout);
     request.timeout = setTimeout(() => {

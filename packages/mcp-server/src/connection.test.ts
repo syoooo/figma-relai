@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { RelaiError, type ResultMeta } from "@figma-relai/shared";
 import { chooseRepairRoom, formatFigmaError, routeResponse } from "./connection.js";
 import { RequestTracker } from "./request-tracker.js";
+import { runInCommandSlot, type CommandSlot } from "./call-scope.js";
 
 function trackedPromise(tracker: RequestTracker, id: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -48,6 +49,18 @@ describe("routeResponse", () => {
     const tracker = new RequestTracker();
     routeResponse({ result: 1 }, tracker);
     expect(tracker.size).toBe(0);
+  });
+});
+
+describe("routeResponse result metadata", () => {
+  test("hands the plugin's result metadata to the tracker", async () => {
+    const tracker = new RequestTracker();
+    const slot: CommandSlot = { closed: false };
+    const promise = runInCommandSlot(slot, () => trackedPromise(tracker, "m"));
+    const meta: ResultMeta = { protocol: 2, write: true, file: "Alpha", outcome: "applied" };
+    routeResponse({ id: "m", result: { ok: true }, meta }, tracker);
+    await expect(promise).resolves.toEqual({ ok: true });
+    expect(slot.settled).toEqual({ id: "m", meta, cancelRequested: undefined });
   });
 });
 

@@ -52,6 +52,16 @@ describe("RequestTracker", () => {
     expect(error.outcome).toBe("unknown");
   });
 
+  test("a second Stop for the same request keeps the first grace period", async () => {
+    const tracker = new RequestTracker();
+    const promise = track(tracker, "a", 60000);
+    // The panel and the plugin both report the Stop
+    expect(tracker.markCancelRequested("a", 10)).toBe(true);
+    expect(tracker.markCancelRequested("a", 60000)).toBe(true);
+    const error = await rejection(promise);
+    expect(error.code).toBe("cancel_unconfirmed");
+  });
+
   test("a real result inside the grace resolves and is marked as after Stop", async () => {
     const tracker = new RequestTracker();
     const slot: CommandSlot = { closed: false };
