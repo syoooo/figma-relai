@@ -76,7 +76,13 @@ function feed(rows: Record<string, ReturnType<typeof row>>, open = true) {
      ${fn("feedNote")}
      ${fn("feedSettle")}
      ${fn("stopAll")}
-     return { stopAll: stopAll, feedSettle: feedSettle, running: function () { return runningCount; } };`
+     ${fn("relayAnswer")}
+     return {
+       stopAll: stopAll,
+       feedSettle: feedSettle,
+       relayAnswer: relayAnswer,
+       running: function () { return runningCount; }
+     };`
   );
   const api = run(
     rows,
@@ -146,6 +152,36 @@ describe("Stop", () => {
     f.stopAll();
     expect(f.posted).toEqual([{ type: "cancel-command", id: "a" }]);
     expect(rows.a.status).toBe("cancelling");
+  });
+});
+
+describe("a plugin answer", () => {
+  test("settles its row and reaches the server while the link is up", () => {
+    const rows = { a: row("set_text") };
+    const f = feed(rows);
+    f.feedSettle("a", true);
+    f.relayAnswer("a", { id: "a", result: { ok: true } });
+    expect(rows.a.status).toBe("ok");
+    expect(f.sent).toEqual([{ type: "message", room: "room-1", id: "a", message: { id: "a", result: { ok: true } } }]);
+    expect(rows.a.el.texts).not.toContain("<result_undelivered>");
+  });
+
+  test("settles its row with the link down and says the answer went nowhere", () => {
+    const rows = { a: row("set_text"), b: row("create_node") };
+    const f = feed(rows, false);
+    f.feedSettle("a", true);
+    f.relayAnswer("a", { id: "a", result: {} });
+    f.feedSettle("b", false, "Node not found");
+    f.relayAnswer("b", { id: "b", error: { message: "Node not found" } });
+    expect(rows.a.status).toBe("ok");
+    expect(rows.b.status).toBe("err");
+    expect(rows.a.el.texts).toContain("<result_undelivered>");
+    expect(rows.b.el.texts).toContain("<result_undelivered>");
+    expect(f.running()).toBe(0);
+  });
+
+  test("is not gated on the relay link in the message handler", () => {
+    expect(script).not.toMatch(/msg\.type === 'command-(result|error)' &&/);
   });
 });
 

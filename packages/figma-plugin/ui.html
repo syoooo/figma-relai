@@ -1209,6 +1209,7 @@
         feed_empty: 'awaiting commands',
         cancel_requested: 'Stop requested — waiting for the command to end',
         cancel_too_late: 'Stop came too late — the command finished',
+        result_undelivered: 'The result did not reach the AI — the connection was down',
         settings: 'Config',
         allow_exec: 'Allow code execution',
         allow_exec_hint: 'execute_figma — AI-written Plugin API scripts',
@@ -1318,6 +1319,7 @@
         feed_empty: 'コマンド待機中',
         cancel_requested: '停止を要求しました。終わるのを待っています',
         cancel_too_late: '停止は間に合わず、最後まで実行されました',
+        result_undelivered: '結果はAIに届いていません（接続が切れていました）',
         settings: '設定',
         allow_exec: 'コード実行を許可',
         allow_exec_hint: 'execute_figma — AIが書いたPlugin APIスクリプト',
@@ -1427,6 +1429,7 @@
         feed_empty: '等待命令',
         cancel_requested: '已请求停止，等待命令结束',
         cancel_too_late: '停止没赶上，命令已执行完',
+        result_undelivered: '结果没送到AI（连接已断开）',
         settings: '设置',
         allow_exec: '允许代码执行',
         allow_exec_hint: 'execute_figma — AI编写的Plugin API脚本',
@@ -2604,6 +2607,17 @@
       if (ok && wasCancelling) feedNote(e, t('cancel_too_late'));
     }
 
+    // The plugin's answer settles its row whether or not the relay link is up.
+    // With the link down the answer goes nowhere, and the row says so instead
+    // of spinning on.
+    function relayAnswer(id, message) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'message', room: roomName, id: id, message: message }));
+        return;
+      }
+      if (entries[id]) feedNote(entries[id], t('result_undelivered'));
+    }
+
     // The control was bound to "is something running", and that binding is what
     // made it fussy: a 0.1s read raised a stop button and put it away again.
     // It is bound to "has this been running long enough to be worth stopping",
@@ -3015,25 +3029,15 @@
         return;
       }
 
-      if (msg.type === 'command-result' && ws && ws.readyState === WebSocket.OPEN) {
+      if (msg.type === 'command-result') {
         feedSettle(msg.id, true);
-        ws.send(JSON.stringify({
-          type: 'message',
-          room: roomName,
-          id: msg.id,
-          message: { id: msg.id, result: msg.result, events: msg.events }
-        }));
+        relayAnswer(msg.id, { id: msg.id, result: msg.result, events: msg.events });
       }
 
-      if (msg.type === 'command-error' && ws && ws.readyState === WebSocket.OPEN) {
+      if (msg.type === 'command-error') {
         var errText = typeof msg.error === 'string' ? msg.error : (msg.error && msg.error.message);
         feedSettle(msg.id, false, errText);
-        ws.send(JSON.stringify({
-          type: 'message',
-          room: roomName,
-          id: msg.id,
-          message: { id: msg.id, error: msg.error }
-        }));
+        relayAnswer(msg.id, { id: msg.id, error: msg.error });
       }
 
       if (msg.type === 'command_progress') {
