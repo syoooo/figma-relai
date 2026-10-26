@@ -2,6 +2,7 @@
 // operate on a structural NodeLike so they can be unit-tested without the
 // figma global; resolveNode and the assert* wrappers throw with actionable
 // messages that tell the AI what to do next.
+import { RelaiError } from "@figma-relai/shared";
 
 // Structural subset of a Figma node — keeps the pure checks testable
 export interface NodeLike {
@@ -80,19 +81,20 @@ export async function resolveNode(
 ): Promise<SceneNode> {
   const node = await figma.getNodeByIdAsync(nodeId);
   if (!node) {
-    throw new Error(
+    throw new RelaiError(
+      "node_not_found",
       `Node not found: ${nodeId}. It may be on another page or the ID is stale — re-read the document.`
     );
   }
   if (node.removed) {
-    throw new Error(`Node ${nodeId} has been deleted. Re-read the parent to get current children.`);
+    throw new RelaiError("node_not_found", `Node ${nodeId} has been deleted. Re-read the parent to get current children.`);
   }
   if (opts?.types) {
     const msg = checkNodeType(node as unknown as NodeLike, opts.types);
-    if (msg) throw new Error(msg);
+    if (msg) throw new RelaiError("precondition_failed", msg);
   }
   if (opts?.requireUnlocked && "locked" in node && node.locked) {
-    throw new Error(`"${node.name}" (${nodeId}) is locked. Unlock it before modifying.`);
+    throw new RelaiError("precondition_failed", `"${node.name}" (${nodeId}) is locked. Unlock it before modifying.`);
   }
   return node as SceneNode;
 }

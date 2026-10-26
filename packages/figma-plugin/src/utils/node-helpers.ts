@@ -1,4 +1,5 @@
 // Common node helper functions
+import { RelaiError } from "@figma-relai/shared";
 
 // Strip Symbol values (e.g. figma.mixed) from an object for safe serialization
 function stripSymbols(obj: any): any {
@@ -145,11 +146,12 @@ export async function appendToParent(
   const parent = await getNodeById(parentId);
   if (!parent) {
     node.remove();
-    throw new Error(`Parent not found: ${parentId}. The node was not created.`);
+    throw new RelaiError("node_not_found", `Parent not found: ${parentId}. The node was not created.`);
   }
   if (!("appendChild" in parent)) {
     node.remove();
-    throw new Error(
+    throw new RelaiError(
+      "precondition_failed",
       `Parent "${parent.name}" (${parentId}) is a ${parent.type} and cannot contain children. The node was not created.`
     );
   }

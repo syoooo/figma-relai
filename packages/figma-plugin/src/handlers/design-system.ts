@@ -1,7 +1,8 @@
 import { registerHandler, isCancelled } from "../dispatcher.js";
 import { getNodeById } from "../utils/node-helpers.js";
 import { sendProgressUpdate, delay } from "../progress.js";
-import { nearestColorMatch, rgbaToHex, type ColorCandidate } from "@figma-relai/shared";
+import { nearestColorMatch, rgbaToHex, RelaiError, type ColorCandidate } from "@figma-relai/shared";
+import { scanCancelled } from "../call-outcome.js";
 
 // Design-system inventory and token-drift scanning. The inventory is honest
 // about what the Plugin API can see:
@@ -36,7 +37,7 @@ registerHandler("get_design_system", async (params) => {
   for (let p = 0; p < pages.length; p++) {
     const page = pages[p];
     await page.loadAsync();
-    if (isCancelled(commandId)) throw new Error("Cancelled by designer");
+    if (isCancelled(commandId)) throw new RelaiError("cancelled", "Cancelled by designer");
 
     const nodes = page.findAll(() => true);
     for (let i = 0; i < nodes.length; i++) {
@@ -80,7 +81,7 @@ registerHandler("get_design_system", async (params) => {
       }
 
       if (i % 400 === 399) {
-        if (isCancelled(commandId)) throw new Error("Cancelled by designer");
+        if (isCancelled(commandId)) throw new RelaiError("cancelled", "Cancelled by designer");
         await delay(10);
       }
     }
@@ -337,11 +338,13 @@ registerHandler("scan_token_drift", async (params) => {
   if (root.type !== "PAGE" && root.type !== "DOCUMENT") nodes.unshift(root as SceneNode);
   let matched = 0;
   let fixed = 0;
+  let attempted = 0;
 
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i] as SceneNode;
     if (i % 300 === 299) {
-      if (isCancelled(commandId)) throw new Error("Cancelled by designer");
+      // With fix on, everything fixed so far is already in the file
+      if (isCancelled(commandId)) throw scanCancelled(fixed, attempted);
       sendProgressUpdate({
         commandId,
         commandType: "scan_token_drift",
@@ -376,6 +379,7 @@ registerHandler("scan_token_drift", async (params) => {
           deltaE: Math.round(hit.deltaE * 1000) / 1000,
         };
         if (fix) {
+          attempted++;
           try {
             const variable = await figma.variables.getVariableByIdAsync(hit.candidate.id);
             if (variable) {
@@ -417,6 +421,7 @@ registerHandler("scan_token_drift", async (params) => {
         variableName: candidate.name,
       };
       if (fix) {
+        attempted++;
         try {
           const variable = await figma.variables.getVariableByIdAsync(candidate.id);
           if (variable) {

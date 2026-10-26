@@ -2,6 +2,7 @@
 // and the scope lock. Approval is enforced once per top-level command (in
 // main.ts); the scope lock is enforced inside dispatch() so batch_execute's
 // nested commands are checked too.
+import { RelaiError } from "@figma-relai/shared";
 
 // Non-mutating (or harmless-navigation) commands. Everything else is a write.
 const READ_PREFIXES = ["get_", "read_", "find_", "export_", "scan_nodes", "scan_text"];
@@ -186,13 +187,15 @@ export async function enforceScopeLock(
   if (command === "batch_execute") return; // nested dispatch checks each sub-command
 
   if (command.startsWith("create_") && params.parentId === undefined) {
-    throw new Error(
+    throw new RelaiError(
+      "scope_locked",
       `Scope lock: the designer restricted edits to "${lockedNames.join('", "')}" — create inside it by passing parentId.`
     );
   }
   for (const ref of collectNodeRefs(params)) {
     if (!(await isInLockedScope(ref))) {
-      throw new Error(
+      throw new RelaiError(
+        "scope_locked",
         `Scope lock: node ${ref} is outside "${lockedNames.join('", "')}", which the designer restricted edits to. Work within that selection or ask them to unlock.`
       );
     }

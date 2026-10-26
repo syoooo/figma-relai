@@ -3,7 +3,7 @@
 // commands) is covered. The designer edits guards in the panel; agents can
 // read them, and may SET them only through the same command surface (which
 // the designer sees in the activity feed).
-
+import { RelaiError } from "@figma-relai/shared";
 import { collectNodeRefs, isWriteCommand } from "../write-guard.js";
 import { registerHandler, setGuardEnforcer } from "../dispatcher.js";
 
@@ -97,7 +97,8 @@ export async function enforcePageGuards(
     figma.root.children.find((p) => p.id === id)?.name ?? id;
 
   if (PAGE_TARGETED.has(command) && typeof params.pageId === "string" && guarded.has(params.pageId)) {
-    throw new Error(
+    throw new RelaiError(
+      "guard_blocked",
       `Page "${guardName(params.pageId)}" is an AI no-go zone (designer-set guard). Ask the designer to lift it in the plugin panel (AI no-go zones) if this is intended.`
     );
   }
@@ -108,7 +109,8 @@ export async function enforcePageGuards(
   if (refs.length === 0) {
     // Creates and page-scoped writes land on the current page
     if (guarded.has(figma.currentPage.id)) {
-      throw new Error(
+      throw new RelaiError(
+        "guard_blocked",
         `The current page "${figma.currentPage.name}" is an AI no-go zone (designer-set guard). Switch to another page, or ask the designer to lift the guard in the plugin panel.`
       );
     }
@@ -117,7 +119,8 @@ export async function enforcePageGuards(
   for (const id of refs.slice(0, 200)) {
     const pageId = await pageOfNode(id);
     if (pageId && guarded.has(pageId)) {
-      throw new Error(
+      throw new RelaiError(
+        "guard_blocked",
         `Node ${id} lives on "${guardName(pageId)}", an AI no-go zone (designer-set guard). That edit is blocked; ask the designer to lift the guard if intended.`
       );
     }

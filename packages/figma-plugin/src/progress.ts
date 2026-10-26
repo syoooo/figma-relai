@@ -3,7 +3,8 @@
 interface ProgressParams {
   commandId: string;
   commandType: string;
-  status: "started" | "in_progress" | "completed" | "error";
+  // cancel_requested: the designer pressed Stop; the real result follows
+  status: "started" | "in_progress" | "completed" | "error" | "cancel_requested";
   progress: number;
   totalItems: number;
   processedItems: number;
