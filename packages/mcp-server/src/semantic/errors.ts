@@ -1,6 +1,17 @@
-import type { ErrorCategory, ToolError, RecoveryOption } from "@figma-relai/shared";
+import {
+  CALL_META_KEY,
+  CATEGORY_CODES,
+  ERROR_DEFAULTS,
+  type CallMeta,
+  type ErrorCategory,
+  type ToolError,
+  type RecoveryOption,
+} from "@figma-relai/shared";
 
-// Build a structured error response for v2 tools
+// Build a structured error response for v2 tools. The JSON body is unchanged;
+// isError and the category's error code go alongside it. A category that
+// knows the outcome better than its code (a partial write, a read that went
+// stale) states it, and the call envelope keeps it.
 export function errorResult(
   category: ErrorCategory,
   message: string,
@@ -18,8 +29,19 @@ export function errorResult(
   if (extra?.preconditions) error.preconditions = extra.preconditions;
   if (extra?.partial_result !== undefined) error.partial_result = extra.partial_result;
 
+  const { code, outcome, retry, partial } = CATEGORY_CODES[category];
+  const meta: CallMeta = {
+    v: 1,
+    ...(outcome ? { outcome } : {}),
+    ...(partial ? { partial } : {}),
+    error: { code, retry: retry ?? ERROR_DEFAULTS[code].retry },
+    calls: [],
+  };
+
   return {
     content: [{ type: "text" as const, text: JSON.stringify({ error }, null, 2) }],
+    isError: true as const,
+    _meta: { [CALL_META_KEY]: meta },
   };
 }
 
