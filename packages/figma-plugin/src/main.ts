@@ -379,7 +379,9 @@ figma.ui.onmessage = async (msg: any) => {
   if (msg.type === "execute-command") {
     const { id, command, params } = msg;
     const call = msg.call as WsCallInfo | undefined;
-    const write = isWriteCommand(command, params || {});
+    // A malformed message without a string command is not a write; it is
+    // refused below as an unknown command
+    const write = typeof command === "string" && isWriteCommand(command, params || {});
     let phase: Phase = "preflight";
 
     const refuse = (error: RelaiError) =>

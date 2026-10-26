@@ -3052,8 +3052,9 @@
       if (msg.type === 'command_progress') {
         // Progress lives on the running entry in the activity feed:
         // percent in the duration slot, message as a sub-line under the command
+        // A Stop acknowledgement carries progress 0; it is not progress
         var pe = entries[msg.commandId];
-        if (pe && pe.status === 'running') {
+        if (pe && pe.status === 'running' && msg.status !== 'cancel_requested') {
           var pct = Math.max(0, Math.min(100, Math.round(msg.progress || 0)));
           var filled = Math.round(pct / 12.5); // 8 cells
           pe.el.querySelector('.dur').innerHTML =
