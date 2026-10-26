@@ -66,6 +66,8 @@ import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timelin
 import { pendingProposals } from "./handlers/proposals.js";
 import { postFileIdentity } from "./handlers/file-identity.js";
 import { createWindowControls, DEFAULT_WINDOW_SIZE } from "./window-controls.js";
+import { checkExpectedFile, denialError, resultMeta, toErrorPayload, type Phase } from "./call-outcome.js";
+import { RelaiError, type WsCallInfo } from "@figma-relai/shared";
 
 // Commands that count as a full check-up for the gentle reminder
 const CHECKUP_COMMANDS = new Set(["audit_readiness", "audit_ghosts"]);
@@ -164,7 +166,8 @@ loadSettings().then(async (settings) => {
 
 // ── Approval gate ───────────────────────────────────────────────────
 // While a command waits for the designer, periodic progress keeps the MCP
-// side's timeout alive; deny resolves into the cancelled-error envelope.
+// side's timeout alive; a card that ends without a yes becomes a coded error
+// (denied, timed out, or stopped) and the command never runs.
 const approvalGate = createApprovalGate({
   timeoutMs: 120000,
   keepaliveMs: 10000,
@@ -184,6 +187,10 @@ const approvalGate = createApprovalGate({
     if (reason) void recordGatePrecedent(command, params, approved, reason);
   },
 });
+
+// Commands inside their handler, by request id, so a Stop can be
+// acknowledged to the server only for a command that is still running
+const runningCommands = new Map<string, string>();
 
 // Handle messages from the UI
 figma.ui.onmessage = async (msg: any) => {
@@ -352,43 +359,79 @@ figma.ui.onmessage = async (msg: any) => {
     cancelCommand(msg.id as string);
     // Stop also answers any approval card still waiting on this command
     approvalGate.answer(msg.id as string, false, undefined, "stop");
+    // A running command can only stop where its handler checks between
+    // items, so tell the server the Stop arrived; the real result follows.
+    const running = runningCommands.get(msg.id as string);
+    if (running) {
+      sendProgressUpdate({
+        commandId: msg.id as string,
+        commandType: running,
+        status: "cancel_requested",
+        progress: 0,
+        totalItems: 0,
+        processedItems: 0,
+        message: "Stop requested by the designer; the command's own result follows",
+      });
+    }
     return;
   }
 
   if (msg.type === "execute-command") {
     const { id, command, params } = msg;
+    const call = msg.call as WsCallInfo | undefined;
+    const write = isWriteCommand(command, params || {});
+    let phase: Phase = "preflight";
+
+    const refuse = (error: RelaiError) =>
+      figma.ui.postMessage({
+        type: "command-error",
+        id,
+        error: toErrorPayload(error, { phase, write, command }),
+      });
 
     try {
       if (!hasHandler(command)) {
-        figma.ui.postMessage({
-          type: "command-error",
-          id,
-          error: `Unknown command: ${command}`,
-        });
+        refuse(
+          new RelaiError(
+            "unknown_command",
+            `Unknown command: ${command}. The plugin may be older than the server; update the plugin.`
+          )
+        );
+        return;
+      }
+
+      // Checked against the live file name, before the designer is asked
+      const wrongFile = checkExpectedFile(call, figma.root.name);
+      if (wrongFile) {
+        refuse(wrongFile);
         return;
       }
 
       if (needsApproval(effectiveConfirmLevel(currentSettings), command, params ?? {})) {
         const verdict = await approvalGate.request(id, command, params ?? {});
-        const approved = verdict.verdict === "approved";
-        figma.ui.postMessage({ type: "approval-settled", id, approved });
-        if (!approved) {
-          figma.ui.postMessage({
-            type: "command-error",
-            id,
-            error: { message: "Denied by designer", command, cancelled: true },
-          });
+        figma.ui.postMessage({ type: "approval-settled", id, approved: verdict.verdict === "approved" });
+        if (verdict.verdict === "denied") {
+          refuse(denialError(verdict.cause));
           return;
         }
       }
 
+      // Handlers that size their result for the server (execute_code, and
+      // batch_execute passing it on) read the protocol from here
+      const protocol = typeof call?.protocol === "number" ? call.protocol : 1;
+      const dispatchParams = protocol >= 2 ? { ...(params || {}), callProtocol: protocol } : params || {};
+
+      phase = "handler";
+      runningCommands.set(id, command);
       beginCommand();
       let result: unknown;
       try {
-        result = await dispatch(command, params || {});
+        result = await dispatch(command, dispatchParams);
       } finally {
         endCommand();
+        runningCommands.delete(id);
       }
+      phase = "after";
       clearCancelled(params?.commandId as string | undefined);
 
       // In-band surfacing: this file's own precedents ride the result the
@@ -402,13 +445,13 @@ figma.ui.onmessage = async (msg: any) => {
         command === "batch_execute" && Array.isArray(params?.commands)
           ? (params.commands as unknown[]).length
           : collectNodeRefs(params || {}).length;
-      if (isWriteCommand(command, params || {}) && touched >= 10) {
+      if (write && touched >= 10) {
         pushEvent({ type: "bulk_write", ts: Date.now(), command, count: touched } as never);
         figma.ui.postMessage({ type: "evidence-marker", command, count: touched });
       }
 
       // Session timeline: every write lands in the per-machine ring buffer
-      if (isWriteCommand(command, params || {})) {
+      if (write) {
         void appendWriteLog(command, collectNodeRefs(params || {}), true, touched);
       }
       if (CHECKUP_COMMANDS.has(command)) void stampCheckup();
@@ -419,11 +462,11 @@ figma.ui.onmessage = async (msg: any) => {
         type: "command-result",
         id,
         result,
+        meta: resultMeta(command, write, result, figma.root.name),
         ...(events.length > 0 ? { events } : {}),
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const payload = toErrorPayload(error, { phase, write, command });
       // Attach node context so the AI can act on the error without re-reading
       const nodeId =
         typeof params?.nodeId === "string" ? params.nodeId : undefined;
@@ -436,15 +479,15 @@ figma.ui.onmessage = async (msg: any) => {
         }
       }
       clearCancelled(params?.commandId as string | undefined);
-      if (isWriteCommand(command, params || {})) {
+      if (write) {
         void appendWriteLog(command, collectNodeRefs(params || {}), false);
       }
       figma.ui.postMessage({
         type: "command-error",
         id,
-        error: { message: errorMessage, command, nodeId, nodeType },
+        error: { ...payload, nodeId, nodeType },
       });
-      figma.notify(`Error: ${errorMessage}`, { error: true });
+      figma.notify(`Error: ${payload.message}`, { error: true });
     }
   }
 };

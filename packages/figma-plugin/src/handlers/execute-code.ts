@@ -86,7 +86,10 @@ registerHandler("execute_code", async (params) => {
 
   const serialized = serializeResult(value);
   const asText = JSON.stringify(serialized);
-  const { result, truncated } = fitResult(serialized, asText, 1);
+  // A server on protocol 2 keeps the full text itself; main.ts passes the
+  // protocol in as callProtocol, absent for older servers
+  const protocol = typeof params.callProtocol === "number" ? params.callProtocol : 1;
+  const { result, truncated } = fitResult(serialized, asText, protocol);
 
   // Silent-mistake lint over deterministic sources: nodes relai created plus
   // any node ids the script returned (returning ids is the documented
