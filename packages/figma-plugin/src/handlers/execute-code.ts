@@ -1,6 +1,6 @@
 import { pitfallHint } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
-import { serializeNode } from "../utils/node-helpers.js";
+import { fitResult, serializeResult } from "../utils/serialize-result.js";
 import {
   makeRelai,
   lintCreatedNodes,
@@ -14,87 +14,11 @@ import { guardedNodesAmong } from "./guards.js";
 // The execute_figma escape hatch: runs AI-authored JavaScript against the
 // Plugin API. Gated by the designer's "Allow code execution" plugin setting.
 
-const MAX_RESULT_CHARS = 50000;
-
 // Calls that change the document. Used only to decide whether silence in the
 // return value is worth a nudge, so over-matching costs a sentence and
 // under-matching costs a missed check.
 const MUTATING_CALL =
   /\.(?:clone|remove|appendChild|insertChild|createInstance|swapComponent|setProperties|resetOverrides|setBoundVariable|setExplicitVariableModeForCollection|editComponentProperty|addComponentProperty|deleteComponentProperty|resize)\s*\(|figma\.(?:create|combineAsVariants|group|union|flatten)/;
-
-// Figma's nodes are host objects that carry methods; a row a script builds
-// with id/type/parent keys does not. Styles carry methods too but no parent.
-export function looksLikeNode(value: unknown): value is SceneNode {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as SceneNode).id === "string" &&
-    typeof (value as SceneNode).type === "string" &&
-    "parent" in (value as object) &&
-    typeof (value as SceneNode).getPluginData === "function"
-  );
-}
-
-// Styles are host objects as well: their fields live on the prototype, so
-// JSON.stringify would see only the id. Copy the fields a reader needs.
-const STYLE_FIELDS: Record<string, string[]> = {
-  PAINT: ["paints"],
-  TEXT: [
-    "fontName",
-    "fontSize",
-    "lineHeight",
-    "letterSpacing",
-    "textCase",
-    "textDecoration",
-    "paragraphSpacing",
-    "paragraphIndent",
-    "leadingTrim",
-  ],
-  EFFECT: ["effects"],
-  GRID: ["layoutGrids"],
-};
-
-export function looksLikeStyle(value: unknown): value is BaseStyle {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !("parent" in (value as object)) &&
-    typeof (value as BaseStyle).getPluginData === "function" &&
-    (value as BaseStyle).type in STYLE_FIELDS
-  );
-}
-
-function serializeStyle(style: BaseStyle): Record<string, unknown> {
-  const fields = ["id", "type", "name", "key", "description", "remote", "boundVariables"];
-  const source = style as unknown as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const key of [...fields, ...STYLE_FIELDS[style.type]]) {
-    if (source[key] !== undefined) out[key] = source[key];
-  }
-  return out;
-}
-
-// Make an arbitrary return value JSON-safe: nodes become budgeted summaries,
-// styles become their fields, symbols (figma.mixed) become "mixed", functions
-// are dropped
-export function serializeResult(value: unknown): unknown {
-  if (looksLikeNode(value)) return serializeNode(value);
-  if (looksLikeStyle(value)) return serializeResult(serializeStyle(value));
-  if (Array.isArray(value)) return value.map(serializeResult);
-  try {
-    return JSON.parse(
-      JSON.stringify(value, (_key, v) => {
-        if (typeof v === "symbol") return "mixed";
-        if (typeof v === "function") return undefined;
-        if (looksLikeNode(v)) return serializeNode(v);
-        if (looksLikeStyle(v)) return serializeStyle(v);
-        return v;
-      }) ?? "null"
-    );
-  } catch {
-    return String(value);
-  }
-}
 
 registerHandler("execute_code", async (params) => {
   const settings =
@@ -154,13 +78,9 @@ registerHandler("execute_code", async (params) => {
     throw new Error(hint ? `${message} — Hint: ${hint}` : message);
   }
 
-  let result = serializeResult(value);
-  let truncated = false;
-  const asText = JSON.stringify(result);
-  if (asText && asText.length > MAX_RESULT_CHARS) {
-    result = `${asText.slice(0, MAX_RESULT_CHARS)}… [truncated ${asText.length - MAX_RESULT_CHARS} chars — return a smaller value]`;
-    truncated = true;
-  }
+  const serialized = serializeResult(value);
+  const asText = JSON.stringify(serialized);
+  const { result, truncated } = fitResult(serialized, asText, 1);
 
   // Silent-mistake lint over deterministic sources: nodes relai created plus
   // any node ids the script returned (returning ids is the documented
