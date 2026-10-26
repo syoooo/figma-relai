@@ -10,7 +10,7 @@ export interface CommandProgressUpdate {
   type: "command_progress";
   commandId: string;
   commandType: string;
-  status: "started" | "in_progress" | "completed" | "error";
+  status: "started" | "in_progress" | "completed" | "error" | "cancel_requested";
   progress: number;
   totalItems: number;
   processedItems: number;
