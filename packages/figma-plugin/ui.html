@@ -605,6 +605,9 @@
     .feed-entry .st.running { color: var(--amber); }
     .feed-entry .st.ok { color: var(--ok); }
     .feed-entry .st.err { color: var(--err); }
+    /* Stop was asked for but the command has not ended: still moving, no
+       longer the panel's live concern, so the mark steps back a shade. */
+    .feed-entry .st.cancelling { color: var(--amber-dim); }
     /* Law rejections wear vermilion, not error red: the file speaking, not the
        machine failing. Detection keys on the wall messages ("no-go zone" in
        guards.ts, "Scope lock:" in write-guard.ts) — reword those and this
@@ -629,7 +632,7 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .feed-entry.law .err-msg { color: var(--shu); opacity: 0.85; }
-    .feed-entry .prog-msg {
+    .feed-entry .prog-msg, .feed-entry .note {
       display: block; color: var(--amber-dim); font-size: 9px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
@@ -1204,7 +1207,8 @@
         activity: 'Activity',
         stop: 'STOP',
         feed_empty: 'awaiting commands',
-        cancelled: 'Cancelled by designer',
+        cancel_requested: 'Stop requested — waiting for the command to end',
+        cancel_too_late: 'Stop came too late — the command finished',
         settings: 'Config',
         allow_exec: 'Allow code execution',
         allow_exec_hint: 'execute_figma — AI-written Plugin API scripts',
@@ -1312,7 +1316,8 @@
         activity: 'アクティビティ',
         stop: '停止',
         feed_empty: 'コマンド待機中',
-        cancelled: 'デザイナーがキャンセル',
+        cancel_requested: '停止を要求しました。終わるのを待っています',
+        cancel_too_late: '停止は間に合わず、最後まで実行されました',
         settings: '設定',
         allow_exec: 'コード実行を許可',
         allow_exec_hint: 'execute_figma — AIが書いたPlugin APIスクリプト',
@@ -1420,7 +1425,8 @@
         activity: '活动',
         stop: '停止',
         feed_empty: '等待命令',
-        cancelled: '设计师已取消',
+        cancel_requested: '已请求停止，等待命令结束',
+        cancel_too_late: '停止没赶上，命令已执行完',
         settings: '设置',
         allow_exec: '允许代码执行',
         allow_exec_hint: 'execute_figma — AI编写的Plugin API脚本',
@@ -2558,12 +2564,26 @@
       feedTrim(feed);
     }
 
+    // Adds a muted sub-line under the command (not an error).
+    function feedNote(e, text) {
+      var n = document.createElement('span');
+      n.className = 'note';
+      n.textContent = text;
+      e.el.querySelector('.cmd').appendChild(n);
+    }
+
+    // A row settles only on the plugin's real answer. A row that Stop already
+    // marked 'cancelling' was taken off the running count then, so it is not
+    // counted down twice.
     function feedSettle(id, ok, errMsg) {
       var e = entries[id];
-      if (!e || e.status !== 'running') return;
+      if (!e || (e.status !== 'running' && e.status !== 'cancelling')) return;
+      var wasCancelling = e.status === 'cancelling';
       e.status = ok ? 'ok' : 'err';
-      runningCount = Math.max(0, runningCount - 1);
-      updateStopBtn();
+      if (!wasCancelling) {
+        runningCount = Math.max(0, runningCount - 1);
+        updateStopBtn();
+      }
 
       var ICON_OK = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>';
       var ICON_ERR = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg>';
@@ -2581,6 +2601,7 @@
         m.textContent = errMsg;
         e.el.querySelector('.cmd').appendChild(m);
       }
+      if (ok && wasCancelling) feedNote(e, t('cancel_too_late'));
     }
 
     // The control was bound to "is something running", and that binding is what
@@ -2656,6 +2677,10 @@
       if (!goTimer) goTimer = setTimeout(endStreak, LINGER_MS);
     }
 
+    // Stop asks; it does not answer. The plugin decides whether the command
+    // was cancelled in time and its real result or error settles the row.
+    // The server only hears that Stop was requested, so it can stop waiting
+    // the full timeout and report the outcome as unknown if nothing follows.
     function stopAll() {
       for (var id in entries) {
         var e = entries[id];
@@ -2663,13 +2688,34 @@
         parent.postMessage({ pluginMessage: { type: 'cancel-command', id: id } }, '*');
         if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
-            type: 'message',
-            room: roomName,
+            type: 'progress_update',
             id: id,
-            message: { id: id, error: { message: 'Cancelled by designer', cancelled: true, command: e.cmd } }
+            room: roomName,
+            message: {
+              data: {
+                type: 'command_progress',
+                commandId: id,
+                commandType: e.cmd,
+                status: 'cancel_requested',
+                progress: 0,
+                totalItems: 0,
+                processedItems: 0,
+                message: 'Stop requested by the designer',
+                timestamp: Date.now()
+              }
+            }
           }));
         }
-        feedSettle(id, false, t('cancelled'));
+        e.status = 'cancelling';
+        runningCount = Math.max(0, runningCount - 1);
+        e.el.querySelector('.st').className = 'st cancelling';
+        var pm = e.el.querySelector('.prog-msg');
+        if (!pm) {
+          pm = document.createElement('span');
+          pm.className = 'prog-msg';
+          e.el.querySelector('.cmd').appendChild(pm);
+        }
+        pm.textContent = t('cancel_requested');
       }
       // The designer has answered. Close now rather than idling out the linger
       // grace with a live control sitting over a feed that has already stopped.
