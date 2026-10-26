@@ -142,6 +142,8 @@ Figma plugin          executes Plugin API calls
 
 The relay lives inside the MCP server, so there is no extra process to keep alive. When several MCP clients run at once, the first one hosts the relay and the others connect to it; if the host exits, a survivor takes over. Both sides remember their room, rejoin after restarts or sleep, and find each other without any copy-pasting. The `join_room` tool exists for one rare case only: two Figma files running the plugin at the same time.
 
+Every write and every failure ends with a `[relai]` line that says whether Figma changed: `applied`, `not_applied`, or `unknown` — it may have, so read the canvas before trying again. Failures are marked as errors and name a code; scripts can read the same receipt from the result's `_meta`. With several files open, a call can carry `room` to go to one plugin, or `expect_file` to refuse unless the target file has that exact name. Text longer than 50,000 characters is cut before it reaches the AI, and the full text is saved on your machine in `~/.figma-relai/results/` (readable only by you, the newest 50 files, none kept longer than a day); the cut notice names the file.
+
 The receipts above are real timings: rule checks run in the plugin before each write, small edits land sub-second, and the 45,509-node audit took 3.9s.
 
 Ports are fixed by Figma's plugin sandbox: the manifest allowlists `ws://localhost:9055–9057`, and other ports cannot work without editing `manifest.json`. That's why there is no port setting in the UI.
@@ -201,13 +203,15 @@ Start with `npx figma-relai doctor` — one command that checks Node, the relay 
 
 **RELAY says LINK but AGENT says WAITING.** The plumbing is fine — the AI just hasn't called a Figma tool yet in this session. Ask it something about the file.
 
-**"Multiple Figma plugins are connected."** Two files are running the plugin. Tell the AI to `join_room` with the room name shown in the plugin you want to control.
+**"Multiple Figma plugins are connected."** Two files are running the plugin. Tell the AI to `join_room` with the room name shown in the plugin you want to control, or to pass `room` or `expect_file` on each call.
+
+**`room_changed`.** The plugin moved to a different file — a branch, or another document — since the last call, so the call was not sent. Sending it again continues in the new file; `join_room` back if that is not the file you meant.
 
 **The first `npx` run is slow.** It downloads the package once; later starts are fast.
 
 ## Security
 
-The relay binds to `127.0.0.1` only and has no authentication: any process on your machine that can reach it can list the open rooms, with each room's file name, and join one. `execute_figma` runs AI-written code inside Figma's plugin sandbox; it is on by default, every run is visible in the activity feed, and the designer can disable it. Scripts are not atomic — a failed script's earlier changes persist. Full threat model: [SECURITY.md](SECURITY.md).
+The relay binds to `127.0.0.1` only and has no authentication: any process on your machine that can reach it can list the open rooms, with each room's file name, and join one. It refuses connections from ordinary web pages, but that check narrows who can connect; it is not authentication. `execute_figma` runs AI-written code inside Figma's plugin sandbox; it is on by default, every run is visible in the activity feed, and the designer can disable it. Scripts are not atomic — a failed script's earlier changes persist. Full threat model: [SECURITY.md](SECURITY.md).
 
 ## For contributors
 

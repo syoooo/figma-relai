@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.8.0
+
+Every result says whether Figma changed.
+
+### Breaking changes
+
+- **Results carry an outcome block and metadata.** A write, a failure, an uncertain result or a call that names its target gets a second text block after the body, starting with `[relai]`: `applied`, `not_applied` or `unknown`, the error code, the request id, the file and the room. The first text block is unchanged. The same receipt sits in machine-readable form under `_meta["io.github.syoooo.figma-relai/call"]` (`outcome`, `partial`, `error: { code, retry }`, one entry per plugin command in `calls`, `target`, `truncated`). A client that joins every text block now sees the extra line.
+- **Failures set `isError`.** Relai's own errors used to come back as ordinary text starting with `Error:`; clients now see them as failed tool calls, and scripts that read only `isError` will start seeing failures they used to miss. The text still starts with `Error:`.
+- **`join_room` errors read `Error: …`** instead of `Error joining room: …`, and carry `isError` and a code like every other tool.
+- **Stop no longer answers for the plugin.** The panel used to send "Cancelled by designer" the moment Stop was pressed, while the command kept running in Figma. Now Stop asks the plugin to cancel and tells the server it was pressed; the agent gets the command's real result or error, or `cancel_unconfirmed` (outcome `unknown`) when nothing follows within 10 seconds. Scripts that matched "Cancelled by designer" will no longer see it from a current panel.
+- **The relay refuses web pages.** A WebSocket handshake that carries a browser Origin other than `"null"` (the plugin panel's sandboxed iframe) gets a 403 from both the embedded and the standalone relay. Clients that send no Origin — the MCP server, `doctor`, scripts — are unaffected.
+- **After the session follows the plugin to a different file, the first call is refused** with `room_changed` and nothing is sent. Sending the call again goes through, as does a call whose `expect_file` names the new file. The refused call has already moved the session's default room to the new file — that is what lets the resend go through — so `join_room` back to the old room if the move is not what you want. Following the plugin to the same file stays silent.
+
+### Changes
+
+- **Every tool reports an outcome.** Registration goes through one wrapper, so no tool can forget to: `applied` means the plugin confirmed the command ran, `not_applied` means certainly nothing changed, and `unknown` means it may have — a timeout, a dropped link, an unconfirmed Stop, a script that threw part-way. A multi-command tool reports the combined outcome, with `partial` when some of it was written; `batch_execute` and a multi-node `set_text` report each item, with skipped items as `cancelled`.
+- **Errors carry a code and what to do next.** One table of codes is shared by the server and the plugin — `timeout`, `link_dropped`, `relay_unresponsive`, `plugin_absent`, `room_ambiguous`, `room_changed`, `wrong_file`, `guard_blocked`, `scope_locked`, `denied_by_designer`, `approval_timeout`, `cancelled`, `script_error` and more — each with a default outcome and a retry class (`retryable`, `read_canvas_first`, `fix_input`, `needs_human`). Errors from older plugins are classified by their wording, and anything unrecognised counts as possibly applied.
+- **A call can name its file.** Every tool except `join_room` and `get_events` takes optional `room` (send this one call to that plugin room, leaving the session's default room alone) and `expect_file` (refuse unless the target file's name is exactly this). The server checks `expect_file` before sending, and a current plugin checks it again against the live file name before running anything; a mismatch is `wrong_file` and names the room where that file is open, if any.
+- **`join_room` says what it found**: the file in that room, whether a plugin is there at all, and the main file's name when the room is a branch and the server already knows it.
+- **A dropped link is reported per call**, with its close code and, when another process hosted the relay, a note that this one takes over in about two seconds. A room listing or a join that gets no answer is `relay_unresponsive` — nothing was sent to Figma — rather than a timeout that may have applied.
+- **Long results are kept whole on this machine.** Text over 50,000 characters is cut before it reaches the model, and the full text is written to `~/.figma-relai/results/` (mode 0600, the newest 50 files, none older than a day); the cut notice names the file. A current plugin hands `execute_figma` results of up to 4,000,000 characters to the server for this; an older plugin still cuts at 50,000 itself, and that cut text is never passed off as the full result.
+- **The panel tells law from crash by error code, not by wording**, and a command's row settles when its result arrives even while the relay link is down — with a note that the result did not reach the AI. After Stop the row reads "Stop requested" until the plugin's real answer settles it.
+- **Plugin errors say which phase they came from.** A refusal before the handler ran (unknown command, wrong file, approval denied, timed out or stopped) is `not_applied`; an error while it ran is `unknown` for writes. A fixing token-drift scan stopped part-way reports what it already wrote.
+- **`execute_figma` puts `figma.skipInvisibleInstanceChildren` back** after each script, so a script that turns it on for speed no longer hides instance sublayers from every later command.
+- **The session log records outcomes.** `get_events scope:"agent"` lists each command's request id, room, outcome and error code.
+- **The server instructions explain how to read a result** and when to pass `room` or `expect_file`.
+- **The standalone relay typechecks on its own**, and the root `typecheck` covers it.
+- **One new pitfall — 79 in the ledger:** `figma.skipInvisibleInstanceChildren` is plugin-wide, not per script.
+
 ## 0.7.11
 
 Limits that held on one path now hold on all of them.

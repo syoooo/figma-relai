@@ -3,7 +3,7 @@
 Run against a real Figma file after changing plugin handlers, the transport, or pairing.
 Setup: MCP client (Claude Code / Cursor) started — the relay is embedded, no `bun socket` needed. Figma plugin installed.
 
-Items 1–39 are the core sheet (~25 min). Items 40–57 cover 0.5–0.7 and need things a driver cannot fake: two files open at once, a branch, a REST token, and a component set that is genuinely broken. Items 58–66 cover what 0.7.11 changed. Run the section that matches what you touched; run all of it before a release that changes pairing, the kit, or the transport.
+Items 1–39 are the core sheet (~25 min). Items 40–57 cover 0.5–0.7 and need things a driver cannot fake: two files open at once, a branch, a REST token, and a component set that is genuinely broken. Items 58–66 cover what 0.7.11 changed, and 67–79 what 0.8.0 changed. Run the section that matches what you touched; run all of it before a release that changes pairing, the kit, or the transport.
 
 ## Pairing & connection
 
@@ -12,7 +12,7 @@ Items 1–39 are the core sheet (~25 min). Items 40–57 cover 0.5–0.7 and nee
 3. **Figma restart**: quit and relaunch Figma Desktop, run the plugin → auto-connects to the same room; next AI command succeeds without `join_room`.
 4. **Relay handover**: with two MCP clients running (e.g. Claude Code + Cursor), kill the one that started first (hosting the relay) → within a few seconds the other takes over; plugin badge flips to "Reconnecting…" then back to connected; commands work again.
 5. **Presence**: with the plugin closed, ask the AI to run a command → immediate "No Figma plugin is connected" (not a 30 s timeout). Open the plugin → its badge shows "AI connected ✓" once the agent is in the room.
-6. **Stop button**: run a large `set_text` bulk edit (50+ nodes), press **Stop** in the plugin → remaining items are skipped, the AI receives "Cancelled by designer", the feed marks the command cancelled.
+6. **Stop button**: run a large `set_text` bulk edit (50+ nodes), press **Stop** in the plugin → remaining items are skipped and reported as `cancelled`, the items already written as applied, and the result is `partial` (see item 67 for the full Stop check).
 7. **Code-exec toggle**: turn "Allow code execution" OFF → `execute_figma` returns the disabled-error naming the toggle. Turn ON → a small script (e.g. `return figma.currentPage.name`) succeeds, logs appear.
 8. **Designer events**: click a different node between two AI commands → the second response contains `designer_events` with the selection change (or `get_events` returns it).
 
@@ -67,7 +67,7 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 
 40. **The public entrance still works**: download `relai-plugin-<version>.zip` from the latest GitHub release, unzip, **Plugins → Development → Import plugin from manifest…**, pick `manifest.json` → the panel opens and connects. (This is the only install path; the filename is version-stamped, so a README that names a bare `relai-plugin.zip` is wrong.)
 41. **Rooms are per file, not per machine**: open the plugin in two different files at the same time → two different room names, and `join_room` with no argument lists both with their file names. Open a *branch* of one of them → a third room (the seed lives in the file, and `root.name` splits branches and copies, which share plugin data). No command ever lands in the wrong document.
-42. **The session follows a plugin that moved**: mid-session, switch the file to one of its branches (a different `root.name` mints a fresh room — reopening the *same* file must not, see item 2) → the next command still works without `join_room`, instead of "the Figma plugin is not open". With plugins live in several files, the error names them so you can choose.
+42. **The session follows a plugin that moved**: mid-session, switch the file to one of its branches (a different `root.name` mints a fresh room — reopening the *same* file must not, see item 2) → the next command is refused once with `room_changed` naming the new file (a different file is where wrong-file writes come from), and sent again it works without `join_room`, instead of "the Figma plugin is not open". With plugins live in several files, the error names them so you can choose. Item 70 covers the confirmation in full.
 
 ### Kits — law that has to survive a merge
 
@@ -78,7 +78,7 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 
 ### The file's no
 
-47. **A law rejection does not look like a crash**: in one session, trigger a no-go rejection and a genuinely failing `execute_figma` → the rejection is vermilion with a hairline rule at its left edge and a faint wash; the crash is plain error red. The NO-GO count in the file card is vermilion while a fence stands, and the timestamp column does not shift by a pixel between the two.
+47. **A law rejection does not look like a crash**: in one session, trigger a no-go rejection and a genuinely failing `execute_figma` → the rejection is vermilion with a hairline rule at its left edge and a faint wash; the crash is plain error red. The colour keys on the error code, not the wording (item 69). The NO-GO count in the file card is vermilion while a fence stands, and the timestamp column does not shift by a pixel between the two.
 48. **Reading a guarded page is not writing to it**: run a script that only *reads* a no-go page — list page names, return the guards value, resolve a component's id — → no rejection. A page id in a result is data, not a confession.
 49. **The scope lock covers a page and survives a reload**: flip the lock with **nothing** selected → it means the current page; reload the plugin → still locked, and the switch still says so.
 
@@ -113,3 +113,29 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 
 65. **Resize and restore**: drag the panel's bottom-right grip in both directions → the window follows, stays between 320×320 and 960×1200, and its content scrolls at small sizes. Focus the grip and use arrow keys (20 px; Shift: 100 px). Minimize with the header button → only the header remains; restore → the previous expanded size and scroll position return. Repeat while disconnected and while connected; the room and activity feed stay intact. Switch EN/日/中 → control tooltips follow the language. Size is remembered for the current plugin session only.
 66. **Minimized work stays controllable**: minimize during a long command → the compact header exposes Stop once it is armed; Stop cancels the command. Trigger an approval request or a no-go proposal while minimized → the panel expands to show the request, and Approve/Deny still work. Close and reopen the plugin → the normal 380×850 panel opens.
+
+## 0.8.0 additions — honest results & per-call target
+
+Run these with the 0.8.0 server and the 0.8.0 plugin unless an item says otherwise. Each failure should come back with `isError`, a `[relai]` line naming the outcome and code, and the same receipt under `_meta["io.github.syoooo.figma-relai/call"]`.
+
+### Stop and the feed
+
+67. **Stop no longer lies**: run a 2–3 minute write script that `await`s inside its loop, press **Stop** midway → the feed row first reads "Stop requested", and settles only when the command really ends. The agent gets the real result (its `[relai]` line says the designer pressed Stop) or, if nothing follows within 10 s, `cancel_unconfirmed` / `unknown` — never "Cancelled by designer" followed by a command that finished anyway. A Stop that comes too late for a command that succeeded shows "Stop came too late". If the panel's relay link is down when Stop is pressed, the server hears nothing and waits for the full timeout; that is expected.
+68. **Stop in a batch and at an approval card**: a 30-command `batch_execute`, Stop midway → written items `applied`, skipped items `cancelled` / `not_applied`, top level `partial`. Approval card: Deny → `denied_by_designer`; leave it for 120 s → `approval_timeout`; press Stop while the card shows → `cancelled`. All three `not_applied`, and the canvas is unchanged.
+69. **Law colour keys on the code**: one no-go rejection and one genuinely failing `execute_figma` in one session → the rejection is vermilion, the crash plain red, as in item 47. Then reword the no-go message in `guards.ts`, rebuild and repeat → still vermilion.
+70. **The result settles while the link is down**: start a 10 s write script, then stop the MCP client (or kill the process hosting the relay with no other client running) before it ends → the plugin finishes, the row settles with its real result plus an amber "The result did not reach the AI" note, and it never spins forever.
+
+### Targeting a file
+
+71. **Per-call room**: open the plugin in two files at once. From one session, alternate writes with `room` set to each file's room → each write lands in its own file; `join_room` with no argument shows the default room did not move. Both panels' AGENT lamps light (known side effect).
+72. **expect_file is checked before sending**: pass a wrong `expect_file` → `wrong_file`, the canvas is unchanged (compare screenshots before and after), and the error names the actual file and the room where the expected one is open. Repeat against a 0.7.11 plugin → the server's check still refuses it.
+73. **Room change asks once**: the item 42 scenario (switch the file to a branch mid-session) → the first command is `room_changed` and names the branch; sending it again goes through. With a matching `expect_file` it goes through at once. Closing and reopening the same file never triggers it.
+74. **join_room reports what it found**: join a room with a plugin → the file name, and the main file's name on a branch once the identity is known; join a room with none → "no plugin is there yet". With the relay unreachable, the error reads `Error: …` and carries `isError`.
+75. **The relay host exits mid-call**: two MCP clients; kill the one hosting the relay while the other has a call in flight → `link_dropped` / `unknown` with the close code and "this process takes over hosting in about 2 seconds"; 2–3 s later the next call works, rooms named per call included.
+76. **list_rooms times out as the relay, not Figma**: two MCP clients; pause the hosting process (`kill -STOP <pid>`), then from the other call `join_room` with no argument → after about 5 s, `relay_unresponsive` / `not_applied` saying nothing changed in Figma. `kill -CONT <pid>` restores it.
+
+### Results and the relay
+
+77. **Long results go to a local file**: an `execute_figma` returning about 120,000 characters → the text is cut at 50,000, `truncated.total` is right, and the named file under `~/.figma-relai/results/` holds the complete JSON (mode 0600). A plain object `{ id, type, parent, extra }` still comes back whole; a real node still as a summary.
+78. **The real panel's Origin passes, web pages do not**: with the 0.8.0 server, open the plugin in Figma Desktop → it connects (the panel's sandboxed iframe sends Origin `"null"`). Then from a browser page on `http://localhost` run `new WebSocket("ws://localhost:9055")` → the handshake fails, and the server logs "refused a connection from origin".
+79. **Version mismatch**: new server with a 0.7.11 plugin, and a 0.7.11 server (`npx figma-relai@0.7.11`) with the new plugin → both read and write; under the old server large results are still cut at 50,000 by the plugin; an old panel's Stop shows as `unknown` on the new server.

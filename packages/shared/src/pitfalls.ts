@@ -410,6 +410,11 @@ export const PITFALLS: Pitfall[] = [
     hint: "",
     doc: "**Renaming a variant axis with `editComponentProperty` unbinds the instances, and can reset their plain overrides too.** Instances bound to that property keep their value but lose the `boundVariables.componentProperties` alias, nested explicit overrides included. In one measured rename, 71 instances whose value for the axis was a plain override — not bound to anything — fell back to the set's default variant. Right after rebinding, some instances kept an old value that disagreed with what the mode resolves to; writing the value first and then rebinding fixed them. Before renaming an axis, record every instance's value and binding for it; afterwards write the values back, rebind, and read both back.",
   },
+  {
+    pattern: null,
+    hint: "",
+    doc: "**`figma.skipInvisibleInstanceChildren` is plugin-wide, not per script.** Setting it to `true` — a common speed-up for `findAll` — hides invisible sublayers of instances from every search that runs while it is set, not only the script that set it. Relai puts the previous value back after each `execute_figma` script, so it does not leak into later commands; set it again in every script that wants it, and while it is on, do not read an instance sublayer missing from a search as deleted.",
+  },
 ];
 
 // First matching pitfall's hint, or null. Doc-only entries never match.
