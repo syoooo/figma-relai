@@ -250,6 +250,19 @@ describe("long results", () => {
     expect(meta(result).truncated?.total).toBe(120000);
     expect(meta(result).truncated?.file).toBeUndefined();
   });
+
+  test("an older plugin's cut is never saved as the full result, even when escaping makes it longer", async () => {
+    const env = envelope(async () => ({
+      result: `${"\"".repeat(50000)}… [truncated 10 chars — return a smaller value]`,
+      logs: [],
+      truncated: true,
+    }));
+    registerAllTools(env.server, env.sendCommand);
+    const result = await env.call("execute_figma", { code: "x" });
+    expect(meta(result).truncated).toMatchObject({ total: 50010, returned: MAX_TEXT_CHARS });
+    expect(meta(result).truncated?.file).toBeUndefined();
+    expect(texts(result)[0]).toEndWith("the full result could not be saved]");
+  });
 });
 
 describe("over MCP", () => {

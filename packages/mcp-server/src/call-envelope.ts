@@ -241,8 +241,10 @@ export function finalizeResult(
   // Cut long text and keep the full text in a local file
   let truncated = declared?.truncated;
   if (body !== undefined && body.length > MAX_TEXT_CHARS) {
-    // The body holds the whole result unless the plugin already cut it
-    const whole = !truncated || truncated.total <= body.length;
+    // The body holds the whole result unless the plugin already cut it (its
+    // stated total says nothing about the body, whose JSON escaping can make
+    // it longer than that total)
+    const whole = !truncated;
     const file = truncated?.file ?? (whole ? writeResultFile(last?.id, body) : undefined);
     const cut: TransportTruncation = {
       total: whole ? body.length : truncated!.total,
