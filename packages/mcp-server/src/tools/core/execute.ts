@@ -1,7 +1,31 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SendCommandFn } from "../../tool-registry.js";
+import { CALL_META_KEY, type CallMeta, type TransportTruncation } from "@figma-relai/shared";
 import { jsonResult, errorResult } from "./helpers.js";
+
+// The plugin cuts large return values itself before sending them. An older
+// plugin keeps the first 50,000 chars of the JSON and appends
+// "… [truncated N chars — …]", where N is the number of chars it cut, so the
+// full length is N + 50,000. A newer plugin may state { total, returned }.
+// Either way the full text never reached this process, so there is no file.
+const LEGACY_PLUGIN_LIMIT = 50000;
+
+export function pluginTruncation(result: unknown): TransportTruncation | undefined {
+  const r = result as { truncated?: unknown; result?: unknown } | null;
+  if (!r || typeof r !== "object") return undefined;
+  const t = r.truncated as { total?: unknown; returned?: unknown } | boolean | undefined;
+  if (t && typeof t === "object" && typeof t.total === "number" && typeof t.returned === "number") {
+    return { total: t.total, returned: t.returned, unit: "chars" };
+  }
+  if (t === true && typeof r.result === "string") {
+    const cut = /… \[truncated (\d+) chars/.exec(r.result);
+    if (cut) {
+      return { total: Number(cut[1]) + LEGACY_PLUGIN_LIMIT, returned: LEGACY_PLUGIN_LIMIT, unit: "chars" };
+    }
+  }
+  return undefined;
+}
 
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
@@ -24,7 +48,10 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
     async ({ code, description, timeoutMs }) => {
       try {
         const result = await sendCommand("execute_code", { code, description }, timeoutMs ?? 60000);
-        return jsonResult(result);
+        const truncated = pluginTruncation(result);
+        if (!truncated) return jsonResult(result);
+        const meta: CallMeta = { v: 1, calls: [], truncated };
+        return { ...jsonResult(result), _meta: { [CALL_META_KEY]: meta } };
       } catch (error) {
         return errorResult(error);
       }

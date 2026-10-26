@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { CALL_META_KEY } from "@figma-relai/shared";
 import { VERSION } from "./version.js";
 
 // Create and configure the MCP server instance
@@ -61,6 +62,16 @@ OPERATING PRINCIPLES:
   set layoutMode on a frame before padding/alignment/spacing
 - Responses include recommended_next tools — follow them
 - Errors name the node, its type, and the fix — read them, don't retry blindly
+
+READING RESULTS:
+- Writes and failures end with a "[relai]" line saying whether Figma changed:
+  applied (the command ran) · not_applied (nothing changed) ·
+  unknown (it may have changed — read the canvas before retrying;
+  never resend a write blindly)
+- Failures set isError and name an error code (e.g. timeout, guard_blocked);
+  the full receipt is in _meta["${CALL_META_KEY}"]
+- Text over 50,000 characters is cut; the cut notice names a local file
+  that holds the full result
 `,
     }
   );

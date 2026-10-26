@@ -25,8 +25,3 @@ export function standardResult<T>(opts: {
     content: [{ type: "text" as const, text: JSON.stringify(response) }],
   };
 }
-
-// Simple text result (for compatibility with v1 tools)
-export function textResult(text: string) {
-  return { content: [{ type: "text" as const, text }] };
-}
