@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   CALL_META_KEY,
+  CATEGORY_CODES,
   ERROR_CODES,
   ERROR_DEFAULTS,
   RelaiError,
@@ -82,6 +83,11 @@ describe("inferLegacyCode", () => {
     });
   });
 
+  test("the Stop wording without the cancelled flag is not read as a Stop", () => {
+    expect(inferLegacyCode({ message: "Cancelled by designer" }).code).toBe("handler_error");
+    expect(inferLegacyCode("Cancelled by designer").code).toBe("handler_error");
+  });
+
   test("a denial maps to not_applied", () => {
     expect(inferLegacyCode({ message: "Denied by designer", command: "delete_node", cancelled: true })).toMatchObject({
       code: "denied_by_designer",
@@ -106,6 +112,31 @@ describe("inferLegacyCode", () => {
   });
 });
 
-test("the result metadata key has a reverse-DNS prefix", () => {
-  expect(CALL_META_KEY).toMatch(/^[a-z0-9-]+(\.[a-z0-9-]+)+\/[a-z]+$/);
+test("the result metadata key is the released one", () => {
+  expect(CALL_META_KEY).toBe("io.github.syoooo.figma-relai/call");
+});
+
+describe("CATEGORY_CODES", () => {
+  test("a partial failure reports that something was written", () => {
+    const { code, ...options } = CATEGORY_CODES.partial_failure;
+    const error = new RelaiError(code, "2 of 5 items failed", options);
+    expect(error.outcome).toBe("applied");
+    expect(error.partial).toBe(true);
+    expect(error.retry).toBe("read_canvas_first");
+  });
+
+  test("a state change wrote nothing but asks for a fresh read", () => {
+    const { code, ...options } = CATEGORY_CODES.state_changed;
+    const error = new RelaiError(code, "Variables changed while paging", options);
+    expect(error.outcome).toBe("not_applied");
+    expect(error.retry).toBe("read_canvas_first");
+  });
+
+  test("every unknown outcome tells the caller to read the canvas first", () => {
+    for (const entry of Object.values(CATEGORY_CODES)) {
+      const outcome = entry.outcome ?? ERROR_DEFAULTS[entry.code].outcome;
+      const retry = entry.retry ?? ERROR_DEFAULTS[entry.code].retry;
+      if (outcome === "unknown") expect(retry).toBe("read_canvas_first");
+    }
+  });
 });

@@ -115,15 +115,28 @@ export const ERROR_DEFAULTS: Record<ErrorCode, { outcome: Outcome; retry: RetryC
   tool_error: { outcome: "not_applied", retry: "fix_input" },
 };
 
-/** Codes for the v2 tools' structured error categories. */
-export const CATEGORY_CODES: Record<ErrorCategory, ErrorCode> = {
-  precondition_failed: "precondition_failed",
-  invalid_input: "invalid_params",
-  type_mismatch: "precondition_failed",
-  partial_failure: "tool_error",
-  state_changed: "tool_error",
-  capability_limit: "capacity_exceeded",
-  connection_error: "not_connected",
+/**
+ * The code each of the v2 tools' structured error categories reports, with
+ * the fields that differ from that code's defaults. Pass the whole entry to
+ * RelaiError (or copy it into the metadata) so a category never reports
+ * the bare code's defaults when they would be wrong.
+ * - `partial_failure`: some items were written before the rest failed, so
+ *   the file did change; resending blindly would repeat the written items.
+ * - `state_changed`: the file changed under a multi-step read (for example
+ *   a fingerprint moved between pages), so nothing was written but what was
+ *   read so far is stale; read again from the start.
+ */
+export const CATEGORY_CODES: Record<
+  ErrorCategory,
+  { code: ErrorCode; outcome?: Outcome; retry?: RetryClass; partial?: true }
+> = {
+  precondition_failed: { code: "precondition_failed" },
+  invalid_input: { code: "invalid_params" },
+  type_mismatch: { code: "precondition_failed" },
+  partial_failure: { code: "tool_error", outcome: "applied", retry: "read_canvas_first", partial: true },
+  state_changed: { code: "tool_error", outcome: "not_applied", retry: "read_canvas_first" },
+  capability_limit: { code: "capacity_exceeded" },
+  connection_error: { code: "not_connected" },
 };
 
 /**
@@ -201,7 +214,9 @@ export interface PluginErrorPayload {
 
 /**
  * The key under a tool result's `_meta` that holds a CallMeta. The prefix is
- * reverse DNS, as MCP asks of implementation-defined metadata keys.
+ * reverse DNS, as MCP asks of implementation-defined metadata keys. Once
+ * released, renaming this key is a breaking change: callers look it up by
+ * this exact string.
  */
 export const CALL_META_KEY = "io.github.syoooo.figma-relai/call";
 
@@ -274,9 +289,13 @@ export function inferLegacyCode(error: string | PluginErrorPayload): {
     return pick("node_not_found");
   }
   if (message.includes("Denied by designer")) return pick("denied_by_designer");
-  // Older panels answered Stop themselves with this text while the command
-  // kept running, so it proves nothing about the canvas
-  if (message.includes("Cancelled by designer")) return pick("cancel_unconfirmed");
+  // Older panels answered Stop themselves with this text and `cancelled: true`
+  // while the command kept running, so it proves nothing about the canvas.
+  // Without the flag (or from a plain string) it falls through to
+  // handler_error, which has the same outcome and retry.
+  if (typeof error !== "string" && error?.cancelled === true && message.includes("Cancelled by designer")) {
+    return pick("cancel_unconfirmed");
+  }
   if (message.includes("Unknown command")) return pick("unknown_command");
   return pick("handler_error");
 }
