@@ -54,7 +54,7 @@ describe("resolveFileIdentity", () => {
     stubFigma({
       "/component_sets/abc123": { meta: { file_key: "MAINKEY" } },
       "/files/MAINKEY": {
-        name: "[MASTER] Gin",
+        name: "[MASTER] Core",
         branches: [
           { key: "OTHER", name: "hagiWork" },
           { key: "BRANCHKEY", name: "refinement" },
@@ -65,12 +65,12 @@ describe("resolveFileIdentity", () => {
     const identity = await resolveFileIdentity(sendCommand);
 
     expect(identity.fileKey).toBe("MAINKEY");
-    expect(identity.fileName).toBe("[MASTER] Gin");
+    expect(identity.fileName).toBe("[MASTER] Core");
     expect(identity.branchKey).toBe("BRANCHKEY");
     expect(identity.branchName).toBe("refinement");
     // Comments live per branch — addressing MAINKEY reads an empty list
     expect(addressableKey(identity)).toBe("BRANCHKEY");
-    expect(describeIdentity(identity)).toBe('[MASTER] Gin (branch "refinement")');
+    expect(describeIdentity(identity)).toBe('[MASTER] Core (branch "refinement")');
     expect(stored[0]?.componentKey).toBe("abc123");
   });
 
@@ -83,7 +83,7 @@ describe("resolveFileIdentity", () => {
       cached: true,
       rootName: "refinement",
       candidates: CANDIDATES,
-      identity: { fileKey: "MAINKEY", fileName: "[MASTER] Gin", branchName: "refinement", branchKey: "B", by: VERSION },
+      identity: { fileKey: "MAINKEY", fileName: "[MASTER] Core", branchName: "refinement", branchKey: "B", by: VERSION },
     };
     stubFigma({});
 
@@ -103,12 +103,12 @@ describe("resolveFileIdentity", () => {
     };
     stubFigma({
       "/component_sets/abc123": { meta: { file_key: "MAINKEY" } },
-      "/files/MAINKEY": { name: "[MASTER] Gin", branches: [{ key: "BRANCHKEY", name: "refinement" }] },
+      "/files/MAINKEY": { name: "[MASTER] Core", branches: [{ key: "BRANCHKEY", name: "refinement" }] },
     });
 
     const identity = await resolveFileIdentity(sendCommand);
 
-    expect(identity.fileName).toBe("[MASTER] Gin");
+    expect(identity.fileName).toBe("[MASTER] Core");
     expect(identity.branchKey).toBe("BRANCHKEY");
     expect(identity.by).toBe(VERSION);
     expect(calls.length).toBeGreaterThan(0);
@@ -140,7 +140,7 @@ describe("resolveFileIdentity", () => {
     };
     stubFigma({
       "/component_sets/abc123": { meta: { file_key: "MAINKEY" } },
-      "/files/MAINKEY": { name: "[MASTER] Gin", branches: [{ key: "BRANCHKEY", name: "refinement" }] },
+      "/files/MAINKEY": { name: "[MASTER] Core", branches: [{ key: "BRANCHKEY", name: "refinement" }] },
     });
 
     expect((await resolveFileIdentity(sendCommand)).branchKey).toBe("BRANCHKEY");

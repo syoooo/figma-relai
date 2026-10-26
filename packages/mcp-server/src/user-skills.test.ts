@@ -6,14 +6,14 @@ const doc = (fm: string, body = "Do the thing step by step.") => `---\n${fm}\n--
 describe("parseSkillFrontmatter", () => {
   test("parses a full skill", () => {
     const { skill, error } = parseSkillFrontmatter(
-      doc("name: gin-furniture\ndescription: Page furniture recipe\nlayer: craft\nprovenance: gin 2026-07")
+      doc("name: core-furniture\ndescription: Page furniture recipe\nlayer: craft\nprovenance: core 2026-07")
     );
     expect(error).toBeUndefined();
     expect(skill).toMatchObject({
-      name: "gin-furniture",
+      name: "core-furniture",
       description: "Page furniture recipe",
       layer: "craft",
-      provenance: "gin 2026-07",
+      provenance: "core 2026-07",
     });
     expect(skill?.text).toContain("step by step");
   });

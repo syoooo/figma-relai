@@ -121,23 +121,23 @@ describe("librariesNotCatalogued", () => {
   test("names an enabled library the catalog could not reach", () => {
     expect(
       librariesNotCatalogued({
-        libraryCatalog: { libraries: [{ name: "[MASTER] Gin" }] },
+        libraryCatalog: { libraries: [{ name: "[MASTER] Core" }] },
         variables: {
           libraryCollections: [
-            { libraryName: "[MASTER] Gin" },
-            { libraryName: "Gin Foundations" },
-            { libraryName: "Gin Foundations" }, // two collections, one library
+            { libraryName: "[MASTER] Core" },
+            { libraryName: "Core Foundations" },
+            { libraryName: "Core Foundations" }, // two collections, one library
           ],
         },
       })
-    ).toEqual(["Gin Foundations"]);
+    ).toEqual(["Core Foundations"]);
   });
 
   test("says nothing when every enabled library was catalogued", () => {
     expect(
       librariesNotCatalogued({
-        libraryCatalog: { libraries: [{ name: "  gin  " }] },
-        variables: { libraryCollections: [{ libraryName: "Gin" }] },
+        libraryCatalog: { libraries: [{ name: "  core  " }] },
+        variables: { libraryCollections: [{ libraryName: "Core" }] },
       })
     ).toEqual([]);
   });
@@ -146,7 +146,7 @@ describe("librariesNotCatalogued", () => {
     expect(
       librariesNotCatalogued({
         libraryCatalog: { note: "needs a token" },
-        variables: { libraryCollections: [{ libraryName: "Gin" }] },
+        variables: { libraryCollections: [{ libraryName: "Core" }] },
       })
     ).toEqual([]);
   });

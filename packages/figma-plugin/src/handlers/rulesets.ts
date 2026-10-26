@@ -262,7 +262,7 @@ export async function pushToRuleset(
   if (!file) throw new Error("This file has no conventions to push.");
   // force-with-lease: the rulesetLink travels with file COPIES and branches,
   // so a stray copy can aim a push at a kit it has no business rewriting
-  // (measured 2026-08-12: "define gin" overwritten with another file's 2,838
+  // (measured 2026-08-12: a kit overwritten with another file's 2,838
   // chars). If the kit has moved since THIS file last synced it, refuse and
   // make the caller look before overwriting.
   if (

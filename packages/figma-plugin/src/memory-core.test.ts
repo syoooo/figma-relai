@@ -18,7 +18,7 @@ const entry = (over: Partial<PrecedentEntry> = {}): PrecedentEntry => ({
   id: makeId(),
   date: "2026-07-26",
   kind: "intent",
-  text: "KARTE Badge border=1 is intent",
+  text: "Badge border=1 is intent",
   source: "chat",
   ...over,
 });

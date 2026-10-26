@@ -98,11 +98,11 @@ describe("chooseRepairPairing", () => {
 
   test("several live plugins — name them instead of guessing", () => {
     const got = chooseRepairRoom("old-room", [
-      room("a", true, "gin"),
+      room("a", true, "Design system"),
       room("b", true, "other"),
     ]);
     expect(got.room).toBeUndefined();
-    expect(got.error).toContain('"gin" (room a)');
+    expect(got.error).toContain('"Design system" (room a)');
     expect(got.error).toContain('"other" (room b)');
   });
 
