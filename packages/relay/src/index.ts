@@ -4,7 +4,7 @@
 // Normal installs don't need this: the MCP server embeds the same relay logic
 // and hosts it on port 9055 automatically.
 
-import { RelayCore } from "@figma-relai/shared";
+import { RelayCore, isAllowedOrigin } from "@figma-relai/shared";
 import type { ServerWebSocket } from "bun";
 
 const PORT = parseInt(process.env.PORT || "9055");
@@ -30,6 +30,13 @@ const server = Bun.serve({
           "Access-Control-Allow-Headers": "Content-Type, Authorization",
         },
       });
+    }
+
+    // Refuse web pages before upgrading; see isAllowedOrigin
+    const origin = req.headers.get("origin");
+    if (!isAllowedOrigin(origin)) {
+      console.log(`Refused a connection from origin ${origin}`);
+      return new Response("Origin not allowed", { status: 403 });
     }
 
     const success = server.upgrade(req, {

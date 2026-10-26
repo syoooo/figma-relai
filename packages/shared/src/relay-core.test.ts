@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { RelayCore, type RelaySocket } from "./relay-core.js";
+import { RelayCore, isAllowedOrigin, type RelaySocket } from "./relay-core.js";
 
 class FakeSocket implements RelaySocket {
   sent: unknown[] = [];
@@ -157,5 +157,24 @@ describe("RelayCore", () => {
     const legacy = connect(core);
     core.handleMessage(legacy, JSON.stringify({ type: "join", id: "j", room: "r1" }));
     expect(legacy.ofType("presence").at(-1)?.peers).toEqual([{ role: "unknown", meta: undefined }]);
+  });
+});
+
+describe("isAllowedOrigin", () => {
+  test("clients that send no Origin (the MCP server, doctor) are let in", () => {
+    expect(isAllowedOrigin(undefined)).toBe(true);
+    expect(isAllowedOrigin(null)).toBe(true);
+    expect(isAllowedOrigin("")).toBe(true);
+  });
+
+  test("the plugin panel's sandboxed iframe sends the opaque origin null", () => {
+    expect(isAllowedOrigin("null")).toBe(true);
+  });
+
+  test("web pages are refused, localhost ones included", () => {
+    expect(isAllowedOrigin("http://localhost:3000")).toBe(false);
+    expect(isAllowedOrigin("http://127.0.0.1:9055")).toBe(false);
+    expect(isAllowedOrigin("https://example.com")).toBe(false);
+    expect(isAllowedOrigin("https://www.figma.com")).toBe(false);
   });
 });
