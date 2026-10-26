@@ -140,7 +140,7 @@
     {
       "name": "diff_nodes",
       "category": "analysis",
-      "description": "Compare two nodes and list their differences (fills, strokes, size, layout, etc.), or audit changes over time with checkpoints: checkpoint:\"save\" snapshots nodeIdA's key properties; checkpoint:\"compare\" later diffs the current state against that snapshot — useful before/after an editing session to show the designer exactly what changed.",
+      "description": "Compare two nodes and list their differences (fills, strokes, size, layout, etc.), or audit changes over time with checkpoints: checkpoint:\"save\" snapshots nodeIdA's key properties; checkpoint:\"compare\" later diffs the current state against that snapshot — useful before/after an editing session to show the designer exactly what changed. Checkpoints are kept in the Relai server's memory, never written to the file, and a server restart clears them.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -158,7 +158,7 @@
               "save",
               "compare"
             ],
-            "description": "save: snapshot nodeIdA now; compare: diff current vs saved snapshot"
+            "description": "save: snapshot nodeIdA now (held in server memory until the server restarts, not in the file); compare: diff current vs saved snapshot"
           }
         },
         "required": [

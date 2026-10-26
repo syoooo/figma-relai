@@ -17,6 +17,7 @@ import type {
   AccessibilityIssue,
   DiffNodesData,
   NodeDiffField,
+  NodeSummary,
 } from "@figma-relai/shared";
 
 // The consolidated tool surface exposes one analyze_design tool; the four
@@ -700,15 +701,19 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
   );
 
   // ─── diff_nodes ─────────────────────────────────────────────────
-  const CHECKPOINT_KEY = "relai.checkpoint";
+  // Checkpoints live in this server process only, so the tool stays read-only:
+  // nothing is written to the file (older builds wrote a `relai.checkpoint`
+  // pluginData entry, which is now ignored). Insertion-ordered, oldest dropped.
+  const CHECKPOINT_LIMIT = 200;
+  const checkpoints = new Map<string, { ts: number; name: string; summary: NodeSummary | null }>();
   server.tool(
     "diff_nodes",
-    "Compare two nodes and list their differences (fills, strokes, size, layout, etc.), or audit changes over time with checkpoints: checkpoint:\"save\" snapshots nodeIdA's key properties; checkpoint:\"compare\" later diffs the current state against that snapshot — useful before/after an editing session to show the designer exactly what changed.",
+    "Compare two nodes and list their differences (fills, strokes, size, layout, etc.), or audit changes over time with checkpoints: checkpoint:\"save\" snapshots nodeIdA's key properties; checkpoint:\"compare\" later diffs the current state against that snapshot — useful before/after an editing session to show the designer exactly what changed. Checkpoints are kept in the Relai server's memory, never written to the file, and a server restart clears them.",
     {
       nodeIdA: z.string().describe("First node ID (or the checkpoint target)"),
       nodeIdB: z.string().optional().describe("Second node ID (omit when using checkpoint)"),
       checkpoint: z.enum(["save", "compare"]).optional()
-        .describe("save: snapshot nodeIdA now; compare: diff current vs saved snapshot"),
+        .describe("save: snapshot nodeIdA now (held in server memory until the server restarts, not in the file); compare: diff current vs saved snapshot"),
     },
     { readOnlyHint: true },
     async ({ nodeIdA, nodeIdB, checkpoint }) => {
@@ -716,32 +721,26 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
         if (checkpoint === "save") {
           const node = (await sendCommand("get_node_info", { nodeId: nodeIdA, depth: 2 })) as any;
           if (!node) return errorResult("invalid_input", `Node '${nodeIdA}' not found`, { suggestion: "Check node ID", tool: "search_nodes" });
-          const summary = normalizeNode(node);
-          await sendCommand("set_plugin_data", {
-            nodeId: nodeIdA,
-            key: CHECKPOINT_KEY,
-            value: JSON.stringify({ ts: Date.now(), name: node.name, summary }),
-          });
+          checkpoints.delete(nodeIdA);
+          checkpoints.set(nodeIdA, { ts: Date.now(), name: node.name, summary: normalizeNode(node) });
+          if (checkpoints.size > CHECKPOINT_LIMIT) checkpoints.delete(checkpoints.keys().next().value!);
           return standardResult({
-            summary: `Checkpoint saved for '${node.name}' (${nodeIdA}). Run diff_nodes with checkpoint:"compare" after editing to see what changed.`,
+            summary: `Checkpoint saved for '${node.name}' (${nodeIdA}) in server memory. Run diff_nodes with checkpoint:"compare" after editing to see what changed.`,
             data: { nodeId: nodeIdA, saved: true },
             recommended_next: [],
           });
         }
 
         if (checkpoint === "compare") {
-          const [node, stored] = await Promise.all([
-            sendCommand("get_node_info", { nodeId: nodeIdA, depth: 2 }) as Promise<any>,
-            sendCommand("get_plugin_data", { nodeId: nodeIdA, key: CHECKPOINT_KEY }) as Promise<any>,
-          ]);
-          if (!node) return errorResult("invalid_input", `Node '${nodeIdA}' not found`, { suggestion: "Check node ID", tool: "search_nodes" });
-          const raw = typeof stored === "string" ? stored : stored?.value;
-          if (!raw) {
-            return errorResult("invalid_input", `No checkpoint saved on '${nodeIdA}'`, {
-              suggestion: 'Save one first with checkpoint:"save"', tool: "diff_nodes",
+          const saved = checkpoints.get(nodeIdA);
+          if (!saved) {
+            return errorResult("invalid_input", `No checkpoint for '${nodeIdA}' in this server session`, {
+              suggestion: `Save one first with checkpoint:"save" — checkpoints are held in server memory (the latest ${CHECKPOINT_LIMIT}) and a server restart clears them`,
+              tool: "diff_nodes",
             });
           }
-          const saved = JSON.parse(raw);
+          const node = (await sendCommand("get_node_info", { nodeId: nodeIdA, depth: 2 })) as any;
+          if (!node) return errorResult("invalid_input", `Node '${nodeIdA}' not found`, { suggestion: "Check node ID", tool: "search_nodes" });
           const before = saved.summary;
           const after = normalizeNode(node);
 
@@ -758,7 +757,7 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
             compareField(differences, "layout.gap", before.layout?.gap, after.layout?.gap);
             compareField(differences, "layout.padding", before.layout?.padding, after.layout?.padding);
           }
-          const age = Math.round((Date.now() - (saved.ts ?? Date.now())) / 1000);
+          const age = Math.round((Date.now() - saved.ts) / 1000);
           return standardResult({
             summary: differences.length === 0
               ? `'${node.name}' is unchanged since the checkpoint ${age}s ago`
