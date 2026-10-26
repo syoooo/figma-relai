@@ -7,6 +7,7 @@ import { registerHandler } from "../dispatcher.js";
 import { collectNodeRefs, isWriteCommand } from "../write-guard.js";
 import {
   assertCapacity,
+  assertUpdateCapacity,
   buildIndex,
   makeId,
   matchPrecedents,
@@ -231,6 +232,8 @@ registerHandler("update_precedent", async (params) => {
     text,
     refs: params.refs !== undefined ? await resolveRefs(params.refs) : existing.refs,
   };
-  writeMemory(entries.map((e) => (e.id === id ? updated : e)));
+  const next = entries.map((e) => (e.id === id ? updated : e));
+  assertUpdateCapacity(entries, next);
+  writeMemory(next);
   return { updated: id };
 });

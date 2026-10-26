@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
+  MEMORY_MAX_BYTES,
   MEMORY_MAX_ENTRIES,
   PRECEDENT_TEXT_MAX,
   assertCapacity,
+  assertUpdateCapacity,
   buildIndex,
   makeId,
   matchPrecedents,
+  serializedSize,
   toSurfaced,
   validatePrecedentInput,
   type PrecedentEntry,
@@ -49,6 +52,53 @@ describe("assertCapacity", () => {
     const fat = Array.from({ length: 190 }, () => entry({ text: "y".repeat(PRECEDENT_TEXT_MAX) }));
     const candidate = entry({ text: "y".repeat(PRECEDENT_TEXT_MAX) });
     expect(() => assertCapacity(fat, candidate)).toThrow(/KB/);
+  });
+});
+
+describe("assertUpdateCapacity", () => {
+  // Fixed ids keep sizes exact: 179 of these plus `short` sit 193 chars under the cap.
+  const fat = (i: number) => entry({ id: `p${String(i).padStart(3, "0")}`, text: "y".repeat(PRECEDENT_TEXT_MAX) });
+  const memory = (fatCount: number) => [...Array.from({ length: fatCount }, (_, i) => fat(i)), entry({ id: "short", text: "short" })];
+  const rewrite = (entries: PrecedentEntry[], id: string, text: string) =>
+    entries.map((e) => (e.id === id ? { ...e, text } : e));
+
+  test("rejects a rewrite that pushes the memory past the byte budget, with now / after / limit / over", () => {
+    const before = memory(179);
+    const after = rewrite(before, "short", "y".repeat(PRECEDENT_TEXT_MAX));
+    const now = serializedSize(before);
+    const size = serializedSize(after);
+    expect(now).toBeLessThanOrEqual(MEMORY_MAX_BYTES);
+    expect(size).toBeGreaterThan(MEMORY_MAX_BYTES);
+    expect(() => assertUpdateCapacity(before, after)).toThrow(
+      `${size} chars after this write (now ${now}), limit ${MEMORY_MAX_BYTES}, ${size - MEMORY_MAX_BYTES} over`
+    );
+  });
+  test("accepts a longer rewrite that still fits", () => {
+    const before = memory(179);
+    const after = rewrite(before, "short", "a little longer");
+    expect(serializedSize(after)).toBeLessThanOrEqual(MEMORY_MAX_BYTES);
+    expect(() => assertUpdateCapacity(before, after)).not.toThrow();
+  });
+  test("accepts a shortening rewrite even when the memory is already over the cap", () => {
+    const before = memory(181);
+    const after = rewrite(before, "p000", "short");
+    expect(serializedSize(after)).toBeGreaterThan(MEMORY_MAX_BYTES);
+    expect(() => assertUpdateCapacity(before, after)).not.toThrow();
+  });
+  test("rejects a growing rewrite when the memory is already over the cap", () => {
+    const before = memory(181);
+    expect(() => assertUpdateCapacity(before, rewrite(before, "short", "shorter"))).toThrow(/update again/);
+  });
+  test("a rewrite at the entry cap is not refused for count", () => {
+    const full = Array.from({ length: MEMORY_MAX_ENTRIES }, () => entry());
+    const id = full[0].id;
+    expect(() => assertUpdateCapacity(full, rewrite(full, id, "reworded"))).not.toThrow();
+  });
+  test("record's size refusal carries the same numbers", () => {
+    const before = memory(179);
+    const candidate = entry({ id: "new", text: "y".repeat(PRECEDENT_TEXT_MAX) });
+    const size = serializedSize([candidate, ...before]);
+    expect(() => assertCapacity(before, candidate)).toThrow(`${size - MEMORY_MAX_BYTES} over`);
   });
 });
 

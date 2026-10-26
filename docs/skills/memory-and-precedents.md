@@ -56,5 +56,5 @@ Early sessions: report every change. Once the designer clearly stops reading ful
 ## Maintenance
 
 - The designer sees and can delete every entry in the plugin panel (Memory section). Their record, their rules.
-- Memory holds 200 entries / 64KB. When recording fails with a capacity error, offer a consolidation pass: `list_precedents`, merge superseded rulings into fewer summary entries (`record_precedent` the summaries, `remove_precedent` the merged ones), preserving every still-active ruling. Show the merge plan before applying it.
+- Memory holds 200 entries / 64KB. The size cap applies to rewrites too: an `update_precedent` that grows the memory past it is refused, while one that shrinks it always passes. When recording fails with a capacity error, offer a consolidation pass: `list_precedents`, merge superseded rulings into fewer summary entries (`record_precedent` the summaries, `remove_precedent` the merged ones), preserving every still-active ruling. Show the merge plan before applying it.
 - If a precedent contradicts current reality (the token it references is gone, the ruling was reversed), ask the designer whether to update or remove it — never silently drop case law.

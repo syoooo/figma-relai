@@ -50,19 +50,49 @@ export function validatePrecedentInput(kind: unknown, text: unknown): { kind: Pr
   return { kind: k, text: trimmed };
 }
 
+export type CapacityOverflow =
+  | { reason: "entries"; limit: number; overBy: number }
+  | { reason: "size"; limit: number; now: number; after: number; overBy: number };
+type SizeOverflow = Extract<CapacityOverflow, { reason: "size" }>;
+
+/** How far putting `added` in front of `entries` would overflow the memory; null when it fits. */
+export function additionOverflow(entries: PrecedentEntry[], added: PrecedentEntry[]): CapacityOverflow | null {
+  const count = entries.length + added.length;
+  if (count > MEMORY_MAX_ENTRIES) return { reason: "entries", limit: MEMORY_MAX_ENTRIES, overBy: count - MEMORY_MAX_ENTRIES };
+  return sizeOverflow(entries, [...added, ...entries]);
+}
+
+// A write that doesn't grow the memory always passes: shortening is how a
+// memory already over the cap (rewrites were unchecked before) gets back under.
+function sizeOverflow(before: PrecedentEntry[], after: PrecedentEntry[]): SizeOverflow | null {
+  const now = serializedSize(before);
+  const size = serializedSize(after);
+  if (size <= MEMORY_MAX_BYTES || size <= now) return null;
+  return { reason: "size", limit: MEMORY_MAX_BYTES, now, after: size, overBy: size - MEMORY_MAX_BYTES };
+}
+
 /** Throws when adding would exceed capacity; message tells the fix. */
 export function assertCapacity(entries: PrecedentEntry[], candidate: PrecedentEntry): void {
-  if (entries.length + 1 > MEMORY_MAX_ENTRIES) {
+  const over = additionOverflow(entries, [candidate]);
+  if (!over) return;
+  if (over.reason === "entries") {
     throw new Error(
       `File memory is full (${MEMORY_MAX_ENTRIES} precedents). Ask the agent to consolidate old precedents into summary entries (list_precedents → merge → remove), then record again.`
     );
   }
-  const size = serializedSize([candidate, ...entries]);
-  if (size > MEMORY_MAX_BYTES) {
-    throw new Error(
-      `File memory would exceed ${Math.round(MEMORY_MAX_BYTES / 1000)}KB. Ask the agent to consolidate old precedents into summary entries, then record again.`
-    );
-  }
+  throwSize(over, "consolidate old precedents into summary entries, then record again");
+}
+
+/** Rewriting a precedent can't add one, so only the size cap applies. */
+export function assertUpdateCapacity(entries: PrecedentEntry[], next: PrecedentEntry[]): void {
+  const over = sizeOverflow(entries, next);
+  if (over) throwSize(over, "shorten this precedent or its refs, or consolidate others first, then update again");
+}
+
+function throwSize(over: SizeOverflow, fix: string): never {
+  throw new Error(
+    `File memory would exceed ${Math.round(MEMORY_MAX_BYTES / 1000)}KB: ${over.after} chars after this write (now ${over.now}), limit ${MEMORY_MAX_BYTES}, ${over.overBy} over. Ask the agent to ${fix}.`
+  );
 }
 
 export function serializedSize(entries: PrecedentEntry[]): number {
