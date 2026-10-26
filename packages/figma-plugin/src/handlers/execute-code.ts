@@ -68,6 +68,10 @@ registerHandler("execute_code", async (params) => {
     throw new RelaiError("script_compile_error", hint ? `${message} — Hint: ${hint}` : message);
   }
 
+  // figma.skipInvisibleInstanceChildren is plugin-wide and outlives the
+  // script: one that sets it (a common speed-up) would hide instance
+  // sublayers from every later command. Put it back however the script ends.
+  const skipInvisible = figma.skipInvisibleInstanceChildren;
   let value: unknown;
   try {
     value = await fn(figma, capturedConsole, relai);
@@ -82,6 +86,8 @@ registerHandler("execute_code", async (params) => {
       "script_error",
       `${hint ? `${message} — Hint: ${hint}` : message} (Scripts are not atomic: changes made before the error stay in the file.)`
     );
+  } finally {
+    figma.skipInvisibleInstanceChildren = skipInvisible;
   }
 
   const serialized = serializeResult(value);
