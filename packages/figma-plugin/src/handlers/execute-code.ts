@@ -35,10 +35,51 @@ export function looksLikeNode(value: unknown): value is SceneNode {
   );
 }
 
+// Styles are host objects as well: their fields live on the prototype, so
+// JSON.stringify would see only the id. Copy the fields a reader needs.
+const STYLE_FIELDS: Record<string, string[]> = {
+  PAINT: ["paints"],
+  TEXT: [
+    "fontName",
+    "fontSize",
+    "lineHeight",
+    "letterSpacing",
+    "textCase",
+    "textDecoration",
+    "paragraphSpacing",
+    "paragraphIndent",
+    "leadingTrim",
+  ],
+  EFFECT: ["effects"],
+  GRID: ["layoutGrids"],
+};
+
+export function looksLikeStyle(value: unknown): value is BaseStyle {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !("parent" in (value as object)) &&
+    typeof (value as BaseStyle).getPluginData === "function" &&
+    (value as BaseStyle).type in STYLE_FIELDS
+  );
+}
+
+function serializeStyle(style: BaseStyle): Record<string, unknown> {
+  const fields = ["id", "type", "name", "key", "description", "remote", "boundVariables"];
+  const source = style as unknown as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of [...fields, ...STYLE_FIELDS[style.type]]) {
+    if (source[key] !== undefined) out[key] = source[key];
+  }
+  return out;
+}
+
 // Make an arbitrary return value JSON-safe: nodes become budgeted summaries,
-// symbols (figma.mixed) become "mixed", functions are dropped
+// styles become their fields, symbols (figma.mixed) become "mixed", functions
+// are dropped
 export function serializeResult(value: unknown): unknown {
   if (looksLikeNode(value)) return serializeNode(value);
+  if (looksLikeStyle(value)) return serializeResult(serializeStyle(value));
   if (Array.isArray(value)) return value.map(serializeResult);
   try {
     return JSON.parse(
@@ -46,6 +87,7 @@ export function serializeResult(value: unknown): unknown {
         if (typeof v === "symbol") return "mixed";
         if (typeof v === "function") return undefined;
         if (looksLikeNode(v)) return serializeNode(v);
+        if (looksLikeStyle(v)) return serializeStyle(v);
         return v;
       }) ?? "null"
     );

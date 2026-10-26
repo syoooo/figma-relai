@@ -38,4 +38,47 @@ describe("execute_figma results", () => {
     const style = { id: "S:abc,", type: "PAINT", name: "Brand/Primary", paints: [], getPluginData: () => "" };
     expect(serializeResult(style)).toEqual({ id: "S:abc,", type: "PAINT", name: "Brand/Primary", paints: [] });
   });
+
+  // Figma's styles keep their fields on the prototype, as getters; a plain
+  // object literal does not show that, so this fake does.
+  class HostPaintStyle {
+    get id() {
+      return "S:abc,";
+    }
+    get type() {
+      return "PAINT";
+    }
+    get name() {
+      return "Brand/Primary";
+    }
+    get key() {
+      return "abc";
+    }
+    get description() {
+      return "";
+    }
+    get remote() {
+      return false;
+    }
+    get paints() {
+      return [{ type: "SOLID", color: { r: 1, g: 0, b: 0 }, opacity: 1 }];
+    }
+    getPluginData() {
+      return "";
+    }
+  }
+
+  test("a style whose fields sit on the prototype comes back with them", () => {
+    const expected = {
+      id: "S:abc,",
+      type: "PAINT",
+      name: "Brand/Primary",
+      key: "abc",
+      description: "",
+      remote: false,
+      paints: [{ type: "SOLID", color: { r: 1, g: 0, b: 0 }, opacity: 1 }],
+    };
+    expect(serializeResult(new HostPaintStyle())).toEqual(expected);
+    expect(serializeResult({ found: new HostPaintStyle() })).toEqual({ found: expected });
+  });
 });
