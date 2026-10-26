@@ -60,14 +60,22 @@ async function resolveRefs(refs: unknown): Promise<PrecedentRefs | undefined> {
 
   if (Array.isArray(input.tokens) && input.tokens.length) {
     const resolved: PrecedentRef[] = [];
-    for (const id of input.tokens.slice(0, 10)) {
-      if (typeof id !== "string") continue;
-      try {
-        const v = await figma.variables.getVariableByIdAsync(id);
-        resolved.push({ id, name: v?.name });
-      } catch {
-        resolved.push({ id });
-      }
+    const missing: string[] = [];
+    for (const raw of input.tokens.slice(0, 10)) {
+      if (typeof raw !== "string") continue;
+      // Writes carry "VariableID:N:M", so a bare "N:M" token ref would never
+      // match — and a ref that names no variable surfaces nothing. Both used
+      // to be saved silently; fix the first, refuse the second.
+      const id = /^\d+:\d+$/.test(raw) ? `VariableID:${raw}` : raw;
+      const v = await figma.variables.getVariableByIdAsync(id).catch(() => null);
+      if (v) resolved.push({ id, name: v.name });
+      else missing.push(id === raw ? `"${raw}"` : `"${raw}" (as ${id})`);
+    }
+    if (missing.length) {
+      throw new Error(
+        `No variable found for token ref ${missing.join(", ")} — nothing was saved. ` +
+          `Pass variable ids as "VariableID:N:M" (manage_variables action:list shows them).`
+      );
     }
     if (resolved.length) out.tokens = resolved;
   }
@@ -134,16 +142,20 @@ export async function recordGatePrecedent(
         : [];
   // Page ref only as a last resort (no direct anchors) — and page-level
   // surfacing skips gate entries anyway, so this is purely for the record.
-  const pages = nodes.length === 0 && variableId.length === 0 ? [figma.currentPage.id] : [];
-  try {
-    await recordPrecedent({
+  const record = (tokens: string[]) =>
+    recordPrecedent({
       kind: "decision",
       text: `${approved ? "approved" : "rejected"} ${command}: ${reason}`,
-      refs: { nodes, tokens: variableId, pages },
+      refs: { nodes, tokens, pages: nodes.length === 0 && tokens.length === 0 ? [figma.currentPage.id] : [] },
       source: "gate",
     });
+  try {
+    await record(variableId);
   } catch {
-    // A full memory must never block the approval flow itself.
+    // A variable that can't be found must not cost the designer's reason:
+    // keep it without the token ref. A full memory must never block the
+    // approval flow itself.
+    if (variableId.length) await record([]).catch(() => {});
   }
 }
 

@@ -876,7 +876,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Variable IDs this precedent concerns"
+                "description": "Variable IDs this precedent concerns, with the \"VariableID:\" prefix (a bare N:M gets it added; an id that names no variable is an error and nothing is saved)"
               },
               "nodes": {
                 "type": "array",

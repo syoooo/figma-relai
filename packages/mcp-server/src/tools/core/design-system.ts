@@ -83,7 +83,12 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       id: z.string().optional().describe("update/remove_precedent: precedent id (from list_precedents)"),
       refs: z
         .object({
-          tokens: z.array(z.string()).optional().describe("Variable IDs this precedent concerns"),
+          tokens: z
+            .array(z.string())
+            .optional()
+            .describe(
+              'Variable IDs this precedent concerns, with the "VariableID:" prefix (a bare N:M gets it added; an id that names no variable is an error and nothing is saved)'
+            ),
           nodes: z.array(z.string()).optional().describe("Node IDs this precedent concerns"),
           pages: z.array(z.string()).optional().describe("Page IDs this precedent concerns"),
         })
