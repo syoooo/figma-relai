@@ -4,6 +4,7 @@ import { z } from "zod";
 import { CALL_META_KEY, type CallMeta } from "@figma-relai/shared";
 import type { JoinReport } from "../connection.js";
 import { errorResult } from "./core/helpers.js";
+import { withCallEnvelope } from "../call-envelope.js";
 
 // Consolidated core tools (~30). Each maps declarative input onto the plugin's
 // granular command vocabulary — the plugin side is unchanged, so the
@@ -138,7 +139,7 @@ export function registerEventsTool(
 ): void {
   server.tool(
     "get_events",
-    "Activity since the last check. scope 'designer' (default): the designer's selection/node/page changes (also piggybacked as designer_events on command results). scope 'agent': this session's own command log — every plugin command sent, with success/duration — useful for summarizing what was changed. 'all': both.",
+    "Activity since the last check. scope 'designer' (default): the designer's selection/node/page changes (also piggybacked as designer_events on command results). scope 'agent': this session's own command log — every plugin command sent, with success/duration, outcome (applied/not_applied/unknown) and error code — useful for summarizing what was changed. 'all': both.",
     {
       scope: z.enum(["designer", "agent", "all"]).optional(),
     },
@@ -166,13 +167,16 @@ export function registerEventsTool(
   );
 }
 
-// Register all tool modules
+// Register all tool modules. Each one goes through the call envelope, so
+// every tool reports its outcome, sets isError on failure and accepts the
+// per-call room and expect_file.
 export function registerAllTools(
   server: McpServer,
   sendCommand: SendCommandFn
 ): void {
+  const env = withCallEnvelope(server, sendCommand);
   for (const [mod] of moduleCategories) {
-    mod.register(server, sendCommand);
+    mod.register(env.server, env.sendCommand);
   }
 }
 

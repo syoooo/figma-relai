@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import {
   CALL_META_KEY,
   ERROR_DEFAULTS,
@@ -24,6 +25,8 @@ import { writeResultFile } from "./result-files.js";
 // true: a tool cannot forget to report an outcome or to set isError.
 //
 // For each tool call the envelope:
+// - adds the optional room and expect_file arguments and hands them to the
+//   connection as the call's target,
 // - collects a receipt for every plugin command the tool sent (request id,
 //   outcome, write or read, error code),
 // - turns errors thrown by a command into coded RelaiErrors, so the tool's
@@ -39,11 +42,18 @@ export const MAX_TEXT_CHARS = 50000;
 /** The fixed label the receipt line starts with. */
 export const RECEIPT_LABEL = "[relai]";
 
+/** Where one tool call's plugin commands go (see FigmaConnection.CallTarget). */
+export interface EnvelopeTarget {
+  room?: string;
+  expectFile?: string;
+}
+
 interface CallScope {
   receipts: CallReceipt[];
   partial: boolean;
   file?: string; // the plugin's live file name, from the latest result metadata
   room?: string;
+  expectFile?: string;
   cancelRequested: boolean;
   lastError?: RelaiError;
 }
@@ -60,6 +70,22 @@ export interface ToolResult {
 type ToolHandler = (...args: unknown[]) => unknown;
 
 const WRAPPED = Symbol("relai.callEnvelope");
+const ENVELOPED_SERVER = Symbol("relai.envelopedServer");
+
+// The two arguments every enveloped tool accepts on top of its own
+const TARGET_SHAPE = {
+  room: z.string().optional().describe("Target this plugin room for this call only (see join_room)."),
+  expect_file: z.string().optional().describe("Refuse unless the target file's name is exactly this."),
+};
+
+/** The target named by the tool call this code runs inside, if any. */
+export function currentCallTarget(): EnvelopeTarget {
+  const scope = scopes.getStore();
+  return {
+    ...(scope?.room !== undefined ? { room: scope.room } : {}),
+    ...(scope?.expectFile !== undefined ? { expectFile: scope.expectFile } : {}),
+  };
+}
 
 /** Whether a tool handler went through the envelope (for tests). */
 export function isEnveloped(handler: unknown): boolean {
@@ -78,8 +104,11 @@ export function withCallEnvelope(
   server: McpServer,
   sendCommand: SendCommandFn
 ): { server: McpServer; sendCommand: SendCommandFn } {
+  // Wrapping twice would report every call twice
+  if ((server as unknown as { [ENVELOPED_SERVER]?: true })[ENVELOPED_SERVER]) return { server, sendCommand };
   const wrappedServer = new Proxy(server, {
     get(target, prop, receiver) {
+      if (prop === ENVELOPED_SERVER) return true;
       if (prop !== "tool") return Reflect.get(target, prop, receiver);
       return (name: string, ...rest: unknown[]) => {
         if ((rest.length !== 3 && rest.length !== 4) || typeof rest[0] !== "string") {
@@ -90,7 +119,8 @@ export function withCallEnvelope(
         const handler = rest[rest.length - 1] as ToolHandler;
         const annotations = rest.length === 4 ? (rest[2] as { readOnlyHint?: boolean }) : undefined;
         const wrapped = envelopeHandler(name, handler, annotations?.readOnlyHint === true);
-        return (target.tool as (...a: unknown[]) => unknown).call(target, name, ...rest.slice(0, -1), wrapped);
+        const shape = { ...TARGET_SHAPE, ...(rest[1] as Record<string, unknown>) };
+        return (target.tool as (...a: unknown[]) => unknown).call(target, name, rest[0], shape, ...rest.slice(2, -1), wrapped);
       };
     },
   }) as McpServer;
@@ -122,11 +152,14 @@ export function withCallEnvelope(
 function envelopeHandler(name: string, handler: ToolHandler, readOnly: boolean): ToolHandler {
   const wrapped = async (...args: unknown[]) => {
     const scope: CallScope = { receipts: [], partial: false, cancelRequested: false };
-    const room = (args[0] as { room?: unknown } | undefined)?.room;
+    // The target is the envelope's business; the tool sees its own arguments only
+    const { room, expect_file: expectFile, ...own } = (args[0] ?? {}) as Record<string, unknown>;
     if (typeof room === "string") scope.room = room;
+    if (typeof expectFile === "string") scope.expectFile = expectFile;
+    const toolArgs = args[0] === undefined ? args : [own, ...args.slice(1)];
     let result: ToolResult;
     try {
-      result = (await scopes.run(scope, () => Promise.resolve(handler(...args)))) as ToolResult;
+      result = (await scopes.run(scope, () => Promise.resolve(handler(...toolArgs)))) as ToolResult;
     } catch (error) {
       result = errorResult(error) as ToolResult;
     }
@@ -189,7 +222,9 @@ function batchItem(raw: unknown): { command: string; outcome: Outcome; code?: Er
 export function finalizeResult(
   name: string,
   result: ToolResult,
-  scope: Pick<CallScope, "receipts" | "partial" | "file" | "room" | "cancelRequested" | "lastError">,
+  scope: Pick<CallScope, "receipts" | "partial" | "file" | "room" | "cancelRequested" | "lastError"> & {
+    expectFile?: string;
+  },
   readOnly: boolean
 ): ToolResult {
   const declared = (result._meta?.[CALL_META_KEY] ?? undefined) as Partial<CallMeta> | undefined;
@@ -274,7 +309,13 @@ export function finalizeResult(
   };
 
   const wrote = calls.some((r) => !isRead(r));
-  const showReceipt = isError || outcome === "unknown" || partial || scope.room !== undefined || (wrote && outcome !== undefined);
+  const showReceipt =
+    isError ||
+    outcome === "unknown" ||
+    partial ||
+    scope.room !== undefined ||
+    scope.expectFile !== undefined ||
+    (wrote && outcome !== undefined);
   if (showReceipt) {
     content.push({ type: "text", text: receiptLine(meta, last?.id, scope.cancelRequested) });
   }

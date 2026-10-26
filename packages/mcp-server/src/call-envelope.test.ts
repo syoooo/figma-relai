@@ -4,7 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CALL_META_KEY, RelaiError, type CallMeta, type ResultMeta } from "@figma-relai/shared";
-import { withCallEnvelope, isEnveloped, MAX_TEXT_CHARS, RECEIPT_LABEL, type ToolResult } from "./call-envelope.js";
+import {
+  withCallEnvelope,
+  isEnveloped,
+  currentCallTarget,
+  MAX_TEXT_CHARS,
+  RECEIPT_LABEL,
+  type ToolResult,
+} from "./call-envelope.js";
 import { RequestTracker } from "./request-tracker.js";
 import { registerAllTools } from "./tools/index.js";
 import type { SendCommandFn } from "./tool-registry.js";
@@ -262,6 +269,52 @@ describe("long results", () => {
     expect(meta(result).truncated).toMatchObject({ total: 50010, returned: MAX_TEXT_CHARS });
     expect(meta(result).truncated?.file).toBeUndefined();
     expect(texts(result)[0]).toEndWith("the full result could not be saved]");
+  });
+});
+
+describe("per-call target", () => {
+  test("room and expect_file reach the command, not the tool", async () => {
+    const seen: { args?: Record<string, unknown>; target?: unknown } = {};
+    const env = envelope(async () => {
+      seen.target = currentCallTarget();
+      return { ok: true };
+    });
+    (env.server.tool as (...a: unknown[]) => void)(
+      "probe",
+      "a test tool",
+      {},
+      async (args: Record<string, unknown>) => {
+        seen.args = args;
+        await env.sendCommand("get_selection", {});
+        return { content: [{ type: "text", text: "{}" }] };
+      }
+    );
+    const result = await env.call("probe", { room: "room-b", expect_file: "Beta", other: 1 });
+    expect(seen.args).toEqual({ other: 1 });
+    expect(seen.target).toEqual({ room: "room-b", expectFile: "Beta" });
+    // A call that names its target always gets a receipt line
+    expect(receipt(result)).toContain("room room-b");
+  });
+
+  test("wrapping an enveloped server again changes nothing", () => {
+    const env = envelope(async () => ({}));
+    const again = withCallEnvelope(env.server, env.sendCommand);
+    expect(again.server).toBe(env.server);
+    expect(again.sendCommand).toBe(env.sendCommand);
+  });
+
+  test("every plugin tool accepts room and expect_file", async () => {
+    const { buildManifest } = await import("./cli/manifest.js");
+    const manifest = await buildManifest("0.0.0");
+    for (const tool of manifest.tools) {
+      const props = Object.keys((tool.inputSchema as { properties?: object }).properties ?? {});
+      if (tool.name === "join_room" || tool.name === "get_events") {
+        expect(props).not.toContain("expect_file");
+      } else {
+        expect(props).toContain("room");
+        expect(props).toContain("expect_file");
+      }
+    }
   });
 });
 

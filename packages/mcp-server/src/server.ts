@@ -11,7 +11,7 @@ export function createServer(): McpServer {
     },
     {
       instructions: `
-You control Figma through ~30 consolidated tools. Pairing with the Figma plugin is automatic — just call any tool; join_room is only needed if an error reports multiple plugins.
+You control Figma through ~30 consolidated tools. Pairing with the Figma plugin is automatic — just call any tool; join_room is only needed if an error reports multiple plugins. With several files open, pass room (or expect_file) on each call instead of relying on the session's default room.
 
 📖 UNDERSTAND (start here):
   get_document_overview — structure, page/component/style/variable counts
@@ -72,6 +72,14 @@ READING RESULTS:
   the full receipt is in _meta["${CALL_META_KEY}"]
 - Text over 50,000 characters is cut; the cut notice names a local file
   that holds the full result
+
+TARGETING A FILE (every tool except join_room and get_events):
+- room: send this one call to that plugin room; the session's default room
+  (set by join_room, shared by every agent in this server process) stays put
+- expect_file: refuse unless the target file's name is exactly this
+  (a branch has its own name); a refusal changes nothing (not_applied)
+- room_changed: the plugin moved to a different file since the last call;
+  nothing was sent, and sending again continues in the new file
 `,
     }
   );

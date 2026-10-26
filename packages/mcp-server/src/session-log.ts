@@ -2,6 +2,8 @@
 // audit trail, surfaced through get_events (scope: "agent"). Complements the
 // plugin's activity feed: the designer sees it live, the AI can review it.
 
+import type { ErrorCode, Outcome } from "@figma-relai/shared";
+
 export interface SessionLogEntry {
   ts: number;
   command: string;
@@ -9,6 +11,11 @@ export interface SessionLogEntry {
   ok: boolean;
   ms: number;
   error?: string;
+  id?: string; // the request id, absent when the command was never sent
+  room?: string;
+  outcome?: Outcome; // whether the command may have changed the file
+  partial?: boolean;
+  code?: ErrorCode; // set on failures
 }
 
 const MAX_ENTRIES = 200;

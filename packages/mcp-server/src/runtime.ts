@@ -1,6 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createServer } from "./server.js";
-import { FigmaConnection } from "./connection.js";
+import { FigmaConnection, receiptOf } from "./connection.js";
+import { currentCallTarget } from "./call-envelope.js";
+import { RelaiError } from "@figma-relai/shared";
 import { logger } from "./logger.js";
 import { registerAllTools, registerRoomTool, registerEventsTool } from "./tools/index.js";
 import { startEmbeddedRelay, type EmbeddedRelay } from "./embedded-relay.js";
@@ -69,6 +71,7 @@ export async function bootRuntime(options: RuntimeOptions): Promise<Runtime> {
         if (relay) logger.info("Took over relay hosting");
       }
     },
+    isHost: () => relay !== null,
   });
 
   // Register the join_room tool
@@ -107,7 +110,8 @@ export async function bootRuntime(options: RuntimeOptions): Promise<Runtime> {
       });
   };
 
-  // Register all domain tools; every plugin command lands in the session log
+  // Register all domain tools; every plugin command goes where its tool call
+  // aimed (room, expect_file) and lands in the session log with its outcome
   registerAllTools(server, async (command, params, timeoutMs) => {
     const t0 = Date.now();
     const nodeId =
@@ -115,14 +119,26 @@ export async function bootRuntime(options: RuntimeOptions): Promise<Runtime> {
         ? ((params as { nodeId: string }).nodeId)
         : undefined;
     try {
-      const result = await connection.sendCommand(command, params, timeoutMs);
-      recordCommand({ ts: t0, command, nodeId, ok: true, ms: Date.now() - t0 });
+      const { result, receipt } = await connection.sendCommandDetailed(command, params, timeoutMs, currentCallTarget());
+      recordCommand({
+        ts: t0,
+        command,
+        nodeId,
+        ok: true,
+        ms: Date.now() - t0,
+        id: receipt.id,
+        room: receipt.room,
+        outcome: receipt.outcome,
+        ...(receipt.partial ? { partial: true } : {}),
+      });
       // Not for the identity commands themselves, or the probe calls itself
       if (command !== "get_file_identity" && command !== "set_file_identity") {
         probeIdentityOnce();
       }
       return result;
     } catch (error) {
+      // A failure before anything was sent has no receipt, only a code
+      const receipt = receiptOf(error);
       recordCommand({
         ts: t0,
         command,
@@ -130,6 +146,9 @@ export async function bootRuntime(options: RuntimeOptions): Promise<Runtime> {
         ok: false,
         ms: Date.now() - t0,
         error: error instanceof Error ? error.message.slice(0, 200) : String(error),
+        ...(receipt ? { id: receipt.id, room: receipt.room } : {}),
+        ...(error instanceof RelaiError ? { outcome: error.outcome, code: error.code } : {}),
+        ...(receipt?.partial ? { partial: true } : {}),
       });
       throw error;
     }
