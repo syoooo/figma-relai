@@ -55,7 +55,13 @@ import {
 } from "./handlers/memory.js";
 import { guardsStatePayload, refreshGuardsUI, setGuardedPages, readGuards } from "./handlers/guards.js";
 import { collectNodeRefs, isWriteCommand } from "./write-guard.js";
-import { reconcileOnLoad, rulesetStatus, postRulesetState } from "./handlers/rulesets.js";
+import {
+  reconcileOnLoad,
+  rulesetStatus,
+  postRulesetState,
+  notifySkippedSeeds,
+  type RestoreResult,
+} from "./handlers/rulesets.js";
 import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timeline.js";
 import { pendingProposals } from "./handlers/proposals.js";
 import { postFileIdentity } from "./handlers/file-identity.js";
@@ -275,9 +281,14 @@ figma.ui.onmessage = async (msg: any) => {
       const op = msg.op as string;
       const name = typeof msg.name === "string" ? msg.name : undefined;
       if (op === "save-from-file") await dispatch("save_ruleset", { name, fromFile: true });
-      else if (op === "link") await dispatch("link_ruleset", { name, restore: msg.restore === true });
-      else if (op === "unlink") await dispatch("unlink_ruleset", {});
-      else if (op === "restore") await dispatch("restore_from_ruleset", { force: msg.force === true });
+      else if (op === "link") {
+        const out = (await dispatch("link_ruleset", { name, restore: msg.restore === true })) as {
+          restored: RestoreResult | null;
+        };
+        notifySkippedSeeds(out.restored);
+      } else if (op === "unlink") await dispatch("unlink_ruleset", {});
+      else if (op === "restore")
+        notifySkippedSeeds((await dispatch("restore_from_ruleset", { force: msg.force === true })) as RestoreResult);
       else if (op === "push") await dispatch("push_to_ruleset", {});
       else if (op === "delete") await dispatch("delete_ruleset", { name });
       else if (op === "set-auto") await dispatch("save_ruleset", { name, autoRestore: msg.autoRestore === true });

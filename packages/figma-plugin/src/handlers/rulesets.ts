@@ -9,7 +9,7 @@
 
 import { registerHandler } from "../dispatcher.js";
 import { readMemory, writeMemory } from "./memory.js";
-import type { PrecedentEntry } from "../memory-core.js";
+import { additionOverflow, type CapacityOverflow, type PrecedentEntry } from "../memory-core.js";
 import { contentHash, newerSide, restoreWouldLoseWork } from "../ruleset-core.js";
 
 export { contentHash } from "../ruleset-core.js";
@@ -160,6 +160,23 @@ async function requireSet(name: unknown): Promise<{ sets: Ruleset[]; set: Rulese
   return { sets, set: sets[index], index };
 }
 
+/** Seed precedents a restore left out because the file memory can't hold them all. */
+interface SeedsSkipped {
+  count: number;
+  reason: CapacityOverflow["reason"];
+  limit: number;
+  overBy: number;
+  next: string;
+}
+
+export interface RestoreResult {
+  restored: string;
+  conventionsChars: number;
+  precedentsSeeded: number;
+  precedentsSkipped?: SeedsSkipped;
+  replaced?: { chars: number; at: string };
+}
+
 /**
  * Pull: ancestor → file. Writes conventions, merges seed precedents (by id).
  *
@@ -169,12 +186,7 @@ async function requireSet(name: unknown): Promise<{ sets: Ruleset[]; set: Rulese
  * exactly what "update from the kit" did on 2026-08-03, silently, because
  * nothing compared the two dates. `force` is the way to say you mean it.
  */
-export async function restoreFromRuleset(force = false): Promise<{
-  restored: string;
-  conventionsChars: number;
-  precedentsSeeded: number;
-  replaced?: { chars: number; at: string };
-}> {
+export async function restoreFromRuleset(force = false): Promise<RestoreResult> {
   const link = readLink();
   if (!link) throw new Error("This file is not linked to a ruleset. Use link_ruleset first.");
   const { set } = await requireSet(link.name);
@@ -192,14 +204,30 @@ export async function restoreFromRuleset(force = false): Promise<{
   }
   writeFileConventions(set.conventions);
   let seeded = 0;
+  let skipped: SeedsSkipped | undefined;
   if (set.seedPrecedents.length) {
     const existing = readMemory();
     const known = new Set(existing.map((e) => e.id));
     const fresh = set.seedPrecedents.filter((e) => !known.has(e.id));
     if (fresh.length) {
-      // Through writeMemory so the precedent index and the panel both refresh
-      writeMemory([...fresh, ...existing]);
-      seeded = fresh.length;
+      // All or none: when the seeds don't fit, none are written (a partial
+      // seed is an arbitrary slice of the kit's precedents). The law above is
+      // restored either way — it is what the merge wound took.
+      const over = additionOverflow(existing, fresh);
+      if (over) {
+        skipped = {
+          count: fresh.length,
+          reason: over.reason,
+          limit: over.limit,
+          overBy: over.overBy,
+          next:
+            "File memory can't take the kit's seed precedents, so none were written. Consolidate this file's precedents (list_precedents → merge → remove), then restore again — seeds merge by id, so only the missing ones are added.",
+        };
+      } else {
+        // Through writeMemory so the precedent index and the panel both refresh
+        writeMemory([...fresh, ...existing]);
+        seeded = fresh.length;
+      }
     }
   }
   writeLink({ name: set.name, lastSyncHash: contentHash(set.conventions) });
@@ -214,6 +242,7 @@ export async function restoreFromRuleset(force = false): Promise<{
     restored: set.name,
     conventionsChars: set.conventions.length,
     precedentsSeeded: seeded,
+    ...(skipped ? { precedentsSkipped: skipped } : {}),
     // Say what was displaced, so a wrong-direction restore is visible in the
     // transcript rather than discovered days later.
     ...(before.length > 0 && contentHash(before) !== contentHash(set.conventions)
@@ -282,11 +311,25 @@ export async function reconcileOnLoad(): Promise<
     // to destroy — but say how old the kit is, because a merge wound healed
     // with a stale ancestor still leaves the designer a day behind.
     const r = await restoreFromRuleset(true);
-    const age = status.setUpdatedAt ? ` (kit last written ${status.setUpdatedAt.slice(0, 10)})` : "";
-    figma.notify(`Relai: restored conventions from ruleset "${r.restored}"${age}`);
+    figma.notify(restoreNotice(r, status.setUpdatedAt));
     return { healed: true, name: r.restored };
   }
   return { healed: false, status };
+}
+
+/** The designer-facing line for a restore — the one wording for the automatic heal and the panel's. */
+function restoreNotice(r: RestoreResult, kitUpdatedAt?: string): string {
+  const age = kitUpdatedAt ? ` (kit last written ${kitUpdatedAt.slice(0, 10)})` : "";
+  const skipped = r.precedentsSkipped ? ` — ${r.precedentsSkipped.count} seed precedents skipped, file memory full` : "";
+  return `Relai: restored conventions from ruleset "${r.restored}"${age}${skipped}`;
+}
+
+/**
+ * Panel restore (and link + restore): the panel shows the law coming back but
+ * not the seeds that stayed out, so say so when some did.
+ */
+export function notifySkippedSeeds(r: RestoreResult | null): void {
+  if (r?.precedentsSkipped) figma.notify(restoreNotice(r));
 }
 
 // ─── Export / import (the future sharing format) ────────────────────
@@ -426,7 +469,7 @@ registerHandler("delete_ruleset", async (params) => {
 registerHandler("link_ruleset", async (params) => {
   const { set } = await requireSet(params.name);
   writeLink({ name: set.name, lastSyncHash: contentHash(set.conventions) });
-  let restored: unknown = null;
+  let restored: RestoreResult | null = null;
   if (params.restore === true) restored = await restoreFromRuleset(params.force === true);
   await postRulesetState();
   return { linked: set.name, restored };
