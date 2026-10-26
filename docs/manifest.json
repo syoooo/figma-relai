@@ -171,7 +171,7 @@
     {
       "name": "annotate",
       "category": "annotations",
-      "description": "Read or write Dev Mode annotations. get: read annotations on a node. set: add/update one annotation (labelMarkdown). set_multiple: batch annotations.",
+      "description": "Read or write Dev Mode annotations. get: read annotations on a node. set: add one annotation (labelMarkdown); existing annotations are kept, and a node type that takes none is an error. set_multiple: batch annotations.",
       "inputSchema": {
         "type": "object",
         "properties": {

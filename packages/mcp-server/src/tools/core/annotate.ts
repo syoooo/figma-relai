@@ -6,7 +6,7 @@ import { jsonResult, errorResult, textResult } from "./helpers.js";
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "annotate",
-    "Read or write Dev Mode annotations. get: read annotations on a node. set: add/update one annotation (labelMarkdown). set_multiple: batch annotations.",
+    "Read or write Dev Mode annotations. get: read annotations on a node. set: add one annotation (labelMarkdown); existing annotations are kept, and a node type that takes none is an error. set_multiple: batch annotations.",
     {
       action: z.enum(["get", "set", "set_multiple"]),
       nodeId: z.string().optional().describe("Target node (get/set)"),
