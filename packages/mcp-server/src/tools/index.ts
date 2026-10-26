@@ -1,6 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SendCommandFn } from "../tool-registry.js";
 import { z } from "zod";
+import { CALL_META_KEY, type CallMeta } from "@figma-relai/shared";
+import type { JoinReport } from "../connection.js";
+import { errorResult } from "./core/helpers.js";
 
 // Consolidated core tools (~30). Each maps declarative input onto the plugin's
 // granular command vocabulary — the plugin side is unchanged, so the
@@ -62,7 +65,7 @@ interface ToolModuleLike {
 // for disambiguation when several Figma files run the plugin at once.
 export function registerRoomTool(
   server: McpServer,
-  joinRoom: (room: string) => Promise<void>,
+  joinRoom: (room: string) => Promise<JoinReport>,
   listRooms: () => Promise<Array<{ room: string; hasPlugin: boolean; fileName?: string }>>
 ): void {
   server.tool(
@@ -92,16 +95,21 @@ export function registerRoomTool(
             }],
           };
         }
-        await joinRoom(room);
-        // Say which file the agent is now talking to. A lookup that fails
-        // doesn't undo the join, so it only costs the file name.
-        const rooms = await listRooms().catch(() => null);
-        const here = rooms?.find((r) => r.room === room && r.hasPlugin);
-        const where = !rooms
-          ? "."
-          : here
-            ? ` — "${here.fileName ?? "unnamed file"}".`
-            : " — no plugin is there yet; commands will fail until that file's plugin opens.";
+        // Say which file the agent is now talking to, and whether its plugin
+        // is there at all
+        const report = await joinRoom(room);
+        const where = report.pluginPresent
+          ? ` — "${report.file ?? "unnamed file"}"${report.branchOf ? `, a branch of "${report.branchOf}"` : ""}.`
+          : " — no plugin is there yet; commands will fail until that file's plugin opens.";
+        const meta: CallMeta = {
+          v: 1,
+          calls: [],
+          target: {
+            room: report.room,
+            ...(report.file ? { file: report.file } : {}),
+            ...(report.branchOf ? { branchOf: report.branchOf } : {}),
+          },
+        };
         return {
           content: [
             {
@@ -111,16 +119,10 @@ export function registerRoomTool(
                 "Every agent in this MCP server process (one client session) shares this room — a join_room from any of them moves them all.",
             },
           ],
+          _meta: { [CALL_META_KEY]: meta },
         };
       } catch (error) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error joining room: ${error instanceof Error ? error.message : String(error)}`,
-            },
-          ],
-        };
+        return errorResult(error);
       }
     }
   );

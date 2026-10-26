@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { RelaiError, type ResultMeta } from "@figma-relai/shared";
 import { chooseRepairRoom, formatFigmaError, routeResponse } from "./connection.js";
 import { RequestTracker } from "./request-tracker.js";
 
@@ -50,6 +51,60 @@ describe("routeResponse", () => {
   });
 });
 
+describe("routeResponse error codes", () => {
+  async function rejection(error: unknown): Promise<RelaiError> {
+    const tracker = new RequestTracker();
+    const promise = trackedPromise(tracker, "e");
+    routeResponse({ id: "e", error }, tracker);
+    return promise.then(
+      () => {
+        throw new Error("expected a rejection");
+      },
+      (err) => err as RelaiError
+    );
+  }
+
+  test("rejects with the plugin's code, keeping the text", async () => {
+    const err = await rejection({
+      message: "Page is a no-go zone",
+      command: "create_frame",
+      code: "guard_blocked",
+    });
+    expect(err).toBeInstanceOf(RelaiError);
+    expect(err.code).toBe("guard_blocked");
+    expect(err.outcome).toBe("not_applied");
+    expect(err.message).toBe("[create_frame] Page is a no-go zone");
+  });
+
+  test("the plugin's outcome and partial flag override the code's defaults", async () => {
+    const err = await rejection({ message: "Stopped", code: "cancelled", outcome: "applied", partial: true });
+    expect(err.outcome).toBe("applied");
+    expect(err.partial).toBe(true);
+  });
+
+  test("an outcome outside the three values is ignored", async () => {
+    const err = await rejection({ message: "x", code: "handler_error", outcome: "maybe" });
+    expect(err.outcome).toBe("unknown");
+  });
+
+  test("infers a code for plugins that predate codes", async () => {
+    expect((await rejection("Denied by designer")).code).toBe("denied_by_designer");
+    const unknown = await rejection({ message: "something odd" });
+    expect(unknown.code).toBe("handler_error");
+    expect(unknown.outcome).toBe("unknown");
+  });
+
+  test("passes the plugin's result metadata along", async () => {
+    const tracker = new RequestTracker();
+    const promise = trackedPromise(tracker, "m");
+    const seen: Array<[string, ResultMeta]> = [];
+    const meta: ResultMeta = { protocol: 2, write: true, file: "Checkout", outcome: "applied" };
+    routeResponse({ id: "m", result: { ok: true }, meta }, tracker, (id, m) => seen.push([id, m]));
+    await expect(promise).resolves.toEqual({ ok: true });
+    expect(seen).toEqual([["m", meta]]);
+  });
+});
+
 describe("formatFigmaError", () => {
   test("passes plain strings through", () => {
     expect(formatFigmaError("Unknown command: foo")).toBe("Unknown command: foo");
@@ -94,6 +149,7 @@ describe("chooseRepairPairing", () => {
     const got = chooseRepairRoom("old-room", [room("old-room", false)]);
     expect(got.room).toBeUndefined();
     expect(got.error).toContain("not open");
+    expect(got.code).toBe("plugin_absent");
   });
 
   test("several live plugins — name them instead of guessing", () => {
@@ -104,6 +160,7 @@ describe("chooseRepairPairing", () => {
     expect(got.room).toBeUndefined();
     expect(got.error).toContain('"Design system" (room a)');
     expect(got.error).toContain('"other" (room b)');
+    expect(got.code).toBe("room_ambiguous");
   });
 
   test("never re-pairs to the stale room itself", () => {

@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
-import { RelayCore } from "@figma-relai/shared";
+import { RelayCore, isAllowedOrigin } from "@figma-relai/shared";
 import { logger } from "./logger.js";
 import { tokenStatus } from "./credentials.js";
 
@@ -34,7 +34,15 @@ export function startEmbeddedRelay(
         // Status, not presence — the token itself never leaves this process.
         features: () => ({ token: tokenStatus() }),
       });
-      const wss = new WebSocketServer({ server: httpServer });
+      const wss = new WebSocketServer({
+        server: httpServer,
+        // Refuse web pages before the handshake completes; see isAllowedOrigin
+        verifyClient: ({ origin }, done) => {
+          if (isAllowedOrigin(origin)) return done(true);
+          logger.warn(`[relay] refused a connection from origin ${origin}`);
+          done(false, 403, "Origin not allowed");
+        },
+      });
 
       wss.on("connection", (ws) => {
         core.handleOpen(ws);

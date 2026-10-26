@@ -42,6 +42,21 @@ export interface RelayCoreOptions {
   features?: () => { token?: RelayTokenFeature };
 }
 
+/**
+ * Whether a WebSocket upgrade carrying this Origin header may reach the relay.
+ *
+ * Browsers attach an Origin to every WebSocket handshake; other clients (the
+ * MCP server, the doctor command) send none. The Figma plugin's panel runs in
+ * a sandboxed iframe, whose origin is opaque and serialized as "null". Any
+ * other origin is a web page, and a page served from localhost could
+ * otherwise list every room and file name, then join a room and send
+ * commands. Opaque origins cannot be told apart, so this narrows who can
+ * connect; it is not authentication.
+ */
+export function isAllowedOrigin(origin: string | null | undefined): boolean {
+  return origin === undefined || origin === null || origin === "" || origin === "null";
+}
+
 export class RelayCore<S extends RelaySocket = RelaySocket> {
   private rooms = new Map<string, Map<S, PeerInfo>>();
   private lastActivity = new Map<S, number>();

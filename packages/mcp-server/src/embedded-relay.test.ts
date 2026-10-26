@@ -63,6 +63,44 @@ describe("startEmbeddedRelay (bind-or-connect)", () => {
   });
 });
 
+// Whether the handshake completes. The Origin goes in as a plain header: the
+// `origin` option and the unexpected-response event are not implemented by
+// Bun's ws client, which is what runs these tests.
+function dial(port: number, origin?: string): Promise<"open" | "refused"> {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(
+      `ws://127.0.0.1:${port}`,
+      origin === undefined ? {} : { headers: { Origin: origin } }
+    );
+    const timer = setTimeout(() => reject(new Error("no handshake answer")), 3000);
+    ws.on("open", () => {
+      clearTimeout(timer);
+      ws.close();
+      resolve("open");
+    });
+    ws.on("error", () => {
+      clearTimeout(timer);
+      resolve("refused");
+    });
+  });
+}
+
+describe("embedded relay Origin check", () => {
+  test("a localhost web page is refused before it can list rooms", async () => {
+    const relay = await start(TEST_PORT + 2);
+    expect(relay).not.toBeNull();
+    expect(await dial(TEST_PORT + 2, "http://localhost:3000")).toBe("refused");
+    expect(await dial(TEST_PORT + 2, "https://example.com")).toBe("refused");
+  });
+
+  test("the plugin panel (origin null) and clients without an Origin connect", async () => {
+    const relay = await start(TEST_PORT + 3);
+    expect(relay).not.toBeNull();
+    expect(await dial(TEST_PORT + 3, "null")).toBe("open");
+    expect(await dial(TEST_PORT + 3)).toBe("open");
+  });
+});
+
 describe("state persistence", () => {
   test("saveState/loadState round-trips the room via FIGMA_RELAI_STATE_DIR", () => {
     const dir = mkdtempSync(join(tmpdir(), "relai-state-"));
