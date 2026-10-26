@@ -22,19 +22,22 @@ const MAX_RESULT_CHARS = 50000;
 const MUTATING_CALL =
   /\.(?:clone|remove|appendChild|insertChild|createInstance|swapComponent|setProperties|resetOverrides|setBoundVariable|setExplicitVariableModeForCollection|editComponentProperty|addComponentProperty|deleteComponentProperty|resize)\s*\(|figma\.(?:create|combineAsVariants|group|union|flatten)/;
 
-function looksLikeNode(value: unknown): value is SceneNode {
+// Figma's nodes are host objects that carry methods; a row a script builds
+// with id/type/parent keys does not. Styles carry methods too but no parent.
+export function looksLikeNode(value: unknown): value is SceneNode {
   return (
     typeof value === "object" &&
     value !== null &&
     typeof (value as SceneNode).id === "string" &&
     typeof (value as SceneNode).type === "string" &&
-    "parent" in (value as object)
+    "parent" in (value as object) &&
+    typeof (value as SceneNode).getPluginData === "function"
   );
 }
 
 // Make an arbitrary return value JSON-safe: nodes become budgeted summaries,
 // symbols (figma.mixed) become "mixed", functions are dropped
-function serializeResult(value: unknown): unknown {
+export function serializeResult(value: unknown): unknown {
   if (looksLikeNode(value)) return serializeNode(value);
   if (Array.isArray(value)) return value.map(serializeResult);
   try {

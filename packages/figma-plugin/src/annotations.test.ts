@@ -3,7 +3,8 @@ import { dispatch } from "./dispatcher.js";
 import "./handlers/annotations.js";
 
 // Just enough of the figma global for annotation writes: node lookup, where a
-// node that takes annotations carries an `annotations` array.
+// node that takes annotations carries an `annotations` array, and a root with
+// no no-go zones (the page guard runs on every dispatch once it is loaded).
 type FakeNode = { id: string; name: string; type: string; annotations?: Array<Record<string, unknown>> };
 let nodes: Map<string, FakeNode>;
 
@@ -13,6 +14,7 @@ beforeEach(() => {
     ["1:2", { id: "1:2", name: "Cluster", type: "GROUP" }],
   ]);
   (globalThis as unknown as { figma: unknown }).figma = {
+    root: { getSharedPluginData: () => "" },
     getNodeByIdAsync: async (id: string) => nodes.get(id) ?? null,
   };
 });
