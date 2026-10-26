@@ -1,20 +1,9 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createServer } from "./server.js";
-import { FigmaConnection } from "./connection.js";
 import { logger } from "./logger.js";
-import {
-  registerAllTools,
-  registerRoomTool,
-  registerEventsTool,
-  listToolCatalog,
-} from "./tools/index.js";
-import { startEmbeddedRelay, type EmbeddedRelay } from "./embedded-relay.js";
-import { refreshTokenStatus } from "./credentials.js";
-import { resolveFileIdentity } from "./tools/core/file-identity.js";
-import { loadState, saveState } from "./state.js";
-import { registerPrompts } from "./prompts.js";
-import { recordCommand, getSessionLog } from "./session-log.js";
+import { listToolCatalog } from "./tools/index.js";
+import { loadState } from "./state.js";
 import { VERSION } from "./version.js";
+import { bootRuntime } from "./runtime.js";
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -80,114 +69,15 @@ if (subcommand) {
 }
 
 async function main() {
-  // Create MCP server
-  const server = createServer();
-
-  // Ask Figma whether the stored token is still alive before anyone lights a
-  // lamp for it. Fire-and-forget: nothing here should wait on the network.
-  void refreshTokenStatus();
-
-  // Host the relay in this process unless another instance already does
-  // (bind-or-connect: first MCP server binds 9055, later ones connect to it).
-  // Only for local relays — a remote --server means someone runs it there.
-  let relay: EmbeddedRelay | null = null;
-  if (serverUrl === "localhost") {
-    relay = await startEmbeddedRelay(port, VERSION);
-    if (!relay) {
-      logger.info(`Port ${port} in use — connecting to the existing relay`);
-    }
-  }
-
-  const initialRoom =
-    roomArg?.split("=")[1] ?? process.env.FIGMA_RELAI_ROOM ?? loadState().room ?? null;
-
-  // Create WebSocket connection to relay
-  const connection = new FigmaConnection(serverUrl, port, {
-    initialRoom,
-    onRoomChanged: (room) => saveState({ room }),
-    beforeReconnect: async () => {
-      // The hosting process may have exited; take over if the port is free
-      if (serverUrl === "localhost" && !relay) {
-        relay = await startEmbeddedRelay(port, VERSION);
-        if (relay) logger.info("Took over relay hosting");
-      }
-    },
+  const { server } = await bootRuntime({
+    serverUrl,
+    port,
+    initialRoom:
+      roomArg?.split("=")[1] ?? process.env.FIGMA_RELAI_ROOM ?? loadState().room ?? null,
+    persistRoom: true,
+    hostRelay: "auto",
+    probeIdentity: true,
   });
-
-  // Register the join_room tool
-  registerRoomTool(
-    server,
-    (room) => connection.joinRoom(room),
-    () => connection.listRooms()
-  );
-
-  // Register designer-activity polling + the AI's own audit trail
-  registerEventsTool(server, () => connection.consumeEvents(), getSessionLog);
-
-  // Expose skill documents as MCP prompts (inlined at build time)
-  registerPrompts(server);
-
-  // Which file is this? Nothing used to ask until manage_comments did, so the
-  // panel's lineage stayed blank in every session that never touched comments
-  // — and blank forever on a machine that never touches them at all. The first
-  // command that reaches the plugin is the earliest honest moment to find out.
-  // A failure is not final: the designer may reload the plugin, open another
-  // file, or store a token mid-session, and a latch set on the first attempt
-  // would keep the panel blank for the rest of the process. Success latches;
-  // failure gets a few more chances and then stops asking.
-  let identityProbes = 0;
-  let identityResolved = false;
-  const probeIdentityOnce = () => {
-    if (identityResolved || identityProbes >= 3) return;
-    identityProbes += 1;
-    void resolveFileIdentity((c, p2, t) => connection.sendCommand(c, p2, t))
-      .then(() => {
-        identityResolved = true;
-      })
-      .catch(() => {
-        // No token, nothing published, no branch — all ordinary. The panel keeps
-        // showing what it showed before and the caller is never told.
-      });
-  };
-
-  // Register all domain tools; every plugin command lands in the session log
-  registerAllTools(server, async (command, params, timeoutMs) => {
-    const t0 = Date.now();
-    const nodeId =
-      typeof (params as { nodeId?: unknown })?.nodeId === "string"
-        ? ((params as { nodeId: string }).nodeId)
-        : undefined;
-    try {
-      const result = await connection.sendCommand(command, params, timeoutMs);
-      recordCommand({ ts: t0, command, nodeId, ok: true, ms: Date.now() - t0 });
-      // Not for the identity commands themselves, or the probe calls itself
-      if (command !== "get_file_identity" && command !== "set_file_identity") {
-        probeIdentityOnce();
-      }
-      return result;
-    } catch (error) {
-      recordCommand({
-        ts: t0,
-        command,
-        nodeId,
-        ok: false,
-        ms: Date.now() - t0,
-        error: error instanceof Error ? error.message.slice(0, 200) : String(error),
-      });
-      throw error;
-    }
-  });
-
-  // Connect to relay (auto-reconnects on failure)
-  try {
-    await connection.connect();
-    logger.info("Connected to relay successfully");
-  } catch (error) {
-    logger.warn(
-      `Could not connect initially: ${error instanceof Error ? error.message : String(error)}`
-    );
-    logger.warn("Will attempt to connect when the first command is sent");
-  }
 
   // Start MCP server with stdio transport
   const transport = new StdioServerTransport();
