@@ -93,9 +93,23 @@ export function registerRoomTool(
           };
         }
         await joinRoom(room);
+        // Say which file the agent is now talking to. A lookup that fails
+        // doesn't undo the join, so it only costs the file name.
+        const rooms = await listRooms().catch(() => null);
+        const here = rooms?.find((r) => r.room === room && r.hasPlugin);
+        const where = !rooms
+          ? "."
+          : here
+            ? ` — "${here.fileName ?? "unnamed file"}".`
+            : " — no plugin is there yet; commands will fail until that file's plugin opens.";
         return {
           content: [
-            { type: "text" as const, text: `Successfully joined room: ${room}` },
+            {
+              type: "text" as const,
+              text:
+                `Joined room ${room}${where} ` +
+                "Every agent in this MCP server process (one client session) shares this room — a join_room from any of them moves them all.",
+            },
           ],
         };
       } catch (error) {
