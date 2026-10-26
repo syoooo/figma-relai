@@ -483,7 +483,7 @@
     {
       "name": "get_design_tokens",
       "category": "context",
-      "description": "Get an overview of the design token system: variable collections, modes, variable counts, and style counts. Use to understand the design system before binding tokens or creating new variables. Follow with manage_variables or bind_tokens.",
+      "description": "Get an overview of the design token system: variable collections, modes, variable counts, and style counts. Use to understand the design system before binding tokens or creating new variables. Follow with manage_variables.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -523,7 +523,7 @@
     {
       "name": "get_node_details",
       "category": "context",
-      "description": "Get a single node's full properties, CSS, token bindings, and children. Use after search_nodes or get_selection_context to inspect a specific node. Follow with update_node or analyze_* tools.",
+      "description": "Get a single node's full properties, CSS, token bindings, and children. Use after search_nodes or get_selection_context to inspect a specific node. Follow with set_properties or analyze_design.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -542,7 +542,7 @@
     {
       "name": "get_selection_context",
       "category": "context",
-      "description": "Get full context for the current Figma selection: node properties, fills, layout, token bindings, and children summary. Use as the starting point for any inspection or modification workflow. Follow with analyze_* tools or update_node.",
+      "description": "Get full context for the current Figma selection: node properties, fills, layout, token bindings, and children summary. Use as the starting point for any inspection or modification workflow. Follow with analyze_design or set_properties.",
       "inputSchema": {
         "type": "object",
         "properties": {},
@@ -568,7 +568,7 @@
     {
       "name": "search_nodes",
       "category": "context",
-      "description": "Search for nodes by name and/or type within a scope. Returns matching node IDs, names, and types. Use to find specific elements before inspecting or modifying them. Follow with get_node_details or update_node.",
+      "description": "Search for nodes by name and/or type within a scope. Returns matching node IDs, names, and types. Use to find specific elements before inspecting or modifying them. Follow with get_node_details or set_properties.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1988,7 +1988,7 @@
     {
       "name": "verify_changes",
       "category": "verification",
-      "description": "Verify that a node's current properties match expected values. Use after update_node, set_auto_layout, or batch_execute to confirm changes applied correctly. Returns match/mismatch for each checked field.",
+      "description": "Verify that a node's current properties match expected values. Use after set_properties or batch_execute to confirm changes applied correctly. Returns match/mismatch for each checked field.",
       "inputSchema": {
         "type": "object",
         "properties": {

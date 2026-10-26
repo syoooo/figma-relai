@@ -102,7 +102,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
   // ─── get_selection_context ──────────────────────────────────────
   server.tool(
     "get_selection_context",
-    "Get full context for the current Figma selection: node properties, fills, layout, token bindings, and children summary. Use as the starting point for any inspection or modification workflow. Follow with analyze_* tools or update_node.",
+    "Get full context for the current Figma selection: node properties, fills, layout, token bindings, and children summary. Use as the starting point for any inspection or modification workflow. Follow with analyze_design or set_properties.",
     {},
     { readOnlyHint: true },
     async () => {
@@ -160,8 +160,8 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           data,
           warnings,
           recommended_next: [
-            { tool: "analyze_color_usage", reason: "Audit color consistency and token coverage" },
-            { tool: "update_node", reason: "Modify selected node properties" },
+            { tool: "analyze_design", reason: "Audit color consistency and token coverage", args: { aspect: "color" } },
+            { tool: "set_properties", reason: "Modify selected node properties" },
             { tool: "screenshot", reason: "Visually inspect the selection" },
           ],
         });
@@ -178,7 +178,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
   // ─── get_node_details ───────────────────────────────────────────
   server.tool(
     "get_node_details",
-    "Get a single node's full properties, CSS, token bindings, and children. Use after search_nodes or get_selection_context to inspect a specific node. Follow with update_node or analyze_* tools.",
+    "Get a single node's full properties, CSS, token bindings, and children. Use after search_nodes or get_selection_context to inspect a specific node. Follow with set_properties or analyze_design.",
     {
       nodeId: z.string().describe("The node ID to inspect"),
     },
@@ -204,7 +204,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           return errorResult(
             "invalid_input",
             `Could not process node '${nodeId}'`,
-            { suggestion: "Try get_node_info directly for raw data", tool: "get_node_info" }
+            { suggestion: "Try get_node_data for raw data", tool: "get_node_data" }
           );
         }
 
@@ -230,8 +230,8 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           summary: `'${node.name}' (${node.type}, ${node.size.width}×${node.size.height})${node.tokenCoverage != null ? `. Token coverage: ${Math.round(node.tokenCoverage * 100)}%` : ""}`,
           data,
           recommended_next: [
-            { tool: "update_node", reason: "Modify this node's properties", args: { nodeId } },
-            { tool: "analyze_color_usage", reason: "Check color token usage", args: { nodeId } },
+            { tool: "set_properties", reason: "Modify this node's properties", args: { nodeIds: [nodeId] } },
+            { tool: "analyze_design", reason: "Check color token usage", args: { aspect: "color", nodeId } },
           ],
         });
       } catch (error) {
@@ -247,7 +247,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
   // ─── search_nodes ───────────────────────────────────────────────
   server.tool(
     "search_nodes",
-    "Search for nodes by name and/or type within a scope. Returns matching node IDs, names, and types. Use to find specific elements before inspecting or modifying them. Follow with get_node_details or update_node.",
+    "Search for nodes by name and/or type within a scope. Returns matching node IDs, names, and types. Use to find specific elements before inspecting or modifying them. Follow with get_node_details or set_properties.",
     {
       query: z.string().optional().describe("Name substring to search for"),
       types: z.array(z.string()).optional().describe("Node types to filter: FRAME, TEXT, COMPONENT, INSTANCE, RECTANGLE, etc."),
@@ -284,7 +284,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           recommended_next: matches.length > 0
             ? [
                 { tool: "get_node_details", reason: "Inspect a specific node", args: { nodeId: matches[0].id } },
-                { tool: "navigate_to", reason: "Focus on a found node", args: { nodeId: matches[0].id } },
+                { tool: "navigate", reason: "Focus on a found node", args: { action: "focus", nodeId: matches[0].id } },
               ]
             : [
                 { tool: "get_document_overview", reason: "Check document structure" },
@@ -303,7 +303,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
   // ─── get_design_tokens ──────────────────────────────────────────
   server.tool(
     "get_design_tokens",
-    "Get an overview of the design token system: variable collections, modes, variable counts, and style counts. Use to understand the design system before binding tokens or creating new variables. Follow with manage_variables or bind_tokens.",
+    "Get an overview of the design token system: variable collections, modes, variable counts, and style counts. Use to understand the design system before binding tokens or creating new variables. Follow with manage_variables.",
     {},
     { readOnlyHint: true },
     async () => {
@@ -334,7 +334,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           data,
           recommended_next: [
             { tool: "manage_variables", reason: "Create or update design tokens" },
-            { tool: "analyze_color_usage", reason: "Check token coverage on selected nodes" },
+            { tool: "analyze_design", reason: "Check token coverage on selected nodes", args: { aspect: "color" } },
           ],
         });
       } catch (error) {
@@ -381,7 +381,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
                     : undefined,
                   recommended_next: [
                     { tool: "get_selection_context", reason: "Get structured data about the selection" },
-                    { tool: "update_node", reason: "Make changes based on what you see" },
+                    { tool: "set_properties", reason: "Make changes based on what you see" },
                   ],
                 }),
               },

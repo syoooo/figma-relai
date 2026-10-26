@@ -14,7 +14,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
   // ─── verify_changes ─────────────────────────────────────────────
   server.tool(
     "verify_changes",
-    "Verify that a node's current properties match expected values. Use after update_node, set_auto_layout, or batch_execute to confirm changes applied correctly. Returns match/mismatch for each checked field.",
+    "Verify that a node's current properties match expected values. Use after set_properties or batch_execute to confirm changes applied correctly. Returns match/mismatch for each checked field.",
     {
       nodeId: z.string().describe("Node ID to verify"),
       expected: z.record(z.string(), z.unknown()).describe("Expected property values, e.g. { fill: '#3B82F6', cornerRadius: 8 }"),
@@ -62,7 +62,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           data,
           recommended_next: allMatch
             ? [{ tool: "screenshot", reason: "Visually confirm the changes" }]
-            : [{ tool: "update_node", reason: "Re-apply changes that didn't match", args: { nodeId } }],
+            : [{ tool: "set_properties", reason: "Re-apply changes that didn't match", args: { nodeIds: [nodeId] } }],
         });
       } catch (error) {
         return errorResult(
@@ -127,7 +127,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           message: `Token coverage: ${Math.round(coverage * 100)}%${coverageDetail} (target: 80%+)`,
           nodeId: targetId,
           fix: coverage < 0.8
-            ? { tool: "bind_tokens", reason: "Bind unbound properties to design tokens", args: { nodeId: targetId } }
+            ? { tool: "manage_variables", reason: "Bind hardcoded values that match an existing variable", args: { action: "tokenize", nodeId: targetId } }
             : undefined,
         });
 
@@ -146,7 +146,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
                 : "No children requiring auto-layout",
             nodeId: targetId,
             fix: !hasAutoLayout && hasChildren
-              ? { tool: "set_auto_layout", reason: "Add auto-layout for responsive behavior", args: { nodeId: targetId } }
+              ? { tool: "set_properties", reason: "Add auto-layout for responsive behavior", args: { nodeIds: [targetId] } }
               : undefined,
           });
         }
@@ -162,7 +162,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
             : `Name '${nodeInfo.name}' looks intentional`,
           nodeId: targetId,
           fix: hasDefaultName
-            ? { tool: "update_node", reason: "Rename with a semantic name", args: { nodeId: targetId } }
+            ? { tool: "set_properties", reason: "Rename with a semantic name", args: { nodeIds: [targetId] } }
             : undefined,
         });
 
@@ -212,7 +212,7 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
               : `Target size: ${Math.round(w)}×${Math.round(h)}px (minimum ${minTarget}×${minTarget}px — WCAG 2.5.8${minTarget >= 44 ? ", mobile" : ""})`,
             nodeId: targetId,
             fix: !adequate
-              ? { tool: "update_node", reason: "Increase size to meet the target-size minimum", args: { nodeId: targetId } }
+              ? { tool: "set_properties", reason: "Increase size to meet the target-size minimum", args: { nodeIds: [targetId] } }
               : undefined,
           });
         }

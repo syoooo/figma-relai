@@ -410,7 +410,7 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
   // ─── analyze_color_usage ────────────────────────────────────────
   server.tool(
     "analyze_color_usage",
-    "Audit color consistency and design token coverage for a node tree. Reports which fill/stroke colors are not bound to variables. Use after get_selection_context to diagnose token gaps. Follow with bind_tokens to fix issues.",
+    "Audit color consistency and design token coverage for a node tree. Reports which fill/stroke colors are not bound to variables. Use after get_selection_context to diagnose token gaps. Follow with manage_variables action:tokenize to fix issues.",
     {
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
     },
@@ -503,11 +503,11 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
           warnings,
           recommended_next: unboundColors.length > 0
             ? [
-                { tool: "bind_tokens", reason: "Bind unbound colors to design tokens" },
+                { tool: "manage_variables", reason: "Bind unbound colors that match an existing variable", args: { action: "tokenize" } },
                 { tool: "get_design_tokens", reason: "See available tokens for binding" },
               ]
             : [
-                { tool: "analyze_layout_quality", reason: "Check layout quality next" },
+                { tool: "analyze_design", reason: "Check layout quality next", args: { aspect: "layout" } },
               ],
         });
       } catch (error) {
@@ -523,7 +523,7 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
   // ─── analyze_layout_quality ─────────────────────────────────────
   server.tool(
     "analyze_layout_quality",
-    "Check layout quality: auto-layout usage, magic numbers in spacing/padding, and sizing consistency. Use after get_selection_context to find layout improvements. Follow with set_auto_layout to fix issues.",
+    "Check layout quality: auto-layout usage, magic numbers in spacing/padding, and sizing consistency. Use after get_selection_context to find layout improvements. Follow with set_properties (auto-layout) to fix issues.",
     {
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
     },
@@ -571,8 +571,8 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
             nodeId: i.nodeId,
           })),
           recommended_next: issues.length > 0
-            ? [{ tool: "set_auto_layout", reason: "Fix layout issues on specific frames" }]
-            : [{ tool: "analyze_color_usage", reason: "Check color token coverage next" }],
+            ? [{ tool: "set_properties", reason: "Fix layout issues on specific frames (auto-layout, spacing, sizing)" }]
+            : [{ tool: "analyze_design", reason: "Check color token coverage next", args: { aspect: "color" } }],
         });
       } catch (error) {
         return errorResult(
@@ -587,7 +587,7 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
   // ─── analyze_component_health ───────────────────────────────────
   server.tool(
     "analyze_component_health",
-    "Check component system health: detached instances, unused components, and override consistency. Use to audit design system adherence. Follow with create_component or update_instance to fix issues.",
+    "Check component system health: detached instances, unused components, and override consistency. Use to audit design system adherence. Follow with manage_components to fix issues.",
     {
       nodeId: z.string().optional().describe("Scope to analyze (default: current page)"),
     },
@@ -648,7 +648,7 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
   // ─── analyze_accessibility ──────────────────────────────────────
   server.tool(
     "analyze_accessibility",
-    "Check accessibility: text contrast ratios against backgrounds, interactive target sizes (WCAG 2.5.8: 24px desktop default, 44px with platform:mobile). Use to ensure designs meet WCAG guidelines. Follow with update_node to fix contrast or sizing issues.",
+    "Check accessibility: text contrast ratios against backgrounds, interactive target sizes (WCAG 2.5.8: 24px desktop default, 44px with platform:mobile). Use to ensure designs meet WCAG guidelines. Follow with set_properties to fix contrast or sizing issues.",
     {
       nodeId: z.string().optional().describe("Root node to analyze (default: current selection)"),
       platform: z.enum(["desktop", "mobile"]).optional().describe("Target-size profile: desktop 24px (default), mobile 44px"),
@@ -687,7 +687,7 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
             nodeId: i.nodeId,
           })),
           recommended_next: issues.length > 0
-            ? [{ tool: "update_node", reason: "Fix accessibility issues" }]
+            ? [{ tool: "set_properties", reason: "Fix accessibility issues" }]
             : [{ tool: "validate_design_rules", reason: "Run full design validation" }],
         });
       } catch (error) {
@@ -816,7 +816,7 @@ function registerAnalysisTools(server: McpServer, sendCommand: SendCommandFn): v
             : `${differences.length} difference(s) between '${nodeA.name}' and '${nodeB.name}'`,
           data,
           recommended_next: differences.length > 0
-            ? [{ tool: "update_node", reason: "Align properties between nodes" }]
+            ? [{ tool: "set_properties", reason: "Align properties between nodes" }]
             : [],
         });
       } catch (error) {
@@ -911,7 +911,7 @@ function analyzeLayoutNode(node: any, issues: LayoutIssue[], _counters: { totalF
           nodeName: node.name,
           issue: `Frame '${node.name}' has ${node.children.length} children but no auto-layout`,
           severity: "warning",
-          suggestion: "Add auto-layout with set_auto_layout for responsive behavior",
+          suggestion: "Add auto-layout with set_properties for responsive behavior",
         });
       }
     }
