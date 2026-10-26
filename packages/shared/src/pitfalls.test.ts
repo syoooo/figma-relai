@@ -21,6 +21,15 @@ describe("pitfallHint", () => {
     expect(
       pitfallHint("Cannot assign to read only property 'width' of object")
     ).toContain("resize");
+    expect(
+      pitfallHint("unsupported type in createVMObject: VARIABLE")
+    ).toContain("getVariableByIdAsync");
+    expect(
+      pitfallHint("in getRangeAllFontNames: Empty range selected. 'end' must be greater than 'start'")
+    ).toContain("fontName");
+    expect(
+      pitfallHint("This property cannot be overridden in an instance: size")
+    ).toContain("removeOverrides");
   });
 
   test("unknown errors return null", () => {
