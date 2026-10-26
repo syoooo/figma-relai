@@ -1,5 +1,5 @@
 
-export const VERSION = 'v0.7.10';
+export const VERSION = 'v0.7.11';
 
 export const translations = {
   en: {
@@ -83,7 +83,7 @@ export const translations = {
     craft: {
       eyebrow: 'CRAFT',
       title: 'Why the results come out better.',
-      body: 'Connecting an AI to Figma is the easy part. Most of Relai is the unglamorous work that decides whether the output is production-grade or plausible-looking noise — and one hundred and ninety-one tests written to break it gate every release that touches logic.',
+      body: 'Connecting an AI to Figma is the easy part. Most of Relai is the unglamorous work that decides whether the output is production-grade or plausible-looking noise — and two hundred and thirty-nine tests written to break it gate every release that touches logic.',
       items: [
         { kicker: 'pitfalls', tag: 'RAW ERROR + HINT', title:'The minefield, mapped', body: 'The Plugin API is full of traps. Relai ships 78 of them, learned in production — trip one, and the raw error comes back with the fix attached; the same registry becomes the cheat sheet the AI reads before writing code.', artifact: '✗ cannot write to node with unloaded font\n  hint: await figma.loadFontAsync(node.fontName)\n        before editing text — new TextNodes\n        default to Inter Regular' },
         { kicker: 'verification', tag: 'RECEIPT', title:'It checks its own work', body: 'After a write, the AI looks: screenshot, compare against intent, re-read the result. The difference between “done” and “actually done”.', rows: ['set_properties · 24 nodes · 0.6s ✓', 'export_asset · 1 png ✓', 'verify_visual · match ✓'] },
