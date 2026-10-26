@@ -22,7 +22,8 @@ registerHandler("get_annotations", async (params) => {
 // one of the two, the markdown when there is one.
 function writable(a: any): any {
   const { label, labelMarkdown, ...rest } = a;
-  return labelMarkdown !== undefined ? { ...rest, labelMarkdown } : { ...rest, label };
+  if (labelMarkdown !== undefined) return { ...rest, labelMarkdown };
+  return label !== undefined ? { ...rest, label } : rest;
 }
 
 function unsupported(node: BaseNode): string {

@@ -39,11 +39,13 @@ describe("annotate set", () => {
     nodes.get("1:1")!.annotations = [
       { label: "old", labelMarkdown: "old" },
       { label: "plain only" },
+      { properties: [{ type: "width" }] },
     ];
     await dispatch("set_annotation", { nodeId: "1:1", labelMarkdown: "new" });
-    expect(nodes.get("1:1")!.annotations).toEqual([
+    expect(nodes.get("1:1")!.annotations).toStrictEqual([
       { labelMarkdown: "old" },
       { label: "plain only" },
+      { properties: [{ type: "width" }] },
       { labelMarkdown: "new" },
     ]);
   });
