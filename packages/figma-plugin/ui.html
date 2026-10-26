@@ -2742,6 +2742,12 @@
     // ---------- Connection ----------
     function currentPort() { return PORTS[portIndex % PORTS.length]; }
 
+    // Read from the footer, so a release bump has one place to change here.
+    function relaiVersion() {
+      var m = document.querySelector('.footer').textContent.match(/Relai v(\S+)/);
+      return m ? m[1] : undefined;
+    }
+
     // Figma throttles/suspends plugin iframe timers while the window is
     // backgrounded — the 2s retry loop can freeze for hours. Any return of
     // attention kicks an immediate redial.
@@ -2781,7 +2787,8 @@
           room: roomName,
           id: 'join-' + Date.now(),
           role: 'plugin',
-          meta: { fileName: fileName },
+          // protocol 2: this panel forwards per-call info and result metadata
+          meta: { fileName: fileName, protocol: 2, version: relaiVersion() },
           message: {
             id: 'join-' + Date.now(),
             command: 'join',
@@ -2827,6 +2834,7 @@
                   id: msg.id,
                   command: msg.command,
                   params: msg.params || {},
+                  call: msg.call,
                 }
               }, '*');
             }
@@ -3031,7 +3039,7 @@
 
       if (msg.type === 'command-result') {
         feedSettle(msg.id, true);
-        relayAnswer(msg.id, { id: msg.id, result: msg.result, events: msg.events });
+        relayAnswer(msg.id, { id: msg.id, result: msg.result, events: msg.events, meta: msg.meta });
       }
 
       if (msg.type === 'command-error') {

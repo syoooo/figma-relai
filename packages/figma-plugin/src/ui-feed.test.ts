@@ -209,6 +209,22 @@ describe("law colour", () => {
   });
 });
 
+describe("protocol 2 wiring", () => {
+  test("the join states protocol 2 and the footer's release version", () => {
+    const footer = html.match(/<div class="footer">([\s\S]*?)<\/div>/)![1].replace(/<[^>]+>/g, "");
+    const version = new Function("document", `${fn("relaiVersion")}\nreturn relaiVersion();`)({
+      querySelector: () => ({ textContent: footer }),
+    });
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(script).toContain("meta: { fileName: fileName, protocol: 2, version: relaiVersion() }");
+  });
+
+  test("the command's call info reaches the plugin and the result metadata reaches the server", () => {
+    expect(script).toContain("call: msg.call,");
+    expect(script).toContain("meta: msg.meta");
+  });
+});
+
 describe("feed text", () => {
   test("every literal t() key exists in all three locales", () => {
     const keys = [...new Set([...script.matchAll(/\bt\('([a-z_0-9]+)'\)/g)].map((m) => m[1]))];
