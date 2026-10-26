@@ -10,6 +10,8 @@ import { register } from "./analysis.js";
 type Handler = (args: Record<string, unknown>) => Promise<{ content: Array<{ text: string }> }>;
 
 let diffNodes: Handler;
+let analyzeDesign: Handler;
+let tokenDebtScan: Record<string, unknown>;
 let calls: Array<{ command: string; params: any }>;
 let nodes: Map<string, any>;
 
@@ -35,10 +37,14 @@ beforeEach(() => {
   const sendCommand: SendCommandFn = async (command, params) => {
     calls.push({ command, params });
     if (command === "get_node_info") return nodes.get((params as { nodeId: string }).nodeId) ?? null;
+    if (command === "audit_token_debt") return tokenDebtScan;
+    if (command === "audit_property_bindings") return { ids: [], done: true };
     return null;
   };
   register(server, sendCommand);
   diffNodes = handlers.get("diff_nodes")!;
+  analyzeDesign = handlers.get("analyze_design")!;
+  tokenDebtScan = {};
 });
 
 describe("diff_nodes checkpoints", () => {
@@ -95,5 +101,33 @@ describe("diff_nodes checkpoints", () => {
     for (const id of ["n:0", "n:2", "n:200"]) {
       expect(parse(await diffNodes({ nodeIdA: id, checkpoint: "compare" })).data.identical).toBe(true);
     }
+  });
+});
+
+// The plugin lists at most 40 borrows and sends the full count beside them.
+describe("token_debt borrow count", () => {
+  const borrow = (i: number) => ({ token: `Toast/bg-${i}`, aliases: `Card/bg-${i}`, collection: "Tokens" });
+  const scan = (listed: number, total: number) => ({
+    pages: ["Page 1", "Page 2"],
+    borrowedTokens: Array.from({ length: listed }, (_, i) => borrow(i)),
+    borrowCount: total,
+    candidates: [],
+  });
+
+  test("the summary counts every borrow, not the listed 40", async () => {
+    tokenDebtScan = scan(40, 85);
+    const res = parse(await analyzeDesign({ aspect: "token_debt" }));
+    expect(res.summary).toStartWith("85 borrowed tokens (showing 40)");
+    expect(res.data.borrowCount).toBe(85);
+    expect(res.data.borrowsTruncated).toBe(true);
+    expect(res.data.borrowedTokens.length).toBe(40);
+  });
+
+  test("a complete list is not marked partial", async () => {
+    tokenDebtScan = scan(3, 3);
+    const res = parse(await analyzeDesign({ aspect: "token_debt" }));
+    expect(res.summary).toStartWith("3 borrowed tokens, ");
+    expect(res.data.borrowCount).toBe(3);
+    expect(res.data.borrowsTruncated).toBe(false);
   });
 });

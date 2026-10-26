@@ -195,8 +195,13 @@ async function runTokenDebt(sendCommand: SendCommandFn, pageIds?: string[]): Pro
 
   const unused = (head.candidates ?? []).filter((c) => !used.has(c.id));
   const borrows = head.borrowedTokens ?? [];
+  // The plugin lists at most 40 borrows; borrowCount is how many there are.
+  const borrowCount = head.borrowCount ?? borrows.length;
+  const borrowsTruncated = borrowCount > borrows.length;
   const summary =
-    `${borrows.length} borrowed token${borrows.length === 1 ? "" : "s"}, ` +
+    `${borrowCount} borrowed token${borrowCount === 1 ? "" : "s"}` +
+    (borrowsTruncated ? ` (showing ${borrows.length})` : "") +
+    ", " +
     `${unused.length} unused across ${pagesScanned.length} page${pagesScanned.length === 1 ? "" : "s"}`;
 
   return standardResult({
@@ -214,6 +219,8 @@ async function runTokenDebt(sendCommand: SendCommandFn, pageIds?: string[]): Pro
       instancesScanned,
       foundationGroups: head.foundationGroups,
       borrowedTokens: borrows,
+      borrowCount,
+      borrowsTruncated,
       unusedTokens: unused.slice(0, 40),
       unusedCount: unused.length,
       allScopesByGroup: head.allScopesByGroup,
