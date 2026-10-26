@@ -1,4 +1,4 @@
-import { pitfallHint } from "@figma-relai/shared";
+import { pitfallHint, RelaiError } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
 import { fitResult, serializeResult } from "../utils/serialize-result.js";
 import {
@@ -26,7 +26,8 @@ registerHandler("execute_code", async (params) => {
       | { allowCodeExec?: boolean }
       | undefined) ?? {};
   if (settings.allowCodeExec === false) {
-    throw new Error(
+    throw new RelaiError(
+      "code_exec_disabled",
       'Code execution is disabled. The designer can enable it with the "Allow code execution" toggle in the Relai plugin.'
     );
   }
@@ -61,9 +62,10 @@ registerHandler("execute_code", async (params) => {
   } catch (error) {
     // Compile-time failures (syntax errors, sandbox-VM compiler bugs like
     // "stack underflow" on `for (… of await …)`) deserve hints too
+    // None of the script ran, so nothing changed
     const message = error instanceof Error ? error.message : String(error);
     const hint = pitfallHint(message);
-    throw new Error(hint ? `${message} — Hint: ${hint}` : message);
+    throw new RelaiError("script_compile_error", hint ? `${message} — Hint: ${hint}` : message);
   }
 
   let value: unknown;
@@ -72,10 +74,14 @@ registerHandler("execute_code", async (params) => {
   } catch (error) {
     // Known Plugin API pitfalls get their remedy appended so the AI can
     // self-correct in one round-trip (registry: shared/src/pitfalls.ts).
-    // NOTE: scripts are NOT atomic — partial changes persist on error.
+    // Scripts are not atomic: whatever ran before the throw stays, so the
+    // outcome is unknown and the message says so.
     const message = error instanceof Error ? error.message : String(error);
     const hint = pitfallHint(message);
-    throw new Error(hint ? `${message} — Hint: ${hint}` : message);
+    throw new RelaiError(
+      "script_error",
+      `${hint ? `${message} — Hint: ${hint}` : message} (Scripts are not atomic: changes made before the error stay in the file.)`
+    );
   }
 
   const serialized = serializeResult(value);
