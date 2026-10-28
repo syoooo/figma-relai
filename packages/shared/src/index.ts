@@ -7,6 +7,7 @@ export * from "./types/styles.js";
 export * from "./types/tool-response.js";
 export * from "./types/tool-error.js";
 export * from "./types/call.js";
+export * from "./types/panel.js";
 export * from "./utils/color.js";
 export * from "./utils/schemas.js";
 export * from "./relay-core.js";
