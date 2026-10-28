@@ -7,13 +7,11 @@ import { registerHandler } from "../dispatcher.js";
 import { collectNodeRefs, isWriteCommand } from "../write-guard.js";
 import {
   attachPreflight,
-  fingerprint,
   preflightPrecedents as matchBeforeWrite,
-  VOICE_KEYS,
   type PrecedentContext,
   type PrecedentPreflight,
-  type VoiceSnap,
 } from "../wall-core.js";
+import { noteVoiceWrite } from "../walls.js";
 import {
   assertCapacity,
   assertUpdateCapacity,
@@ -42,26 +40,6 @@ function parseMemory(raw: string): PrecedentEntry[] {
 
 export function readMemory(): PrecedentEntry[] {
   return parseMemory(figma.root.getSharedPluginData(MEMORY_NS, MEMORY_KEY));
-}
-
-// ─── Voice writes ───────────────────────────────────────────────────
-// Precedents, conventions, their timestamp and the ruleset link are reported
-// when a script changes them, never reverted. The post-run check snapshots
-// them around a script; the epoch counts Relai's own writes so a write by
-// one of its own commands while the script awaits is not blamed on it.
-
-let voiceEpoch = 0;
-
-/** Call before Relai itself writes any voice key (memory, conventions, conventionsAt, rulesetLink). */
-export function noteVoiceWrite(): void {
-  voiceEpoch++;
-}
-
-/** The voice keys' fingerprints and Relai's write count, read synchronously. */
-export function snapshotVoice(): VoiceSnap {
-  const prints = {} as VoiceSnap["prints"];
-  for (const key of VOICE_KEYS) prints[key] = fingerprint(figma.root.getSharedPluginData(MEMORY_NS, key));
-  return { epoch: voiceEpoch, prints };
 }
 
 export function writeMemory(entries: PrecedentEntry[]): void {

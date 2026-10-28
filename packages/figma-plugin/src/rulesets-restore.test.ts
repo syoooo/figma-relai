@@ -10,7 +10,7 @@ import {
   type RestoreResult,
   type Ruleset,
 } from "./handlers/rulesets.js";
-import { snapshotVoice } from "./handlers/memory.js";
+import { snapshotVoice } from "./walls.js";
 import "./handlers/plugin-data.js";
 import {
   MEMORY_MAX_BYTES,

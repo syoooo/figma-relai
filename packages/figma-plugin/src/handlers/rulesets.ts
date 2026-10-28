@@ -9,7 +9,8 @@
 
 import type { KitRefusal, RulesetHealed, RulesetOp, RulesetOpResultMessage } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
-import { noteVoiceWrite, readMemory, writeMemory } from "./memory.js";
+import { readMemory, writeMemory } from "./memory.js";
+import { noteVoiceWrite } from "../walls.js";
 import { additionOverflow, type CapacityOverflow, type PrecedentEntry } from "../memory-core.js";
 import { contentHash, kitRefusalMessage, newerSide, pushRefusal, restoreRefusal } from "../ruleset-core.js";
 
