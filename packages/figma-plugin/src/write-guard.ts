@@ -1,8 +1,10 @@
 // Designer-side write governance: command classification, the approval gate,
-// and the scope lock. Approval is enforced once per top-level command (in
-// main.ts); the scope lock is enforced inside dispatch() so batch_execute's
-// nested commands are checked too.
+// and the scope lock. Approval is asked once per top-level command (in
+// main.ts), but for batch_execute that one decision looks at every wrapped
+// command, nested batches included; the scope lock is enforced inside
+// dispatch() so batch_execute's nested commands are checked too.
 import { RelaiError } from "@figma-relai/shared";
+import { batchApproval, batchScale, type CommandRules } from "./wall-core.js";
 
 // Non-mutating (or harmless-navigation) commands. Everything else is a write.
 const READ_PREFIXES = ["get_", "read_", "find_", "export_", "scan_nodes", "scan_text"];
@@ -44,6 +46,10 @@ export function nodeIdsInText(text: string, limit = 20): string[] {
   return [...new Set(text.match(NODE_ID_IN_TEXT) ?? [])].slice(0, limit);
 }
 
+// List params whose items each name a node: set_multiple_text_contents sends
+// { text: [{ nodeId, text }] }, with no node id at the top level
+const NODE_REF_ITEM_KEYS = ["text"] as const;
+
 export function collectNodeRefs(params: Record<string, unknown>): string[] {
   const refs: string[] = [];
   for (const key of NODE_REF_KEYS) {
@@ -51,6 +57,14 @@ export function collectNodeRefs(params: Record<string, unknown>): string[] {
     if (typeof value === "string") refs.push(value);
     else if (Array.isArray(value)) {
       for (const v of value) if (typeof v === "string") refs.push(v);
+    }
+  }
+  for (const key of NODE_REF_ITEM_KEYS) {
+    const items = params[key];
+    if (!Array.isArray(items)) continue;
+    for (const item of items) {
+      const id = (item as { nodeId?: unknown } | null)?.nodeId;
+      if (typeof id === "string") refs.push(id);
     }
   }
   return refs;
@@ -103,37 +117,62 @@ export function taxTier(command: string, params: Record<string, unknown>): "ghos
 
 /** Human-readable scale of a command, for the approval card */
 export function describeScale(command: string, params: Record<string, unknown>): string {
+  // A batch says what is inside it: "12 commands · contains execute_code · 2 ghost-risk"
+  if (command === "batch_execute") return batchScale(batchApproval("all", params.commands, COMMAND_RULES));
   const parts: string[] = [];
   const tier = taxTier(command, params);
   if (tier === "ghost") parts.push("ghost-risk");
   if (tier === "irreversible") parts.push("irreversible");
-  if (command === "batch_execute" && Array.isArray(params.commands)) {
-    parts.push(`${params.commands.length} commands`);
-  } else {
-    const refs = collectNodeRefs(params);
-    if (refs.length > 0) parts.push(refs.length > 1 ? `${refs.length} nodes` : "1 node");
-  }
+  const refs = collectNodeRefs(params);
+  if (refs.length > 0) parts.push(refs.length > 1 ? `${refs.length} nodes` : "1 node");
   return parts.join(" · ");
 }
 
+/**
+ * Whether a command needs the designer's approval at this level.
+ *
+ * execute_code counts as a write at every level, including all: the plugin
+ * cannot tell before it runs whether a script only reads, and a script's own
+ * claim to be read-only is not something the dial can trust.
+ *
+ * batch_execute is judged by what it wraps (wall-core.ts batchApproval): it
+ * asks when any wrapped command would ask on its own, at all when any of them
+ * writes, at bulk when it holds BULK_THRESHOLD commands or more. A batch
+ * nested deeper than MAX_BATCH_DEPTH is refused as invalid_params.
+ */
 export function needsApproval(
   level: ConfirmLevel,
   command: string,
   params: Record<string, unknown>
 ): boolean {
+  if (command === "batch_execute") {
+    const verdict = batchApproval(level, params.commands, COMMAND_RULES);
+    if (verdict.tooDeep) {
+      throw new RelaiError("invalid_params", "batch_execute is nested too deep: wrap at most 3 levels of batches.");
+    }
+    return verdict.asks;
+  }
+  return singleNeedsApproval(level, command, params);
+}
+
+function singleNeedsApproval(level: ConfirmLevel, command: string, params: Record<string, unknown>): boolean {
   if (!isWriteCommand(command, params)) return false;
   if (level === "open") return false;
   if (taxTier(command, params) !== null) return true; // risk and above
   if (level === "risk") return false;
   if (level === "all") return true;
-  // bulk: code execution, big batches, wide fan-outs, and whole-tree fixes
+  // bulk: code execution, wide fan-outs, and whole-tree fixes
   if (ALWAYS_BULK.has(command)) return true;
   if (command === "scan_token_drift" && params.fix === true) return true;
-  if (command === "batch_execute" && Array.isArray(params.commands)) {
-    return params.commands.length >= BULK_THRESHOLD;
-  }
   return collectNodeRefs(params).length >= BULK_THRESHOLD;
 }
+
+const COMMAND_RULES: CommandRules = {
+  isWrite: isWriteCommand,
+  taxTier,
+  needsApproval: singleNeedsApproval,
+  bulkThreshold: BULK_THRESHOLD,
+};
 
 // ─── Scope lock ─────────────────────────────────────────────────────
 
