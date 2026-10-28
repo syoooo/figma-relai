@@ -11,6 +11,7 @@ import type { ResultMeta } from "@figma-relai/shared";
 export interface SettledRequest {
   id: string;
   meta?: ResultMeta;
+  file?: string; // a failed command: the plugin's live file name, when its error named it
   cancelRequested?: boolean; // the designer pressed Stop before this settled
 }
 

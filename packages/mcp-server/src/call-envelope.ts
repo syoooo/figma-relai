@@ -33,11 +33,17 @@ import { writeResultFile } from "./result-files.js";
 //   own error handling passes the code along,
 // - sets isError on failures, including tools that still print "Error: …",
 // - cuts text over MAX_TEXT_CHARS and saves the full text to a local file,
-// - appends a one-line receipt the model can read (it cannot see _meta),
+// - appends a one-line receipt the model can read (it cannot see _meta)
+//   to every call that reached the plugin or named a target,
 // - stores the machine-readable CallMeta under _meta[CALL_META_KEY].
 
-/** Text longer than this is cut before it reaches the model. */
-export const MAX_TEXT_CHARS = 50000;
+/**
+ * Text longer than this is cut before it reaches the model. Claude Code moves
+ * a tool result over 50,000 characters out to a file, which the model then
+ * has to open; this leaves room under that for the cut notice, the receipt
+ * line and any other text block.
+ */
+export const MAX_TEXT_CHARS = 40000;
 
 /** The fixed label the receipt line starts with. */
 export const RECEIPT_LABEL = "[relai]";
@@ -137,6 +143,7 @@ export function withCallEnvelope(
       slot.closed = true;
       const coded = toRelaiError(error);
       if (scope) {
+        if (slot.settled?.file) scope.file = slot.settled.file;
         scope.receipts.push({ id: slot.settled?.id ?? "", command, outcome: coded.outcome, code: coded.code });
         if (coded.partial) scope.partial = true;
         if (slot.settled?.cancelRequested) scope.cancelRequested = true;
@@ -308,14 +315,13 @@ export function finalizeResult(
     ...(truncated ? { truncated } : {}),
   };
 
-  const wrote = calls.some((r) => !isRead(r));
   const showReceipt =
     isError ||
     outcome === "unknown" ||
     partial ||
+    calls.length > 0 ||
     scope.room !== undefined ||
-    scope.expectFile !== undefined ||
-    (wrote && outcome !== undefined);
+    scope.expectFile !== undefined;
   if (showReceipt) {
     content.push({ type: "text", text: receiptLine(meta, last?.id, scope.cancelRequested) });
   }

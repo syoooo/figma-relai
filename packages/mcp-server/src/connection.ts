@@ -107,6 +107,17 @@ export function pluginError(payload: unknown): RelaiError {
   return new RelaiError(legacy.code, message, { outcome: legacy.outcome, retry: legacy.retry });
 }
 
+/**
+ * The file a failed command ran in, so its receipt line can name it: the
+ * error's own `file`, else the result metadata sent with it. Older plugins
+ * send neither.
+ */
+export function errorFile(payload: unknown, meta: ResultMeta | undefined): string | undefined {
+  const file = typeof payload === "object" && payload !== null ? (payload as { file?: unknown }).file : undefined;
+  if (typeof file === "string" && file !== "") return file;
+  return typeof meta?.file === "string" && meta.file !== "" ? meta.file : undefined;
+}
+
 // Route a response message to its pending request. Error responses have no
 // `result` field, so the error check must come first and resolution must key
 // on field presence — falsy results (0, "", false) are valid.
@@ -117,7 +128,7 @@ export function routeResponse(
 ): void {
   if (!response?.id || !tracker.has(response.id)) return;
   if (response.error !== undefined) {
-    tracker.reject(response.id, pluginError(response.error));
+    tracker.reject(response.id, pluginError(response.error), errorFile(response.error, response.meta));
   } else if ("result" in response) {
     if (response.meta && onMeta) onMeta(response.id, response.meta);
     tracker.resolve(response.id, response.result, response.meta);

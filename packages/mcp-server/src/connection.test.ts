@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { RelaiError, type ResultMeta } from "@figma-relai/shared";
-import { chooseRepairRoom, formatFigmaError, routeResponse } from "./connection.js";
+import { chooseRepairRoom, errorFile, formatFigmaError, routeResponse } from "./connection.js";
 import { RequestTracker } from "./request-tracker.js";
 import { runInCommandSlot, type CommandSlot } from "./call-scope.js";
 
@@ -49,6 +49,25 @@ describe("routeResponse", () => {
     const tracker = new RequestTracker();
     routeResponse({ result: 1 }, tracker);
     expect(tracker.size).toBe(0);
+  });
+});
+
+describe("errorFile", () => {
+  test("reads the error's own file, else the metadata sent with it", () => {
+    const meta: ResultMeta = { protocol: 2, write: true, file: "From meta", outcome: "not_applied" };
+    expect(errorFile({ message: "x", file: "From error" }, meta)).toBe("From error");
+    expect(errorFile({ message: "x" }, meta)).toBe("From meta");
+    expect(errorFile("in set_characters: font is not loaded", undefined)).toBeUndefined();
+    expect(errorFile({ message: "x", file: 3 }, undefined)).toBeUndefined();
+  });
+
+  test("a failed command's slot learns the file", async () => {
+    const tracker = new RequestTracker();
+    const slot: CommandSlot = { closed: false };
+    const promise = runInCommandSlot(slot, () => trackedPromise(tracker, "req-f"));
+    routeResponse({ id: "req-f", error: { message: "Node not found: 9:9", file: "Checkout v2" } }, tracker);
+    await expect(promise).rejects.toThrow("Node not found");
+    expect(slot.settled).toEqual({ id: "req-f", file: "Checkout v2" });
   });
 });
 

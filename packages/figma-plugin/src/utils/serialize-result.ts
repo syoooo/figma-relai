@@ -6,8 +6,9 @@ import { serializeNode } from "./node-helpers.js";
 // in tests without Figma.
 
 // What a server on protocol 1 accepts: it hands the text to the model as it
-// is, so the plugin keeps it short.
-export const LEGACY_MAX_RESULT_CHARS = 50000;
+// is, so the plugin keeps it short. Under 50,000 with room to spare: Claude
+// Code moves a tool result over 50,000 characters out to a file.
+export const LEGACY_MAX_RESULT_CHARS = 40000;
 
 // What a server on protocol 2 accepts. It cuts the text for the model itself
 // and keeps the whole result in a local file, so the plugin only guards the

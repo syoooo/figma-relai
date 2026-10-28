@@ -69,11 +69,12 @@ export class RequestTracker {
     return true;
   }
 
-  // Reject a request with error
-  reject(id: string, error: Error): boolean {
+  // Reject a request with error; `file` is the plugin's live file name when
+  // its error named it
+  reject(id: string, error: Error, file?: string): boolean {
     const request = this.take(id);
     if (!request) return false;
-    noteSettled(request.slot, { id, cancelRequested: request.cancelRequested });
+    noteSettled(request.slot, { id, ...(file ? { file } : {}), cancelRequested: request.cancelRequested });
     request.reject(error);
     return true;
   }
