@@ -35,4 +35,11 @@ describe("the panel channel", () => {
     );
     expect(code(read("main.ts"))).toMatch(/from "\.\/walls\.js"/);
   });
+
+  test("the kit card's overwrite reaches push and restore", () => {
+    // The panel sends force after a refused push or restore; dropping it
+    // refuses the overwrite the designer just confirmed
+    expect(code(read("main.ts"))).toMatch(/dispatch\("push_to_ruleset", \{ force: msg\.force === true \}\)/);
+    expect(code(read("main.ts"))).toMatch(/dispatch\("restore_from_ruleset", \{ force: msg\.force === true \}\)/);
+  });
 });

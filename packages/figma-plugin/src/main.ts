@@ -358,7 +358,7 @@ const onPanelMessage = async (msg: any) => {
       } else if (op === "unlink") await dispatch("unlink_ruleset", {});
       else if (op === "restore")
         restored = (await dispatch("restore_from_ruleset", { force: msg.force === true })) as RestoreResult;
-      else if (op === "push") await dispatch("push_to_ruleset", {});
+      else if (op === "push") await dispatch("push_to_ruleset", { force: msg.force === true });
       else if (op === "delete") await dispatch("delete_ruleset", { name });
       else if (op === "set-auto") await dispatch("save_ruleset", { name, autoRestore: msg.autoRestore === true });
       else if (op === "export") {
