@@ -2,12 +2,16 @@ import { describe, expect, test } from "bun:test";
 import { dispatch } from "./dispatcher.js";
 import {
   contentHash,
+  KitRefusedError,
   notifySkippedSeeds,
   reconcileOnLoad,
   restoreFromRuleset,
+  rulesetOpResult,
   type RestoreResult,
   type Ruleset,
 } from "./handlers/rulesets.js";
+import { snapshotVoice } from "./handlers/memory.js";
+import "./handlers/plugin-data.js";
 import {
   MEMORY_MAX_BYTES,
   MEMORY_MAX_ENTRIES,
@@ -132,11 +136,21 @@ describe("restore notices", () => {
   };
   const skippedLine = " — 2 seed precedents skipped, file memory full";
 
-  test("the automatic heal names the skipped seeds", async () => {
+  test("the automatic heal returns the kit's date and the skipped seeds for the panel's card, with no toast", async () => {
     const { memory, seeds } = tooMany();
     setup(memory, seeds, true);
-    expect(await reconcileOnLoad()).toEqual({ healed: true, name: "kit" });
-    expect(notices).toEqual([`Relai: restored conventions from ruleset "kit" (kit last written 2026-09-01)${skippedLine}`]);
+    expect(await reconcileOnLoad()).toEqual({
+      healed: true,
+      name: "kit",
+      kitUpdatedAt: "2026-09-01T00:00:00.000Z",
+      precedentsSkipped: { count: 2, limit: MEMORY_MAX_ENTRIES },
+    });
+    expect(notices).toEqual([]);
+  });
+
+  test("a heal that skips nothing names only the kit and its date", async () => {
+    setup([], [precedent("s1")], true);
+    expect(await reconcileOnLoad()).toEqual({ healed: true, name: "kit", kitUpdatedAt: "2026-09-01T00:00:00.000Z" });
   });
 
   test("a panel restore that skips seeds says so in the same words", async () => {
@@ -160,5 +174,147 @@ describe("restore notices", () => {
     const out = (await dispatch("link_ruleset", { name: "kit" })) as { restored: RestoreResult | null };
     notifySkippedSeeds(out.restored);
     expect(notices).toEqual([]);
+  });
+});
+
+// A linked file with its own law, synced to the kit at `syncedLaw`.
+function linked(fileLaw: string, fileAt: string, kit: Partial<Ruleset>, syncedLaw = LAW): void {
+  shared.clear();
+  notices.length = 0;
+  shared.set("relai:conventions", fileLaw);
+  shared.set("relai:conventionsAt", fileAt);
+  shared.set("relai:rulesetLink", JSON.stringify({ name: "kit", lastSyncHash: contentHash(syncedLaw) }));
+  stored = [
+    {
+      name: "kit",
+      conventions: LAW,
+      seedPrecedents: [],
+      autoRestore: false,
+      provenance: "",
+      createdAt: "2026-09-01T00:00:00.000Z",
+      updatedAt: "2026-09-01T00:00:00.000Z",
+      ...kit,
+    },
+  ];
+}
+
+async function thrown(run: () => Promise<unknown>): Promise<unknown> {
+  try {
+    await run();
+  } catch (error) {
+    return error;
+  }
+  throw new Error("expected a throw");
+}
+
+describe("kit refusals", () => {
+  test("a push over a kit that moved is refused with the facts, and the agent's text is unchanged", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", { updatedBy: "Other file" }, "# older");
+    const error = await thrown(() => dispatch("push_to_ruleset", {}));
+    expect(error).toBeInstanceOf(KitRefusedError);
+    expect((error as KitRefusedError).refusal).toEqual({
+      code: "kit_lease",
+      kit: "kit",
+      kitChars: LAW.length,
+      kitUpdatedAt: "2026-09-01T00:00:00.000Z",
+      updatedBy: "Other file",
+      fileChars: "# mine".length,
+    });
+    expect((error as Error).message).toBe(
+      `Ruleset "kit" has changed since this file last synced it (kit ${LAW.length} chars, updated 2026-09-01T00:00:00.000Z by "Other file"). ` +
+        `Review with list/export first; pass force:true only if this file's law should replace it.`
+    );
+    expect((stored as Ruleset[])[0].conventions).toBe(LAW);
+  });
+
+  test("a restore over newer file law is refused with both sides, and the agent's text is unchanged", async () => {
+    linked("# newer", "2026-09-10T00:00:00.000Z", {});
+    const error = await thrown(() => dispatch("restore_from_ruleset", {}));
+    expect((error as KitRefusedError).refusal).toEqual({
+      code: "kit_older",
+      kit: "kit",
+      kitChars: LAW.length,
+      kitUpdatedAt: "2026-09-01T00:00:00.000Z",
+      fileChars: "# newer".length,
+      fileUpdatedAt: "2026-09-10T00:00:00.000Z",
+    });
+    expect((error as Error).message).toBe(
+      `Restore would overwrite newer law. This file's conventions (7 chars, written 2026-09-10T00:00:00.000Z) ` +
+        `are more recent than ruleset "kit" (${LAW.length} chars, 2026-09-01T00:00:00.000Z). ` +
+        `If the file's law is the one to keep, push it up instead (file → kit). ` +
+        `To replace the file anyway, restore with force: true.`
+    );
+    expect(shared.get("relai:conventions")).toBe("# newer");
+  });
+
+  test("force still goes through", async () => {
+    linked("# newer", "2026-09-10T00:00:00.000Z", {});
+    await dispatch("restore_from_ruleset", { force: true });
+    expect(shared.get("relai:conventions")).toBe(LAW);
+  });
+});
+
+describe("ruleset-op-result", () => {
+  test("a refused push carries the refusal and the same message", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", {}, "# older");
+    const error = await thrown(() => dispatch("push_to_ruleset", {}));
+    expect(rulesetOpResult("push", { error })).toEqual({
+      type: "ruleset-op-result",
+      op: "push",
+      ok: false,
+      refusal: (error as KitRefusedError).refusal,
+      message: (error as Error).message,
+    });
+  });
+
+  test("any other failure carries only its message", () => {
+    expect(rulesetOpResult("delete", { error: new Error('No ruleset named "x".') })).toEqual({
+      type: "ruleset-op-result",
+      op: "delete",
+      ok: false,
+      message: 'No ruleset named "x".',
+    });
+  });
+
+  test("a restore that left seeds out says how many, against which limit", async () => {
+    setup(many(MEMORY_MAX_ENTRIES - 1), [precedent("s1"), precedent("s2")]);
+    const restored = (await dispatch("restore_from_ruleset", {})) as RestoreResult;
+    expect(rulesetOpResult("restore", { restored })).toEqual({
+      type: "ruleset-op-result",
+      op: "restore",
+      ok: true,
+      precedentsSkipped: { count: 2, limit: MEMORY_MAX_ENTRIES },
+    });
+  });
+
+  test("a plain success is just ok", () => {
+    expect(rulesetOpResult("unlink", {})).toEqual({ type: "ruleset-op-result", op: "unlink", ok: true });
+    expect(rulesetOpResult("link", { restored: null })).toEqual({ type: "ruleset-op-result", op: "link", ok: true });
+  });
+});
+
+describe("voice writes are counted before they happen", () => {
+  test("writing conventions, the link or memory moves the epoch; reading does not", async () => {
+    setup([], [precedent("s1")]);
+    const start = snapshotVoice();
+    expect(snapshotVoice().epoch).toBe(start.epoch);
+    await dispatch("set_conventions", { content: "# set" });
+    const afterConventions = snapshotVoice();
+    expect(afterConventions.epoch).toBeGreaterThan(start.epoch);
+    expect(afterConventions.prints.conventions).not.toEqual(start.prints.conventions);
+    await dispatch("unlink_ruleset", {});
+    expect(snapshotVoice().epoch).toBeGreaterThan(afterConventions.epoch);
+    const beforeRecord = snapshotVoice().epoch;
+    await dispatch("record_precedent", { text: "one ruling" });
+    expect(snapshotVoice().epoch).toBeGreaterThan(beforeRecord);
+  });
+
+  test("a raw write that bypasses Relai changes the prints but not the epoch", () => {
+    setup([], []);
+    const before = snapshotVoice();
+    shared.set("relai:memory", JSON.stringify([precedent("raw")]));
+    const after = snapshotVoice();
+    expect(after.epoch).toBe(before.epoch);
+    expect(after.prints.memory).not.toEqual(before.prints.memory);
   });
 });

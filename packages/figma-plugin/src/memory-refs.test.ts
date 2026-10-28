@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { dispatch } from "./dispatcher.js";
-import { attachPrecedents, readMemory, recordGatePrecedent } from "./handlers/memory.js";
+import { attachPrecedents, preflightPrecedents, readMemory, recordGatePrecedent } from "./handlers/memory.js";
 import type { PrecedentEntry } from "./memory-core.js";
 
 // Just enough of the figma global to record a precedent: root shared plugin
@@ -87,5 +87,72 @@ describe("gate precedents and token refs", () => {
     const entries = readMemory();
     expect(entries).toHaveLength(1);
     expect(entries[0].refs).toEqual({ tokens: [{ id: "VariableID:1:23", name: "Badge/border" }] });
+  });
+});
+
+describe("precedents matched before the write", () => {
+  test("a write's result lists the precedents first, marked before_write", async () => {
+    await record({ nodes: ["5:6"] });
+    const out = attachPrecedents("set_properties", { nodeId: "5:6" }, { id: "5:6", updated: true }) as Record<
+      string,
+      unknown
+    >;
+    expect(Object.keys(out)).toEqual(["precedents", "precedentsMatched", "id", "updated"]);
+    expect(out.precedentsMatched).toBe("before_write");
+  });
+
+  test("the match taken before dispatch is the one attached, whatever the write changed", async () => {
+    const { id } = (await record({ nodes: ["5:6"] })) as { id: string };
+    const pre = preflightPrecedents("delete_node", { nodeId: "5:6" });
+    await dispatch("remove_precedent", { id });
+    const out = attachPrecedents("delete_node", { nodeId: "5:6" }, { deleted: "5:6" }, pre) as {
+      precedents?: Array<{ text: string }>;
+    };
+    expect(out.precedents?.[0].text).toBe("Badge border=1 is intent");
+  });
+
+  test("each command in a batch carries its own precedents", async () => {
+    await record({ nodes: ["5:6"] });
+    const params = {
+      commands: [
+        { command: "set_properties", params: { nodeId: "1:1" } },
+        { command: "set_properties", params: { nodeId: "5:6" } },
+      ],
+    };
+    const pre = preflightPrecedents("batch_execute", params);
+    const out = attachPrecedents(
+      "batch_execute",
+      params,
+      [
+        { command: "set_properties", success: true, result: {} },
+        { command: "set_properties", success: true, result: {} },
+      ],
+      pre
+    ) as Array<Record<string, unknown>>;
+    expect(out[0]).not.toHaveProperty("precedents");
+    expect(out[1].precedents).toHaveLength(1);
+  });
+
+  test("reads and memory commands surface nothing", async () => {
+    await record({ nodes: ["5:6"] });
+    expect(preflightPrecedents("get_node_info", { nodeId: "5:6" })).toBeNull();
+    expect(preflightPrecedents("update_precedent", { nodeId: "5:6" })).toBeNull();
+  });
+
+  test("precedents a script wrote straight into file memory surface on the next write", async () => {
+    await record({ nodes: ["5:6"] });
+    expect(preflightPrecedents("set_properties", { nodeId: "7:7" })).toBeNull();
+    const raw: PrecedentEntry = {
+      id: "raw1",
+      date: "2026-10-28",
+      kind: "intent",
+      text: "written by a script",
+      refs: { nodes: [{ id: "7:7" }] },
+      source: "chat",
+    };
+    shared.set("relai:memory", JSON.stringify([raw, ...readMemory()]));
+    expect(preflightPrecedents("set_properties", { nodeId: "7:7" })?.surfaced?.precedents[0].text).toBe(
+      "written by a script"
+    );
   });
 });
