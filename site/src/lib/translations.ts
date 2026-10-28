@@ -6,7 +6,7 @@ export const translations = {
     nav: { changes: 'What it does', start: 'Get started', faq: 'FAQ', github: 'GitHub', install: 'Install plugin', home: 'Relai home', menu: 'Open menu', close: 'Close menu' },
     hero: {
       eyebrow: 'FIGMA × ANY AGENT',
-      title: 'Everyone gave agents the pen.\nRelai gave the file a veto.',
+      title: 'Agents get the pen.\nThe file keeps the veto.',
       body: 'Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma. The file carries your conventions, your rulings, your fences; every client that opens it inherits them. Which is why you can finally let the agents run.',
       mono: 'open source · local · node-level read/write/delete',
       install: 'Install the plugin',
@@ -15,7 +15,7 @@ export const translations = {
     },
     belief: {
       eyebrow: 'THE ARGUMENT',
-      p1: 'Every design team is being offered the same trade right now: take the agents’ speed and watch the system rot one plausible edit at a time — or guard the system by hand and watch everyone else ship. The tools all promise speed. None of them make it safe to accept.',
+      p1: 'Every design team is being offered the same trade right now: take the agents’ speed and watch the system rot one plausible edit at a time — or guard the system by hand and give that speed back. Speed is the easy part. Making it safe to accept is the hard one.',
       p2: 'Code already escaped this, and not by making models careful. The repo pushes back — lint that flags, checks that gate, protected branches that refuse — so a developer can hand an agent real work and go do something else. That is what an artifact that defends itself buys: not safety for its own sake. Delegation you can live with.',
       p3: 'Relai builds that pushback into the design file itself. Not a leash — a license: let any agent run at full speed, because the file holds your line.',
       p4: 'The writable part of taste becomes rules the machine keeps. The part that can’t be written always waits for your yes.'
