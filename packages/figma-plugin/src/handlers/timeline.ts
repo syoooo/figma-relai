@@ -3,6 +3,7 @@
 // lane only: entries link back to nodes; no canvas time-travel (Figma's
 // version history plus checkpoints already cover restoration).
 
+import type { WriteLogWhy } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
 
 const LOG_KEY = "relai.writeLog";
@@ -18,6 +19,7 @@ export interface WriteLogEntry {
   nodes: string[]; // up to 5 touched node ids
   ok: boolean;
   n?: number; // touched count when notable (bulk)
+  why?: WriteLogWhy; // why it did not run, or ran without reaching the agent; absent in older entries
 }
 
 export const SESSION_ID = Math.random().toString(36).slice(2, 8);
@@ -52,7 +54,8 @@ export async function appendWriteLog(
   cmd: string,
   nodes: string[],
   ok: boolean,
-  touched?: number
+  touched?: number,
+  why?: WriteLogWhy
 ): Promise<void> {
   const log = await loadLog();
   log.unshift({
@@ -63,6 +66,7 @@ export async function appendWriteLog(
     nodes: nodes.slice(0, 5),
     ok,
     ...(touched && touched >= 10 ? { n: touched } : {}),
+    ...(why ? { why } : {}),
   });
   if (log.length > MAX_ENTRIES) log.length = MAX_ENTRIES;
   scheduleFlush();

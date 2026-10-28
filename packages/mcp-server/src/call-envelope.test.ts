@@ -100,14 +100,15 @@ describe("successful calls", () => {
     expect(texts(result).at(-1)).toBe(`${RECEIPT_LABEL} applied — the command ran · call req-1-00 · file "Checkout v2"`);
   });
 
-  test("a read adds metadata but no receipt line", async () => {
+  test("a read with no room named still ends with a receipt line naming the file", async () => {
     const pluginMeta: ResultMeta = { protocol: 2, write: false, file: "F", outcome: "applied" };
     const env = envelope(viaTracker((t, id) => t.resolve(id, { name: "Doc" }, pluginMeta)));
     registerAllTools(env.server, env.sendCommand);
     const result = await env.call("get_document_overview");
     expect(meta(result).outcome).toBe("applied");
-    expect(receipt(result)).toBeUndefined();
-    expect(result.content).toHaveLength(1);
+    expect(result.content).toHaveLength(2);
+    expect(texts(result).at(-1)).toStartWith(`${RECEIPT_LABEL} applied — the command ran · call req-`);
+    expect(texts(result).at(-1)).toEndWith(`· file "F"`);
   });
 
   test("an older plugin's batch is judged from its items", async () => {
@@ -149,6 +150,19 @@ describe("failed calls", () => {
       expect(meta(result).outcome).toBe("not_applied");
       expect(receipt(result)).toContain("guard_blocked");
     }
+  });
+
+  test("a failed command names the file its error came from", async () => {
+    const env = envelope(
+      viaTracker((t, id) =>
+        t.reject(id, new RelaiError("node_not_found", "Node not found: 9:9"), "Checkout v2")
+      )
+    );
+    registerAllTools(env.server, env.sendCommand);
+    const result = await env.call("set_text", { nodeId: "9:9", text: "Hi" });
+    expect(result.isError).toBe(true);
+    expect(meta(result).target).toEqual({ file: "Checkout v2" });
+    expect(receipt(result)).toContain('file "Checkout v2"');
   });
 
   test("a timeout is unknown and says to read the canvas first", async () => {
@@ -244,6 +258,16 @@ describe("long results", () => {
     expect(JSON.parse(readFileSync(truncated.file!, "utf8")).data).toBe(big);
     expect(texts(result)[0]).toEndWith(`the full result is in ${truncated.file}]`);
     expect(texts(result)[0]!.length).toBeLessThan(MAX_TEXT_CHARS + 300);
+  });
+
+  test("a cut result, notice and receipt line included, stays under Claude Code's 50,000-character limit", async () => {
+    const pluginMeta: ResultMeta = { protocol: 2, write: false, file: "A file with a long name ".repeat(4), outcome: "applied" };
+    const env = envelope(viaTracker((t, id) => t.resolve(id, { data: "\"".repeat(200000) }, pluginMeta)));
+    registerAllTools(env.server, env.sendCommand);
+    const result = await env.call("export_asset", { nodeId: "1:2" });
+    expect(receipt(result)).toBeDefined();
+    const total = texts(result).reduce((sum, text) => sum + (text?.length ?? 0), 0);
+    expect(total).toBeLessThan(50000);
   });
 
   test("an older plugin's cut reports the full length (cut chars plus 50,000)", async () => {
