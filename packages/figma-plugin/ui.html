@@ -120,7 +120,9 @@
       position: fixed; right: 0; bottom: 0; z-index: 40; /* under .modal-overlay */
       display: flex; align-items: center; justify-content: center;
       width: 20px; height: 20px; border: none;
-      background: var(--panel); color: var(--muted);
+      /* No fill: a panel-coloured box read as a small dark square sitting on
+         the page. The two strokes are the whole mark. */
+      background: transparent; color: var(--faint);
       cursor: nwse-resize; touch-action: none;
     }
     .resize-handle:hover { color: var(--amber); }
@@ -632,6 +634,16 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
     .feed-entry.law .err-msg { color: var(--shu); opacity: 0.85; }
+    /* A wall notice stays until dismissed, so its lines wrap instead of
+       truncating, and the close mark takes the duration's column. */
+    .feed-entry.notice .err-msg { white-space: normal; overflow: visible; }
+    .notice-x {
+      flex-shrink: 0; align-self: flex-start; height: 1.7em; height: 1lh;
+      display: flex; align-items: center;
+      background: none; border: none; color: var(--faint); cursor: pointer; padding: 0 2px;
+    }
+    .notice-x:hover { color: var(--shu); }
+    .notice-x:focus-visible { outline: 1px dashed var(--amber); outline-offset: 1px; }
     .feed-entry .prog-msg, .feed-entry .note {
       display: block; color: var(--amber-dim); font-size: 9px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -688,10 +700,25 @@
     .approval-card.show { display: block; animation: pop var(--dur-med) var(--ease-out); }
     .modal-overlay.open .modal-box { animation: pop var(--dur-fast) var(--ease-out); }
     .approval-title {
+      display: flex; align-items: baseline; gap: var(--sp-6);
       font-size: 8px; font-weight: 700; letter-spacing: 0.18em;
       color: var(--amber);
       margin-bottom: var(--sp-4);
     }
+    /* Queue depth, written like the Stop's ×N */
+    .approval-n:empty { display: none; }
+    /* Time left on the card: grey digits that only change, never blink;
+       amber from 30 seconds down. */
+    .approval-left {
+      margin-left: auto; font-weight: 400; letter-spacing: 0.08em;
+      color: var(--faint); font-variant-numeric: tabular-nums;
+    }
+    .approval-left.low { color: var(--amber); }
+    .approval-precedent { font-size: 10px; color: var(--muted); margin-bottom: var(--sp-6); overflow-wrap: anywhere; }
+    .approval-precedent:empty { display: none; }
+    .approval-precedent div::before { content: "\2691\FE0E  "; color: var(--amber-dim); }
+    /* A card waiting on the plugin's answer: the actions give way to one grey line */
+    .approval-wait { color: var(--faint); font-size: 10px; }
     .approval-cmd {
       font-size: 10px; color: var(--text);
       word-break: break-all;
@@ -778,6 +805,10 @@
     .hist-entry .cmd.link:hover { color: var(--amber); border-bottom-color: var(--amber); }
     .hist-entry .mark { color: var(--amber-dim); font-size: 9px; flex-shrink: 0; margin-left: auto; }
     .hist-entry .mark.err { color: var(--err); }
+    .mem-err { color: var(--err); font-size: 9px; overflow-wrap: anywhere; }
+    .mem-err:empty { display: none; }
+    /* Kit modal: the last refusal stays on the in-use row until a push or restore succeeds */
+    .rs-refusal { color: var(--amber); font-size: 9.5px; padding: var(--sp-2) 0; overflow-wrap: anywhere; }
     .mem-input {
       width: 100%; margin-top: var(--sp-8);
       background: var(--bg); border: 1px dashed var(--line); color: var(--text);
@@ -992,7 +1023,8 @@
           <button class="modal-close" onclick="closeMemModal()" aria-label="close">&#10005;</button>
         </div>
         <div id="memList"><div class="mem-empty" data-i18n="memory_empty">no precedents yet — they accumulate as you adjudicate</div></div>
-        <input class="mem-input" id="memInput" data-i18n-ph="memory_add_ph" placeholder="+ note a precedent… (Enter)" onkeydown="onMemInputKey(event)">
+        <input class="mem-input" id="memInput" data-i18n-ph="memory_add_ph" placeholder="+ note a precedent… (Enter)" onkeydown="onMemInputKey(event)" oninput="setMemError('')">
+        <div class="mem-err" id="memErr"></div>
       </div>
     </div>
 
@@ -1058,8 +1090,9 @@
 
     <!-- Approval gate: the agent wants to write; the designer decides -->
     <div class="panel approval-card" id="approvalCard">
-      <div class="approval-title" data-i18n="approval_title">AGENT REQUESTS</div>
+      <div class="approval-title"><span data-i18n="approval_title">AGENT REQUESTS</span><span class="approval-n" id="approvalN"></span><span class="approval-left" id="approvalLeft"></span></div>
       <div class="approval-intent" id="approvalIntent"></div>
+      <div class="approval-precedent" id="approvalPrecedent"></div>
       <div class="approval-cmd"><code id="approvalCmd"></code></div>
       <input class="approval-reason" id="approvalReason" data-i18n-ph="approval_reason_ph" placeholder="reason → saved to file memory (optional)">
       <div class="approval-actions">
@@ -1115,8 +1148,8 @@
         <label class="switch"><input type="checkbox" id="scopeLock" onchange="onScopeLockToggle()"><span class="track"></span></label>
       </div>
       <div class="setting-row">
-        <span class="label"><span data-i18n="allow_exec">Allow code execution</span><span class="sub" data-i18n="allow_exec_hint">execute_figma — AI-written Plugin API scripts</span></span>
-        <label class="switch"><input type="checkbox" id="allowExec" checked onchange="onSettingChange()"><span class="track"></span></label>
+        <span class="label"><span data-i18n="allow_exec">Allow code execution</span><span class="sub" data-i18n="allow_exec_hint">execute_figma — scripts can reach no-go pages (reported, not blocked)</span></span>
+        <label class="switch"><input type="checkbox" id="allowExec" checked onchange="onExecToggle()"><span class="track"></span></label>
       </div>
       <div class="setting-row">
         <span class="label"><span data-i18n="auto_connect">Connect automatically</span><span class="sub" data-i18n="auto_connect_hint">rejoin this room when the plugin opens</span></span>
@@ -1212,7 +1245,7 @@
         result_undelivered: 'The result did not reach the AI — the connection was down',
         settings: 'Config',
         allow_exec: 'Allow code execution',
-        allow_exec_hint: 'execute_figma — AI-written Plugin API scripts',
+        allow_exec_hint: 'execute_figma — scripts can reach no-go pages (reported, not blocked)',
         auto_connect: 'Connect automatically',
         auto_connect_hint: 'rejoin this room when the plugin opens',
         approvals: 'When to ask',
@@ -1272,7 +1305,56 @@
         proposal_title: 'AGENT PROPOSES',
         proposal_enable: 'Enable no-go',
         proposal_dismiss: 'Dismiss',
-        promote_title: 'promote into the kit'
+        promote_title: 'promote into the kit',
+        approval_left: '{s}s left',
+        approval_timed_out: 'No answer in time — denied automatically',
+        law_title: 'no-go & settings',
+        law_dismiss: 'Dismiss',
+        q: '“{x}”',
+        list_sep: ', ',
+        law_guards_code: 'A script lifted no-go pages. Put back: {pages}.',
+        law_guards_unknown: 'No-go pages had gone missing. Put back: {pages}.',
+        law_settings_code: 'A script changed {fields}. Your setting is back.',
+        law_settings_unknown: '{fields} changed outside the panel. Your setting is back.',
+        law_voice: 'A script edited this file’s {key}. Left as it is.',
+        law_tight_guards: 'No-go pages were added outside this panel. Now in force: {pages}.',
+        law_tight_settings: 'This file held a stricter {fields}. Now in force.',
+        breach_guard: 'A script reached {n} node(s) on no-go {pages}. The change stays.',
+        breach_scope: 'A script reached {n} node(s) outside the scope lock. The change stays.',
+        panel_lost: 'The panel reloaded or lost its relay link during this command. The outcome is unknown; reopen the plugin.',
+        refused_running: '{what} was not applied because a script was running. Please do it again.',
+        refused_cooldown: '{what} was not applied because a script had just finished. Please do it again.',
+        field_confirmLevel: '“When to ask”',
+        field_allowCodeExec: 'code execution',
+        field_scopeLock: 'the scope lock',
+        voice_memory: 'precedents',
+        voice_conventions: 'rules',
+        voice_conventionsAt: 'rules date',
+        voice_rulesetLink: 'kit link',
+        msg_save_settings: 'The settings change',
+        msg_approval_response: 'Your answer to the request',
+        msg_guards_set: 'The no-go change',
+        msg_proposal_response: 'Your answer to the proposal',
+        msg_scope_lock: 'The scope lock change',
+        kit_waiting: 'Working…',
+        kit_lease: 'Couldn’t send to “{kit}”. It was updated on {date}, after this file last synced ({kit_chars} chars there).',
+        kit_lease_by: 'Couldn’t send to “{kit}”. “{by}” updated it on {date}, after this file last synced ({kit_chars} chars there).',
+        kit_older: 'Updating from “{kit}” would erase this file’s newer rules ({mine} chars, {file_date}).',
+        kit_export_compare: 'Export to compare',
+        kit_force: 'Overwrite anyway',
+        kit_force_sure: 'Sure? Overwrite',
+        kit_overwrite: 'Overwrite',
+        kit_cancel: 'Cancel',
+        kit_done_push: 'Sent to “{kit}”.',
+        kit_done_restore: 'Updated from “{kit}”.',
+        kit_done_link: 'Now using “{kit}”.',
+        kit_skipped: '{count} seed precedents were left out (memory holds {limit}).',
+        moment_healed: 'My rules had gone missing, so they were put back from “{kit}”.',
+        moment_healed_date: 'My rules had gone missing, so they were put back from “{kit}” (the kit’s copy of {date}).',
+        why_denied: 'denied',
+        why_timeout: 'timed out',
+        why_stopped: 'stopped',
+        why_undelivered: 'not delivered'
       },
       ja: {
         minimize_window: 'ウィンドウを最小化',
@@ -1322,7 +1404,7 @@
         result_undelivered: '結果はAIに届いていません（接続が切れていました）',
         settings: '設定',
         allow_exec: 'コード実行を許可',
-        allow_exec_hint: 'execute_figma — AIが書いたPlugin APIスクリプト',
+        allow_exec_hint: 'execute_figmaのスクリプトは立入禁止のページにも届きます（止めずに報告）',
         auto_connect: '自動接続',
         auto_connect_hint: 'プラグイン起動時にこのルームへ再接続',
         approvals: '確認レベル',
@@ -1382,7 +1464,56 @@
         proposal_title: 'エージェントの提案',
         proposal_enable: '立入禁止にする',
         proposal_dismiss: '見送る',
-        promote_title: 'キットへ昇格'
+        promote_title: 'キットへ昇格',
+        approval_left: '残り{s}秒',
+        approval_timed_out: '時間内に回答がなかったため、自動で拒否しました',
+        law_title: '立入禁止と設定',
+        law_dismiss: '閉じる',
+        q: '「{x}」',
+        list_sep: '、',
+        law_guards_code: 'スクリプトが外した立入禁止を戻しました（{pages}）。',
+        law_guards_unknown: '立入禁止が外れていたので戻しました（{pages}）。',
+        law_settings_code: 'スクリプトが{fields}を変えたので、パネルの設定に戻しました。',
+        law_settings_unknown: 'パネルの外で{fields}が変わっていたので、パネルの設定に戻しました。',
+        law_voice: 'スクリプトがこのファイルの{key}を書き換えました。そのまま残しています。',
+        law_tight_guards: 'パネルの外で立入禁止が増えていました。そのまま守ります（{pages}）。',
+        law_tight_settings: 'このファイルにはより厳しい{fields}が入っていたので、そちらに合わせました。',
+        breach_guard: 'スクリプトが立入禁止の{pages}にある{n}個のノードに届きました。変更は残っています。',
+        breach_scope: 'スクリプトが編集範囲の外にある{n}個のノードに届きました。変更は残っています。',
+        panel_lost: 'このコマンドの途中で、パネルの再読み込みかリレーの切断がありました。結果はわかりません。プラグインを開き直してください。',
+        refused_running: 'スクリプトの実行中だったため、{what}は反映していません。もう一度操作してください。',
+        refused_cooldown: 'スクリプトが終わった直後だったため、{what}は反映していません。もう一度操作してください。',
+        field_confirmLevel: '確認レベル',
+        field_allowCodeExec: 'コード実行の許可',
+        field_scopeLock: '編集範囲の限定',
+        voice_memory: '判例',
+        voice_conventions: '規約',
+        voice_conventionsAt: '規約の日付',
+        voice_rulesetLink: 'キットとのつながり',
+        msg_save_settings: '設定の変更',
+        msg_approval_response: 'リクエストへの回答',
+        msg_guards_set: '立入禁止の変更',
+        msg_proposal_response: '提案への回答',
+        msg_scope_lock: '編集範囲の限定の変更',
+        kit_waiting: '処理しています…',
+        kit_lease: '「{kit}」に送れませんでした。このファイルが最後に同期したあと、{date}に更新されています（向こうは{kit_chars}字）。',
+        kit_lease_by: '「{kit}」に送れませんでした。このファイルが最後に同期したあと、{date}に「{by}」から更新されています（向こうは{kit_chars}字）。',
+        kit_older: '「{kit}」で上書きすると、このファイルの新しい規約（{mine}字、{file_date}）が消えます。',
+        kit_export_compare: '書き出して比べる',
+        kit_force: 'それでも上書きする',
+        kit_force_sure: '本当に上書きする',
+        kit_overwrite: '上書きする',
+        kit_cancel: 'やめる',
+        kit_done_push: '「{kit}」へ送りました。',
+        kit_done_restore: '「{kit}」から更新しました。',
+        kit_done_link: '「{kit}」を使っています。',
+        kit_skipped: '判例の種のうち{count}件は入りませんでした（記憶の上限は{limit}件）。',
+        moment_healed: '規約が消えていたので、「{kit}」から戻しました。',
+        moment_healed_date: '規約が消えていたので、「{kit}」から戻しました（キットの日付は{date}）。',
+        why_denied: '拒否',
+        why_timeout: '時間切れ',
+        why_stopped: '停止',
+        why_undelivered: '未達'
       },
       zh: {
         minimize_window: '最小化窗口',
@@ -1432,7 +1563,7 @@
         result_undelivered: '结果没送到AI（连接已断开）',
         settings: '设置',
         allow_exec: '允许代码执行',
-        allow_exec_hint: 'execute_figma — AI编写的Plugin API脚本',
+        allow_exec_hint: 'execute_figma — 脚本能写到禁区页（事后报告，不拦）',
         auto_connect: '自动连接',
         auto_connect_hint: '插件启动时自动重连到此房间',
         approvals: '确认级别',
@@ -1492,7 +1623,56 @@
         proposal_title: 'AGENT提议',
         proposal_enable: '设为禁区',
         proposal_dismiss: '不用了',
-        promote_title: '升格进kit'
+        promote_title: '升格进kit',
+        approval_left: '剩{s}秒',
+        approval_timed_out: '超时没有回答，已自动拒绝',
+        law_title: '禁区与设置',
+        law_dismiss: '关闭',
+        q: '「{x}」',
+        list_sep: '、',
+        law_guards_code: '脚本撤掉了禁区，已放回（{pages}）。',
+        law_guards_unknown: '禁区被撤掉了，已放回（{pages}）。',
+        law_settings_code: '脚本改了{fields}，已改回面板里的设置。',
+        law_settings_unknown: '{fields}在面板之外被改了，已改回面板里的设置。',
+        law_voice: '脚本改写了这个文件的{key}，没有改回。',
+        law_tight_guards: '面板之外新加了禁区，现在照样生效（{pages}）。',
+        law_tight_settings: '这个文件里存着更严的{fields}，已照它执行。',
+        breach_guard: '脚本碰到了禁区{pages}里的{n}个节点，改动还在。',
+        breach_scope: '脚本碰到了限定范围之外的{n}个节点，改动还在。',
+        panel_lost: '这条命令执行中面板被重载或与relay断开，结果不明。请重新打开插件。',
+        refused_running: '脚本正在运行，{what}没有生效。请再操作一次。',
+        refused_cooldown: '脚本刚跑完，{what}没有生效。请再操作一次。',
+        field_confirmLevel: '确认级别',
+        field_allowCodeExec: '代码执行开关',
+        field_scopeLock: '范围锁定',
+        voice_memory: '判例',
+        voice_conventions: '规矩',
+        voice_conventionsAt: '规矩的日期',
+        voice_rulesetLink: 'kit关联',
+        msg_save_settings: '设置的修改',
+        msg_approval_response: '对请求的回答',
+        msg_guards_set: '禁区的修改',
+        msg_proposal_response: '对提议的回答',
+        msg_scope_lock: '范围锁定的修改',
+        kit_waiting: '处理中…',
+        kit_lease: '没能送到「{kit}」。这个文件上次同步之后，它在{date}被更新过（那边{kit_chars}字）。',
+        kit_lease_by: '没能送到「{kit}」。这个文件上次同步之后，「{by}」在{date}更新过它（那边{kit_chars}字）。',
+        kit_older: '用「{kit}」覆盖，会丢掉这个文件更新的规矩（{mine}字，{file_date}）。',
+        kit_export_compare: '导出来比较',
+        kit_force: '仍然覆盖',
+        kit_force_sure: '确定覆盖',
+        kit_overwrite: '覆盖',
+        kit_cancel: '算了',
+        kit_done_push: '已送到「{kit}」。',
+        kit_done_restore: '已从「{kit}」更新。',
+        kit_done_link: '已开始使用「{kit}」。',
+        kit_skipped: '有{count}条种子判例没放进来（记忆上限{limit}条）。',
+        moment_healed: '规矩丢了，已从「{kit}」放回。',
+        moment_healed_date: '规矩丢了，已从「{kit}」放回（kit的日期是{date}）。',
+        why_denied: '已拒绝',
+        why_timeout: '超时',
+        why_stopped: '已停止',
+        why_undelivered: '没送到'
       }
     };
     var LOCALES = ['en', 'ja', 'zh'];
@@ -1693,8 +1873,19 @@
              noun[Math.floor(Math.random() * noun.length)] + '-' + suffix;
     }
 
-    function saveSettings(patch) {
+    // The plugin refuses a settings change while a script runs or has just
+    // finished, because the script could be posing as this panel. `undo` puts
+    // the control back so it does not show a value that was never applied.
+    var lastSettingsUndo = null;
+    function saveSettings(patch, undo) {
+      lastSettingsUndo = undo || null;
       parent.postMessage({ pluginMessage: { type: 'save-settings', settings: patch } }, '*');
+    }
+
+    function onExecToggle() {
+      var box = document.getElementById('allowExec');
+      var was = !box.checked;
+      saveSettings({ allowCodeExec: box.checked }, function () { box.checked = was; });
     }
 
     function onSettingChange() {
@@ -1773,18 +1964,50 @@
     }
 
     function setApproval(level) {
+      var was = confirmLevel;
       confirmLevel = level;
       renderApprovalSeg();
-      saveSettings({ confirmLevel: level });
+      saveSettings({ confirmLevel: level }, function () { confirmLevel = was; renderApprovalSeg(); });
+    }
+
+    // Answered cards stay here until the plugin settles them, so a refused
+    // answer can put its card back instead of leaving the command waiting.
+    var approvalAnswered = [];
+    var approvalTick = null;
+    var APPROVAL_LOW_S = 30;
+
+    function approvalSecondsLeft(deadline, now) {
+      return Math.max(0, Math.ceil((deadline - now) / 1000));
+    }
+
+    function renderApprovalLeft() {
+      var req = approvalQueue[0];
+      if (!req) return;
+      var left = approvalSecondsLeft(req.deadline, Date.now());
+      var el = document.getElementById('approvalLeft');
+      el.textContent = t('approval_left').replace('{s}', String(left));
+      el.className = 'approval-left' + (left <= APPROVAL_LOW_S ? ' low' : '');
     }
 
     function showNextApproval() {
       var card = document.getElementById('approvalCard');
       if (approvalQueue.length === 0) {
         card.classList.remove('show');
+        if (approvalTick) { clearInterval(approvalTick); approvalTick = null; }
         return;
       }
       var req = approvalQueue[0];
+      document.getElementById('approvalN').textContent =
+        approvalQueue.length > 1 ? '\u00d7' + approvalQueue.length : '';
+      renderApprovalLeft();
+      if (!approvalTick) approvalTick = setInterval(renderApprovalLeft, 1000);
+      var precEl = document.getElementById('approvalPrecedent');
+      precEl.textContent = '';
+      (req.precedents || []).slice(0, 2).forEach(function (text) {
+        var line = document.createElement('div');
+        line.textContent = text;
+        precEl.appendChild(line);
+      });
       var intentEl = document.getElementById('approvalIntent');
       if (req.intent) {
         intentEl.textContent = req.intent;
@@ -1804,11 +2027,19 @@
       var reason = reasonEl ? reasonEl.value.trim() : '';
       if (reasonEl) reasonEl.value = '';
       if (req) {
+        approvalAnswered.push(req);
         parent.postMessage(
           { pluginMessage: { type: 'approval-response', id: req.id, approved: approved, reason: reason } },
           '*'
         );
       }
+      showNextApproval();
+    }
+
+    function settleApproval(id) {
+      var other = function (r) { return r.id !== id; };
+      approvalQueue = approvalQueue.filter(other);
+      approvalAnswered = approvalAnswered.filter(other);
       showNextApproval();
     }
 
@@ -1846,6 +2077,7 @@
         up.title = t('promote_title');
         up.setAttribute('aria-label', 'promote precedent to ruleset');
         up.onclick = function () {
+          if (memRowErrors[e.id]) { delete memRowErrors[e.id]; renderMemory(); }
           parent.postMessage({ pluginMessage: { type: 'memory-promote', id: e.id } }, '*');
         };
         var del = document.createElement('button');
@@ -1861,7 +2093,20 @@
         row.appendChild(up);
         row.appendChild(del);
         list.appendChild(row);
+        if (memRowErrors[e.id]) {
+          var err = document.createElement('div');
+          err.className = 'mem-err';
+          err.textContent = memRowErrors[e.id];
+          list.appendChild(err);
+        }
       });
+    }
+
+    // A failed precedent action says so where it was made: under the input
+    // for a new note, under its own row for a promotion.
+    var memRowErrors = {};
+    function setMemError(text) {
+      document.getElementById('memErr').textContent = text;
     }
 
     function onMemInputKey(ev) {
@@ -1878,6 +2123,9 @@
     }
     function closeMemModal() {
       document.getElementById('memModal').classList.remove('open');
+      memRowErrors = {};
+      setMemError('');
+      renderMemory();
     }
 
     var conventionsContent = '';
@@ -1965,6 +2213,41 @@
       list.textContent = '';
       var s = rsStatusData;
       var inUse = s && s.linked ? s.linked : null;
+
+      // The last refusal or failure of an action taken here stays in view
+      if (rsRefusal) {
+        var rf = document.createElement('div');
+        rf.className = 'rs-refusal';
+        rf.textContent = rsRefusal.refusal ? kitRefusalText(rsRefusal.refusal) : rsRefusal.message;
+        list.appendChild(rf);
+        var rr = rsRefusal.refusal;
+        if (rr) {
+          var racts = document.createElement('div');
+          racts.className = 'rs-acts';
+          if (rr.code === 'kit_lease') {
+            var rexp = document.createElement('span');
+            rexp.className = 'act';
+            rexp.textContent = t('kit_export_compare');
+            rexp.onclick = function () { rsPost('export', { name: rr.kit }); };
+            racts.appendChild(rexp);
+            var rforce = document.createElement('span');
+            rforce.className = 'act warn';
+            rforce.textContent = t(rsForceArmed ? 'kit_force_sure' : 'kit_force');
+            rforce.onclick = function () {
+              if (rsForceArmed) { rsForceArmed = false; rsPost('push', { force: true }); }
+              else { rsForceArmed = true; renderRulesetModal(); }
+            };
+            racts.appendChild(rforce);
+          } else {
+            var rover = document.createElement('span');
+            rover.className = 'act warn';
+            rover.textContent = t('kit_overwrite');
+            rover.onclick = function () { rsPost('restore', { force: true }); };
+            racts.appendChild(rover);
+          }
+          list.appendChild(racts);
+        }
+      }
 
       if (rsList.length === 0) {
         var empty = document.createElement('div');
@@ -2189,6 +2472,13 @@
         var mark = document.createElement('span');
         mark.className = 'mark' + (e.ok ? '' : ' err');
         mark.textContent = e.ok ? (e.n ? '⚑' + e.n : '') : '✗';
+        // Why it did not run (or did not arrive). Entries from older versions have none.
+        if (I18N.en['why_' + e.why]) {
+          var word = t('why_' + e.why);
+          mark.textContent = e.why === 'timeout' ? '\u23f1\ufe0e ' + word
+            : e.why === 'undelivered' ? (mark.textContent ? mark.textContent + ' \u00b7 ' : '') + word
+            : '\u2717 ' + word;
+        }
         row.appendChild(tm);
         row.appendChild(cmd);
         row.appendChild(mark);
@@ -2206,8 +2496,10 @@
       document.getElementById('proposalPages').textContent = p.pages.map(function (x) { return x.name; }).join(', ');
       card.classList.add('show');
     }
+    var lastProposalAnswered = null;
     function answerProposal(accepted) {
       var p = proposalQueue.shift();
+      lastProposalAnswered = p || null;
       if (p) {
         parent.postMessage({ pluginMessage: { type: 'proposal-response', id: p.id, accepted: accepted } }, '*');
       }
@@ -2217,6 +2509,106 @@
     // ---------- Moment cards (the file speaks; one question at a time) ----------
     var momentAnswered = { wound: false, drift: false, first: false };
     var kitGoneName = null;
+    var healedNotice = null;      // the kit put back automatically when the plugin opened
+    // An action taken on the card keeps the card: it waits for the plugin's
+    // answer and shows it in place, and nothing else may take the card meanwhile.
+    var momentHold = false;
+    var momentForceArmed = false;
+    var rsPending = null;         // { op, kit } of the action the card waits on
+    var rsRefusal = null;         // last failure of an action taken in the kit modal
+    var rsForceArmed = false;
+
+    function fmtDate(iso) {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso || '');
+      var p2 = function (n) { return ('0' + n).slice(-2); };
+      return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+    }
+    // Sentences join with a space in English and with nothing in Japanese and Chinese
+    function sentSep() { return locale === 'en' ? ' ' : ''; }
+    function skippedText(p) {
+      return t('kit_skipped').replace('{count}', String(p.count)).replace('{limit}', String(p.limit));
+    }
+
+    function kitRefusalText(r) {
+      if (r.code === 'kit_lease') {
+        return t(r.updatedBy ? 'kit_lease_by' : 'kit_lease')
+          .replace(/\{kit\}/g, r.kit)
+          .replace('{by}', r.updatedBy || '')
+          .replace('{date}', fmtDate(r.kitUpdatedAt))
+          .replace('{kit_chars}', String(r.kitChars));
+      }
+      return t('kit_older')
+        .replace(/\{kit\}/g, r.kit)
+        .replace('{mine}', String(r.fileChars))
+        .replace('{file_date}', fmtDate(r.fileUpdatedAt));
+    }
+
+    function momentAct(op, extra, kit) {
+      rsPending = { op: op, kit: kit };
+      momentHold = true;
+      momentForceArmed = false;
+      rsPost(op, extra);
+      var box = document.getElementById('momentActions');
+      box.textContent = '';
+      var wait = document.createElement('span');
+      wait.className = 'approval-wait';
+      wait.textContent = t('kit_waiting');
+      box.appendChild(wait);
+    }
+
+    function releaseMoment() {
+      momentHold = false;
+      momentForceArmed = false;
+      hideMomentCard();
+      evalMoments();
+    }
+
+    function showMomentResult(msg, kit) {
+      if (msg.ok) {
+        var done = t(msg.op === 'push' ? 'kit_done_push' : msg.op === 'link' ? 'kit_done_link' : 'kit_done_restore')
+          .replace(/\{kit\}/g, kit);
+        if (msg.precedentsSkipped) done += sentSep() + skippedText(msg.precedentsSkipped);
+        showMomentCard(done, [{ label: t('moment_ok'), fn: releaseMoment }]);
+        return;
+      }
+      var r = msg.refusal;
+      if (r && r.code === 'kit_lease') {
+        // Overwriting someone else's push takes a second, deliberate click
+        showMomentCard(kitRefusalText(r), [
+          { label: t('kit_export_compare'), fn: function () { rsPost('export', { name: r.kit }); } },
+          { label: t(momentForceArmed ? 'kit_force_sure' : 'kit_force'), fn: function () {
+            if (momentForceArmed) { momentAct('push', { force: true }, kit); return; }
+            momentForceArmed = true;
+            showMomentResult(msg, kit);
+          } },
+          { label: t('moment_later'), quiet: true, fn: releaseMoment }
+        ]);
+        return;
+      }
+      if (r && r.code === 'kit_older') {
+        showMomentCard(kitRefusalText(r), [
+          { label: t('kit_overwrite'), fn: function () { momentAct('restore', { force: true }, kit); } },
+          { label: t('kit_cancel'), quiet: true, fn: releaseMoment }
+        ]);
+        return;
+      }
+      showMomentCard(msg.message, [{ label: t('moment_ok'), fn: releaseMoment }]);
+    }
+
+    function onRulesetOpResult(msg) {
+      var pending = rsPending && rsPending.op === msg.op ? rsPending : null;
+      if (pending) rsPending = null;
+      if (msg.ok) {
+        if (rsRefusal && (!rsRefusal.refusal || msg.op === 'push' || msg.op === 'restore')) rsRefusal = null;
+        rsForceArmed = false;
+      } else if (!pending) {
+        rsRefusal = { op: msg.op, refusal: msg.refusal || null, message: msg.message };
+        rsForceArmed = false;
+      }
+      renderRulesetModal();
+      if (pending) showMomentResult(msg, pending.kit);
+    }
 
     function hideMomentCard() {
       document.getElementById('momentCard').classList.remove('show');
@@ -2237,6 +2629,7 @@
     }
 
     function evalMoments() {
+      if (momentHold) return;
       var s = rsStatusData;
       if (!s) { hideMomentCard(); return; }
       var fill = function (key, kit) { return t(key).replace(/\{kit\}/g, kit); };
@@ -2246,9 +2639,19 @@
         ]);
         return;
       }
+      if (healedNotice) {
+        var healed = (healedNotice.kitUpdatedAt
+          ? t('moment_healed_date').replace('{date}', fmtDate(healedNotice.kitUpdatedAt))
+          : t('moment_healed')).replace(/\{kit\}/g, healedNotice.name);
+        if (healedNotice.precedentsSkipped) healed += sentSep() + skippedText(healedNotice.precedentsSkipped);
+        showMomentCard(healed, [
+          { label: t('moment_ok'), fn: function () { healedNotice = null; hideMomentCard(); evalMoments(); } }
+        ]);
+        return;
+      }
       if (s.state === 'file-empty' && !s.autoRestore && !momentAnswered.wound) {
         showMomentCard(fill('moment_wound', s.linked), [
-          { label: t('moment_wound_yes'), fn: function () { momentAnswered.wound = true; rsPost('restore'); hideMomentCard(); } },
+          { label: t('moment_wound_yes'), fn: function () { momentAnswered.wound = true; momentAct('restore', null, s.linked); } },
           { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.wound = true; hideMomentCard(); } }
         ]);
         return;
@@ -2266,8 +2669,9 @@
           : fill('moment_drift', s.linked);
         // Choosing to pull AFTER being told yours is newer IS the confirmation,
         // so carry it through rather than bouncing off the safety and saying nothing.
-        var pull = { label: fill('moment_drift_pull', s.linked), fn: function () { momentAnswered.drift = true; rsPost('restore', mineNewer ? { force: true } : null); hideMomentCard(); } };
-        var push = { label: fill('moment_drift_push', s.linked), fn: function () { momentAnswered.drift = true; rsPost('push'); hideMomentCard(); } };
+        // The card waits for the answer and shows it in place.
+        var pull = { label: fill('moment_drift_pull', s.linked), fn: function () { momentAnswered.drift = true; momentAct('restore', mineNewer ? { force: true } : null, s.linked); } };
+        var push = { label: fill('moment_drift_push', s.linked), fn: function () { momentAnswered.drift = true; momentAct('push', null, s.linked); } };
         var later = { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.drift = true; hideMomentCard(); } };
         showMomentCard(head, mineNewer ? [push, pull, later] : [pull, push, later]);
         return;
@@ -2275,7 +2679,7 @@
       if (s.state === 'unlinked' && s.fileChars === 0 && rsList.length > 0 && !momentAnswered.first) {
         var kit = rsList.slice().sort(function (a, b) { return (b.updatedAt || '').localeCompare(a.updatedAt || ''); })[0];
         showMomentCard(fill('moment_first', kit.name), [
-          { label: t('moment_first_yes'), fn: function () { momentAnswered.first = true; rsPost('link', { name: kit.name, restore: true }); hideMomentCard(); } },
+          { label: t('moment_first_yes'), fn: function () { momentAnswered.first = true; momentAct('link', { name: kit.name, restore: true }, kit.name); } },
           { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.first = true; hideMomentCard(); } }
         ]);
         return;
@@ -2288,6 +2692,28 @@
         { pluginMessage: { type: 'scope-lock', on: document.getElementById('scopeLock').checked } },
         '*'
       );
+    }
+
+    // A designer-only message the plugin did not apply: undo what the panel
+    // already showed, or show the card again, so the designer can repeat it.
+    function onPanelMessageRefused(message) {
+      if (message === 'approval-response') {
+        approvalQueue = approvalAnswered.concat(approvalQueue);
+        approvalAnswered = [];
+        showNextApproval();
+      } else if (message === 'proposal-response') {
+        if (lastProposalAnswered) proposalQueue.unshift(lastProposalAnswered);
+        lastProposalAnswered = null;
+        showNextProposal();
+      } else if (message === 'guards-set') {
+        parent.postMessage({ pluginMessage: { type: 'guards-refresh' } }, '*');
+      } else if (message === 'save-settings') {
+        if (lastSettingsUndo) lastSettingsUndo();
+        lastSettingsUndo = null;
+      } else if (message === 'scope-lock') {
+        var lock = document.getElementById('scopeLock');
+        lock.checked = !lock.checked;
+      }
     }
 
     // ---------- Collapse toggles ----------
@@ -2526,8 +2952,9 @@
 
     // Rows already closing are excluded from the count, or the trim would keep
     // picking the same ones while they animate out.
+    // Wall notices are pinned: they leave only when the designer dismisses them.
     function feedTrim(feed) {
-      var rows = feed.querySelectorAll('.feed-row.in:not(#feedEmptyRow)');
+      var rows = feed.querySelectorAll('.feed-row.in:not(#feedEmptyRow):not(.pinned)');
       for (var i = FEED_MAX; i < rows.length; i++) {
         (function (row) {
           row.classList.remove('in');
@@ -2591,10 +3018,12 @@
       var ICON_OK = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"/></svg>';
       var ICON_ERR = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"/></svg>';
       var st = e.el.querySelector('.st');
-      var isLaw = !ok && (code === 'guard_blocked' || code === 'scope_locked');
+      var isLaw = !ok && (code === 'guard_blocked' || code === 'scope_locked' || code === 'designer_only');
       if (isLaw) e.el.classList.add('law');
       st.className = 'st ' + (ok ? 'ok' : (isLaw ? 'shu' : 'err'));
       st.innerHTML = ok ? ICON_OK : ICON_ERR;
+      // A script that reached across a wall ran, but it is not a plain success
+      if (ok && e.breach) { st.className = 'st shu'; st.innerHTML = ICON_LAW; }
       var pm = e.el.querySelector('.prog-msg');
       if (pm) pm.parentNode.removeChild(pm);
       e.el.querySelector('.dur').textContent = ((Date.now() - e.t0) / 1000).toFixed(1) + 's';
@@ -2605,6 +3034,94 @@
         e.el.querySelector('.cmd').appendChild(m);
       }
       if (ok && wasCancelling) feedNote(e, t('cancel_too_late'));
+    }
+
+    var ICON_LAW = '<svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M116,152V48a12,12,0,0,1,24,0V152a12,12,0,0,1-24,0Zm12,36a16,16,0,1,0,16,16A16,16,0,0,0,128,188Z"/></svg>';
+
+    function pageList(pages) {
+      return (pages || []).map(function (p) { return t('q').replace('{x}', p.name); }).join(t('list_sep'));
+    }
+    function wordList(prefix, keys) {
+      return (keys || []).map(function (k) { return t(prefix + k); }).join(t('list_sep'));
+    }
+
+    function breachText(v) {
+      if (v.kind === 'scope') return t('breach_scope').replace('{n}', String(v.count));
+      return t('breach_guard').replace('{n}', String(v.count)).replace('{pages}', pageList(v.pages));
+    }
+
+    // One line per thing the walls did. Returns a list: a breach can name
+    // several pages and kinds at once.
+    function noticeLines(n) {
+      if (n.kind === 'script_breach') return (n.violations || []).map(breachText);
+      if (n.kind === 'law_restored' && n.key === 'guards') {
+        return [t(n.by === 'code' ? 'law_guards_code' : 'law_guards_unknown').replace('{pages}', pageList(n.pages))];
+      }
+      if (n.kind === 'law_restored') {
+        return [t(n.by === 'code' ? 'law_settings_code' : 'law_settings_unknown').replace('{fields}', wordList('field_', n.fields))];
+      }
+      if (n.kind === 'law_edited_by_code') return [t('law_voice').replace('{key}', t('voice_' + n.key))];
+      if (n.kind === 'law_tightened_outside' && n.key === 'guards') {
+        return [t('law_tight_guards').replace('{pages}', pageList(n.pages))];
+      }
+      if (n.kind === 'law_tightened_outside') return [t('law_tight_settings').replace('{fields}', wordList('field_', n.fields))];
+      if (n.kind === 'panel_lost') return [t('panel_lost')];
+      if (n.kind === 'panel_message_refused') {
+        return [t(n.reason === 'script_running' ? 'refused_running' : 'refused_cooldown')
+          .replace('{what}', t('msg_' + String(n.message).replace(/-/g, '_')))];
+      }
+      return [];
+    }
+
+    // The command's own row turns vermilion and says what was reached; it no
+    // longer shows a tick. Safe to call before or after the row settles.
+    function feedBreach(id, violations) {
+      var e = entries[id];
+      if (!e || e.breach || !violations || violations.length === 0) return;
+      e.breach = violations;
+      e.el.classList.add('law');
+      violations.forEach(function (v) {
+        var m = document.createElement('span');
+        m.className = 'err-msg';
+        m.textContent = breachText(v);
+        e.el.querySelector('.cmd').appendChild(m);
+      });
+      if (e.status === 'ok') {
+        var st = e.el.querySelector('.st');
+        st.className = 'st shu';
+        st.innerHTML = ICON_LAW;
+      }
+    }
+
+    // A wall notice: a pinned vermilion row that stays until dismissed.
+    function lawNoticeRow(command, notices) {
+      var lines = [];
+      notices.forEach(function (n) { lines = lines.concat(noticeLines(n)); });
+      if (lines.length === 0) return;
+      var feed = document.getElementById('feed');
+      feedHideEmpty();
+      var el = document.createElement('div');
+      el.className = 'feed-entry law notice';
+      el.innerHTML = '<span class="t"></span><span class="st shu">' + ICON_LAW +
+        '</span><span class="cmd"></span><button class="notice-x" type="button">' + MEM_DEL_SVG + '</button>';
+      el.querySelector('.t').textContent = timeStamp();
+      var cmd = el.querySelector('.cmd');
+      cmd.textContent = command || t('law_title');
+      lines.forEach(function (line) {
+        var m = document.createElement('span');
+        m.className = 'err-msg';
+        m.textContent = line;
+        cmd.appendChild(m);
+      });
+      var x = el.querySelector('.notice-x');
+      x.title = t('law_dismiss');
+      x.setAttribute('aria-label', t('law_dismiss'));
+      var wrap = feedInsert(feed, el);
+      wrap.classList.add('pinned');
+      x.onclick = function () {
+        wrap.classList.remove('in');
+        setTimeout(function () { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); }, FEED_ROW_MS);
+      };
     }
 
     // The plugin's answer settles its row whether or not the relay link is up.
@@ -2938,6 +3455,9 @@
         renderMemory();
         if (msg.guards) { guardPages = msg.guards.pages || []; renderGuards(); }
         if (msg.rulesetStatus) { rsStatusData = msg.rulesetStatus; renderConvRow(); }
+        // A kit put back on open leaves a card until the designer has seen it
+        healedNotice = msg.rulesetHealed || null;
+        if (healedNotice) evalMoments();
         renderCheckup(msg.lastCheckup);
         if (s.autoConnect !== false) connect();
         return;
@@ -2987,6 +3507,27 @@
         return;
       }
 
+      if (msg.type === 'ruleset-op-result') {
+        onRulesetOpResult(msg);
+        return;
+      }
+
+      if (msg.type === 'memory-op-result') {
+        if (msg.op === 'promote' && msg.id) { memRowErrors[msg.id] = msg.message; renderMemory(); }
+        else setMemError(msg.message);
+        return;
+      }
+
+      if (msg.type === 'law-notice') {
+        var notices = msg.notices || [];
+        notices.forEach(function (n) {
+          if (n.kind === 'script_breach' && msg.commandId) feedBreach(msg.commandId, n.violations);
+          if (n.kind === 'panel_message_refused') onPanelMessageRefused(n.message);
+        });
+        lawNoticeRow(msg.command, notices);
+        return;
+      }
+
       if (msg.type === 'ruleset-export') {
         downloadRuleset(msg.name, msg.markdown);
         return;
@@ -3006,14 +3547,19 @@
 
       if (msg.type === 'approval-request') {
         if (windowMinimized) { windowRevealTarget = 'approvalCard'; setWindowMinimized(false); }
-        approvalQueue.push({ id: msg.id, command: msg.command, scale: msg.scale, intent: msg.intent });
+        approvalQueue.push({
+          id: msg.id, command: msg.command, scale: msg.scale, intent: msg.intent,
+          deadline: msg.deadline, precedents: msg.precedents
+        });
         showNextApproval();
         return;
       }
 
       if (msg.type === 'approval-settled') {
-        approvalQueue = approvalQueue.filter(function (r) { return r.id !== msg.id; });
-        showNextApproval();
+        settleApproval(msg.id);
+        // A timed-out card settles its row now, and says it timed out rather than
+        // that the designer declined; the command's own error then finds it settled.
+        if (msg.cause === 'timeout') feedSettle(msg.id, false, t('approval_timed_out'));
         return;
       }
 
@@ -3039,6 +3585,7 @@
 
       if (msg.type === 'command-result') {
         feedSettle(msg.id, true);
+        feedBreach(msg.id, msg.violations);
         relayAnswer(msg.id, { id: msg.id, result: msg.result, events: msg.events, meta: msg.meta });
       }
 
