@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { RelaiError } from "@figma-relai/shared";
 import {
   isWriteCommand,
   collectNodeRefs,
@@ -53,6 +54,20 @@ describe("collectNodeRefs", () => {
       })
     ).toEqual(["1:1", "2:1", "2:2", "3:1"]);
   });
+
+  test("a bulk text edit names each item's node", () => {
+    expect(
+      collectNodeRefs({
+        text: [
+          { nodeId: "4:1", text: "a" },
+          { nodeId: "4:2", text: "b" },
+          { text: "no id" },
+          null,
+        ],
+      })
+    ).toEqual(["4:1", "4:2"]);
+    expect(collectNodeRefs({ text: "plain string" })).toEqual([]);
+  });
 });
 
 describe("needsApproval (four-stop dial)", () => {
@@ -79,6 +94,16 @@ describe("needsApproval (four-stop dial)", () => {
     expect(needsApproval("all", "get_node_info", { nodeId: "1:1" })).toBe(false);
   });
 
+  test("all asks for every script, even one that only reads: it cannot be told apart before it runs", () => {
+    expect(needsApproval("all", "execute_code", { code: "return figma.currentPage.name;" })).toBe(true);
+  });
+
+  test("bulk: a bulk text edit across 10+ nodes asks", () => {
+    const text = Array.from({ length: 10 }, (_, i) => ({ nodeId: `5:${i}`, text: "x" }));
+    expect(needsApproval("bulk", "set_multiple_text_contents", { text })).toBe(true);
+    expect(needsApproval("bulk", "set_multiple_text_contents", { text: text.slice(0, 9) })).toBe(false);
+  });
+
   test("bulk: tax + code exec, drift fixes, big batches, wide fan-outs", () => {
     expect(needsApproval("bulk", "delete_variable", { variableId: "V:1" })).toBe(true);
     expect(needsApproval("bulk", "execute_code", {})).toBe(true);
@@ -99,6 +124,72 @@ describe("needsApproval (four-stop dial)", () => {
   });
 });
 
+describe("needsApproval batch", () => {
+  const batch = (...commands: unknown[]) => ({ commands });
+  const write = { command: "set_fill_color", params: { nodeId: "1:1" } };
+  const read = { command: "get_node_info", params: { nodeId: "1:1" } };
+
+  test("RISK: batch with delete_variable asks", () => {
+    expect(needsApproval("risk", "batch_execute", batch({ command: "delete_variable", params: { variableId: "V:1" } }))).toBe(true);
+  });
+
+  test("RISK: batch with detach_instance asks", () => {
+    expect(needsApproval("risk", "batch_execute", batch(write, { command: "detach_instance", params: { nodeId: "1:2" } }))).toBe(true);
+  });
+
+  test("RISK: batch with 10+ node delete asks", () => {
+    const nodeIds = Array.from({ length: 10 }, (_, i) => `2:${i}`);
+    expect(needsApproval("risk", "batch_execute", batch({ command: "delete_multiple_nodes", params: { nodeIds } }))).toBe(true);
+    expect(needsApproval("risk", "batch_execute", batch(write, write))).toBe(false);
+  });
+
+  test("BULK: batch with one execute_code asks", () => {
+    expect(needsApproval("bulk", "batch_execute", batch(write, { command: "execute_code", params: { code: "" } }))).toBe(true);
+  });
+
+  test("BULK: 9 plain writes stay silent", () => {
+    expect(needsApproval("bulk", "batch_execute", batch(...Array.from({ length: 9 }, () => write)))).toBe(false);
+  });
+
+  test("OPEN: nothing asks even in batch", () => {
+    expect(needsApproval("open", "batch_execute", batch({ command: "delete_variable", params: {} }, { command: "execute_code", params: {} }))).toBe(false);
+  });
+
+  test("ALL: read-only batch no longer asks", () => {
+    expect(needsApproval("all", "batch_execute", batch(read, read))).toBe(false);
+    expect(needsApproval("all", "batch_execute", batch(read, write))).toBe(true);
+  });
+
+  test("nested batch inherits", () => {
+    const inner = { command: "batch_execute", params: batch({ command: "delete_style", params: { styleId: "S:1" } }) };
+    expect(needsApproval("risk", "batch_execute", batch(write, inner))).toBe(true);
+    const innerCode = { command: "batch_execute", params: batch({ command: "execute_code", params: {} }) };
+    expect(needsApproval("bulk", "batch_execute", batch(innerCode))).toBe(true);
+  });
+
+  test("depth > 3 throws invalid_params", () => {
+    let params: Record<string, unknown> = batch(write);
+    for (let i = 0; i < 3; i++) params = batch({ command: "batch_execute", params });
+    let thrown: unknown;
+    try {
+      needsApproval("risk", "batch_execute", params);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(RelaiError);
+    expect((thrown as RelaiError).code).toBe("invalid_params");
+
+    // Three levels of batch_execute are still fine
+    let ok: Record<string, unknown> = batch(write);
+    for (let i = 0; i < 2; i++) ok = batch({ command: "batch_execute", params: ok });
+    expect(needsApproval("risk", "batch_execute", ok)).toBe(false);
+  });
+
+  test("a batch item without a command is read as a write that asks", () => {
+    expect(needsApproval("risk", "batch_execute", batch({ params: {} }))).toBe(true);
+  });
+});
+
 describe("migrateConfirmLevel", () => {
   test("legacy pairs map onto the dial", () => {
     expect(migrateConfirmLevel(undefined, undefined)).toBe("risk");
@@ -111,10 +202,29 @@ describe("migrateConfirmLevel", () => {
 
 describe("describeScale", () => {
   test("batches count commands, fan-outs count nodes", () => {
-    expect(describeScale("batch_execute", { commands: [{}, {}, {}] })).toBe("3 commands");
+    const write = { command: "set_fill_color", params: { nodeId: "1:1" } };
+    expect(describeScale("batch_execute", { commands: [write, write, write] })).toBe("3 commands");
     expect(describeScale("set_instance_overrides", { targetNodeIds: ["a", "b"] })).toBe("2 nodes");
     expect(describeScale("delete_node", { nodeId: "1:1" })).toBe("1 node");
     expect(describeScale("execute_code", {})).toBe("");
+  });
+});
+
+describe("describeScale batch", () => {
+  test("names execute_code and tax counts", () => {
+    expect(
+      describeScale("batch_execute", {
+        commands: [
+          { command: "execute_code", params: { code: "" } },
+          { command: "delete_variable", params: { variableId: "V:1" } },
+          { command: "delete_style", params: { styleId: "S:1" } },
+          {
+            command: "batch_execute",
+            params: { commands: [{ command: "detach_instance", params: { nodeId: "1:1" } }] },
+          },
+        ],
+      })
+    ).toBe("4 commands · contains execute_code · 2 ghost-risk · 1 irreversible");
   });
 });
 
