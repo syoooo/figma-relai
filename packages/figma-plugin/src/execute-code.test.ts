@@ -180,4 +180,19 @@ describe("execute_code after the script", () => {
     expect(out.warnings?.some((w) => w.startsWith("GUARD VIOLATION:"))).toBe(true);
     expect(posted).toEqual([{ type: "law-notice", commandId: "req-8", command: "execute_code", notices: out.law }]);
   });
+
+  test("a script that throws is still checked for nodes it made on a no-go page", async () => {
+    const page = { id: "0:9", name: "Brand / Masters", type: "PAGE", parent: null };
+    const frame = { id: "32:1", name: "frame", type: "FRAME", parent: page };
+    nodes.set(frame.id, frame);
+    fakeFigma.createFrame = () => frame;
+    guardsStored = JSON.stringify({ pages: ["0:9"] });
+    const error = await failure({ code: "relai.autoLayout(); throw new Error('late');", commandId: "req-9" });
+    expect(error.code).toBe("script_error");
+    expect(error.message).toContain("GUARD VIOLATION:");
+    const violation = { kind: "guard", count: 1, nodeIds: ["32:1"], pages: [{ id: "0:9", name: "Brand / Masters" }] };
+    expect(posted).toEqual([
+      { type: "law-notice", commandId: "req-9", command: "execute_code", notices: [{ kind: "script_breach", violations: [violation] }] },
+    ]);
+  });
 });

@@ -347,17 +347,6 @@ export function rulesetOpResult(
   return { type: "ruleset-op-result", op, ok: true, ...(skipped ? { precedentsSkipped: skippedCount(skipped) } : {}) };
 }
 
-/**
- * Panel restore (and link + restore) as a toast, until the panel reads
- * `ruleset-op-result` (rulesetOpResult) and says it on the kit card.
- */
-export function notifySkippedSeeds(r: RestoreResult | null): void {
-  if (r?.precedentsSkipped)
-    figma.notify(
-      `Relai: restored conventions from ruleset "${r.restored}" — ${r.precedentsSkipped.count} seed precedents skipped, file memory full`
-    );
-}
-
 // ─── Export / import (the future sharing format) ────────────────────
 
 export function rulesetToMarkdown(set: Ruleset): string {

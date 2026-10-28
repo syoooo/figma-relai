@@ -436,3 +436,23 @@ describe("resize handle", () => {
     expect(rule).toContain("background: transparent");
   });
 });
+
+describe("panel liveness", () => {
+  // main.ts reports panel_lost only after the panel has said hello, and only
+  // when the hello count or the relay state changes across a command
+  test("the panel says hello once when it loads", () => {
+    expect(script.match(/type: 'panel-hello'/g)?.length).toBe(1);
+  });
+
+  test("the relay link is reported when it opens and when an opened link closes", () => {
+    const open = script.match(/ws\.onopen = function \(\) \{[\s\S]*?\n {6}\};/)![0];
+    const close = script.match(/ws\.onclose = function \(\) \{[\s\S]*?\n {6}\};/)![0];
+    expect(open).toContain("postRelayState(true)");
+    expect(close).toContain("if (opened) postRelayState(false)");
+    const posted: unknown[] = [];
+    lift<(c: boolean) => void>(["postRelayState"], "", "postRelayState", {
+      parent: { postMessage: (m: unknown) => posted.push(m) },
+    })(false);
+    expect(posted).toEqual([{ pluginMessage: { type: "relay-state", connected: false } }]);
+  });
+});

@@ -81,6 +81,59 @@ async function pageRefOf(nodeId: string): Promise<PageRef | null> {
   return node ? { id: node.id, name: node.name } : null;
 }
 
+/**
+ * Nodes a script touched that sit outside the scope lock or on a no-go page,
+ * as warnings for the agent and violations for the result and the panel.
+ */
+async function wallBreaches(nodeIds: Iterable<string>): Promise<{ warnings: string[]; violations: Violation[] }> {
+  const ids = [...nodeIds];
+  const warnings: string[] = [];
+  const violations: Violation[] = [];
+  // Scope lock can't intercept arbitrary code up front, so it lints after the
+  // fact: touched nodes outside the locked selection get a loud warning.
+  if (isScopeLocked()) {
+    const outside: string[] = [];
+    for (const nodeId of ids) {
+      if (!(await isInLockedScope(nodeId))) outside.push(nodeId);
+    }
+    if (outside.length > 0) {
+      const { names } = scopeLockState();
+      warnings.push(
+        `SCOPE VIOLATION: ${outside.length} node(s) (${outside.slice(0, 5).join(", ")}) are outside "${names.join('", "')}", which the designer restricted edits to. Undo those changes and stay within the locked selection.`
+      );
+      violations.push({ kind: "scope", count: outside.length, nodeIds: outside.slice(0, MAX_VIOLATION_IDS) });
+    }
+  }
+
+  // Same blind spot, same remedy: enforcePageGuards catches execute_code only
+  // when the current page is guarded, so code that reaches across to another
+  // no-go zone is reported here rather than passing silently.
+  const guardHits = await guardedNodesAmong(ids);
+  if (guardHits.length > 0) {
+    const pages = [...new Set(guardHits.map((h) => h.pageName))];
+    warnings.push(
+      `GUARD VIOLATION: ${guardHits.length} node(s) (${guardHits
+        .slice(0, 5)
+        .map((h) => h.nodeId)
+        .join(", ")}) live on AI no-go zone(s) "${pages.join(
+        '", "'
+      )}" the designer declared off-limits. Undo those changes and ask before touching that page.`
+    );
+    const pageRefs = new Map<string, PageRef>();
+    for (const hit of guardHits) {
+      const ref = await pageRefOf(hit.nodeId);
+      if (ref) pageRefs.set(ref.id, ref);
+    }
+    violations.push({
+      kind: "guard",
+      count: guardHits.length,
+      nodeIds: guardHits.slice(0, MAX_VIOLATION_IDS).map((h) => h.nodeId),
+      pages: [...pageRefs.values()],
+    });
+  }
+  return { warnings, violations };
+}
+
 registerHandler("execute_code", async (params) => {
   const walls = wallsForCode();
   if (!walls.currentWalls().allowCodeExec) {
@@ -148,6 +201,10 @@ registerHandler("execute_code", async (params) => {
   const restored = lawRestoredWarning(law);
 
   if (failure) {
+    // A script that threw returned nothing, but the nodes it made through the
+    // relai helpers before the throw are still checked against the walls
+    const breach = await wallBreaches(relaiCreated.map((node) => node?.id).filter((id): id is string => !!id));
+    if (breach.violations.length > 0) law.push({ kind: "script_breach", violations: breach.violations });
     postLawNotice(params.commandId, law);
     // Known Plugin API pitfalls get their remedy appended so the AI can
     // self-correct in one round-trip (registry: shared/src/pitfalls.ts).
@@ -157,7 +214,7 @@ registerHandler("execute_code", async (params) => {
     const hint = pitfallHint(message);
     throw new RelaiError(
       "script_error",
-      `${hint ? `${message} — Hint: ${hint}` : message} (Scripts are not atomic: changes made before the error stay in the file.)${restored ? ` ${restored}` : ""}`
+      `${hint ? `${message} — Hint: ${hint}` : message} (Scripts are not atomic: changes made before the error stay in the file.)${restored ? ` ${restored}` : ""}${breach.warnings.map((w) => ` ${w}`).join("")}`
     );
   }
 
@@ -218,49 +275,8 @@ registerHandler("execute_code", async (params) => {
     );
   }
 
-  // Scope lock can't intercept arbitrary code up front, so it lints after the
-  // fact: touched nodes outside the locked selection get a loud warning.
-  const violations: Violation[] = [];
-  if (isScopeLocked()) {
-    const outside: string[] = [];
-    for (const [nodeId] of lintTargets) {
-      if (!(await isInLockedScope(nodeId))) outside.push(nodeId);
-    }
-    if (outside.length > 0) {
-      const { names } = scopeLockState();
-      warnings.push(
-        `SCOPE VIOLATION: ${outside.length} node(s) (${outside.slice(0, 5).join(", ")}) are outside "${names.join('", "')}", which the designer restricted edits to. Undo those changes and stay within the locked selection.`
-      );
-      violations.push({ kind: "scope", count: outside.length, nodeIds: outside.slice(0, MAX_VIOLATION_IDS) });
-    }
-  }
-
-  // Same blind spot, same remedy: enforcePageGuards catches execute_code only
-  // when the current page is guarded, so code that reaches across to another
-  // no-go zone is reported here rather than passing silently.
-  const guardHits = await guardedNodesAmong([...lintTargets.keys()]);
-  if (guardHits.length > 0) {
-    const pages = [...new Set(guardHits.map((h) => h.pageName))];
-    warnings.push(
-      `GUARD VIOLATION: ${guardHits.length} node(s) (${guardHits
-        .slice(0, 5)
-        .map((h) => h.nodeId)
-        .join(", ")}) live on AI no-go zone(s) "${pages.join(
-        '", "'
-      )}" the designer declared off-limits. Undo those changes and ask before touching that page.`
-    );
-    const pageRefs = new Map<string, PageRef>();
-    for (const hit of guardHits) {
-      const ref = await pageRefOf(hit.nodeId);
-      if (ref) pageRefs.set(ref.id, ref);
-    }
-    violations.push({
-      kind: "guard",
-      count: guardHits.length,
-      nodeIds: guardHits.slice(0, MAX_VIOLATION_IDS).map((h) => h.nodeId),
-      pages: [...pageRefs.values()],
-    });
-  }
+  const { warnings: breachWarnings, violations } = await wallBreaches(lintTargets.keys());
+  warnings.push(...breachWarnings);
 
   if (violations.length > 0) law.push({ kind: "script_breach", violations });
   if (restored) warnings.unshift(restored);

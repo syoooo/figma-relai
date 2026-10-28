@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.8.1
+
+The walls hold against the agent in the same session, and the panel no longer goes quiet.
+
+### Breaking changes
+
+- **An agent can no longer lift the designer's no-go zones.** `manage_pages action:unguard`, and `set_guards` anywhere — inside `batch_execute` too — are refused with `designer_only` when they would lift a zone the designer set; the message starts with `Designer-only:` and points to the panel. An agent can still add zones, and lift one it added itself in the same plugin session. `unguard` now sends a removal request, so a 0.8.0 or older plugin refuses it ("set_guards needs pages") rather than lifting anything.
+- **`batch_execute` asks by what it wraps.** At RISK a wrapped ghost-making or irreversible command asks; at BULK a single wrapped `execute_figma` asks; at ALL a batch of reads no longer asks. Batches nested deeper than three levels are refused with `invalid_params`. At ALL every `execute_figma` still asks, even one that only reads, because the plugin cannot tell before it runs.
+
+### Changes
+
+- **Wall settings are the plugin's own and stored per file.** The confirmation level, the code toggle and the scope lock are enforced from the plugin's copy and saved per file; a lock no longer follows you into another file. A script that rewrites them, or clears a no-go zone, is undone when it ends — or at the next command, for a delayed write — and reported as `law` with a LAW RESTORED warning. The code toggle is read from that copy too, so a script writing plugin storage cannot turn it on.
+- **The panel's handler is out of a script's reach.** Panel messages are registered with `figma.ui.on`, so a script cannot call them as the designer, and designer-only panel actions are not applied while a script runs or for 3 seconds after; the feed says so and the control goes back.
+- **`execute_figma` reports what a script reached across a wall**, as `violations` and a `script_breach` notice: nodes on a no-go page or outside the scope lock, among those it created through the `relai` helpers or returned. A script that throws is checked for the nodes it created before the throw. Changes a script makes to conventions, precedents or the kit link are reported, not reverted.
+- **A multi-node `set_text` is checked item by item** against no-go zones and the scope lock before it runs; 10 or more items ask at BULK.
+- **Precedents arrive before the write**: matched against the file as it was, first in the result, on each item of a batch, and on the approval card (the first two).
+- **The approval card counts down** and turns amber in its last 30 seconds; a timed-out card says so on its row.
+- **Kit results stay where you acted.** Push and restore results, refusals included, stay on the card or in the kit list, with who moved the kit and when; overwriting someone else's push takes a second click. A ruleset restored on open leaves a card instead of a toast.
+- **Wall notices stay in the activity feed until dismissed**: no-go pages put back, settings restored, a script that reached across a wall, a refused panel action, a panel that lost its relay link during a command.
+- **Command errors no longer show a toast**; the activity feed records them, and a failed precedent note says why under its input.
+- **Every call that reached the plugin ends with a `[relai]` line**, reads included, and a failed command's line names the file.
+- **A call in flight fails at once when its plugin closes**, as `link_dropped` with outcome `unknown`, instead of waiting for its timeout.
+- **Results are cut at 40,000 characters**, so the cut text, its notice and the `[relai]` line stay under the 50,000-character limit at which some clients move a result out to a file. A 0.8.0 server still cuts at 50,000.
+- **The write log says why a command did not run**: denied, timeout or stopped.
+- **The resize corner no longer draws a dark square**, and the code-execution switch says that scripts can reach no-go pages and are reported, not blocked.
+- **README, SECURITY.md, the site and the tool descriptions say what the walls do now**, including where they stop: scripts are checked after they run, and nothing guards writes that do not go through Relai.
+
 ## 0.8.0
 
 Every result says whether Figma changed.

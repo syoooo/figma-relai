@@ -1,14 +1,14 @@
 # Security Policy
 
-**Designer-side containment.** Beyond the code-execution toggle: a four-stop confirmation dial (OPEN · RISK · BULK · ALL — RISK stops ghost-making and irreversible operations even in otherwise-silent mode), per-page AI no-go zones, and a selection lock, all set in the panel. No Relai tool changes the dial, the toggle or the lock; an agent can add or lift a no-go zone with `manage_pages`, and that command is listed in the activity feed like any other.
+**Designer-side containment.** Beyond the code-execution toggle: a four-stop confirmation dial (OPEN · RISK · BULK · ALL — RISK stops ghost-making and irreversible operations, including inside batches), per-page AI no-go zones, and a selection lock, all set in the panel and stored per file. No Relai tool changes the dial, the toggle or the lock. Through Relai an agent can add a no-go zone but cannot lift one the designer set (it may take back a zone it added in the same plugin session); the refusal reads `Designer-only` and points to the panel. If a script rewrites any of these settings, Relai restores the designer's value when the script ends, or at the next command, and flags it in the activity feed.
 
 These checks run in the plugin before a Relai command does, with limits stated plainly:
 
-- The dial reads the top-level command, so a destructive operation wrapped in `batch_execute` asks only at ALL, or at BULK when the batch is large.
-- Commands that carry their node ids inside a list (a multi-node `set_text`, `annotate set_multiple`) are checked against the current page only, not against the lock or the pages of those nodes.
+- The dial reads what a `batch_execute` wraps, down to three levels of nesting; deeper batches are refused. At ALL every script asks, even one that only reads, because the plugin cannot tell before it runs.
+- A multi-node `set_text` is checked item by item. `annotate set_multiple` carries its node ids inside a list and is checked against the current page only, not against the lock or the pages of those nodes.
 - Variables and modes belong to no page; no-go zones do not cover them.
-- `execute_figma` is refused up front only when the current page is a no-go zone. Otherwise its result warns the agent afterwards about nodes it created through the `relai` helpers or returned that sit on a no-go page or outside the lock.
-- With code execution on, a script runs in the same sandbox as these checks and can rewrite them, along with the law stored in the file. Turn code execution off where that matters.
+- `execute_figma` is refused up front only when the current page is a no-go zone. Otherwise it is checked after it runs, even when it throws: nodes it created through the `relai` helpers or returned that sit on a no-go page or outside the lock are reported to the agent and in the panel, not prevented.
+- With code execution on, a script runs in the same sandbox as these checks. Changes it makes to Relai's own settings are reverted; designer-only panel actions are not applied while a script runs or for three seconds after; edits to the conventions and precedents stored in the file are reported, not reverted. This stops an agent cutting corners, not deliberate tampering: a script that closes the plugin before Relai can check may leave a changed setting behind for the next session. Turn code execution off where that matters.
 - None of this constrains writes that do not go through Relai: another plugin, another MCP server, manual edits, or anything done while the plugin is closed.
 
 ## Threat model

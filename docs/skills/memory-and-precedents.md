@@ -39,7 +39,7 @@ When conventions or repeated precedents describe something ENFORCEABLE, propose 
 - "Never touch page X" (in conventions or a repeated ruling) → send a panel proposal: `propose_rule` (via batch_execute) with `kind: "page_guard"`, the `pageIds`, and a `reason` that QUOTES the sentence it comes from. The designer gets a card and decides there; do not wait for the verdict and do not guard on your own. Mention in your reply that you proposed it.
 - Repeated identical adjudications ("this is intent" three times on the same token family) → offer to consolidate them into one conventions line, then remove the superseded precedents.
 
-Guards belong to the designer: never guard/unguard on your own judgment, and mention any guard change in your reply.
+Guards belong to the designer. Add one only when the designer asks; lifting a guard the designer set is refused (Designer-only) — point the designer to the panel. Mention any guard change in your reply.
 
 ## Kits — the law's common ancestor
 

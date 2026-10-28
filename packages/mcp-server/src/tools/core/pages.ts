@@ -7,7 +7,7 @@ import { jsonResult, errorResult } from "./helpers.js";
 export function register(server: McpServer, sendCommand: SendCommandFn): void {
   server.tool(
     "manage_pages",
-    "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page. Guards: list_guards shows the designer's AI no-go zones; guard/unguard change them — ONLY do that when the designer explicitly asks (guards are theirs; every change shows in their activity feed). Writes into a guarded page are rejected at dispatch.",
+    "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page. Guards: list_guards shows the designer's AI no-go zones. guard adds one — ONLY when the designer explicitly asks. unguard is refused (Designer-only) for a zone the designer set: lifting it is done in the panel; only a zone you added in this plugin session can be lifted. Every change shows in the designer's activity feed. Writes into a guarded page are rejected before they run, batch included.",
     {
       action: z.enum(["list", "create", "rename", "delete", "set_background", "list_guards", "guard", "unguard"]),
       pageId: z.string().optional().describe("Target page (rename/delete/set_background/guard/unguard)"),

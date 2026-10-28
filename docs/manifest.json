@@ -1,6 +1,6 @@
 {
   "name": "figma-relai",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "tools": [
     {
       "name": "batch_execute",
@@ -54,7 +54,7 @@
     {
       "name": "execute_figma",
       "category": "advanced",
-      "description": "Run JavaScript against the Figma Plugin API inside the plugin sandbox — the escape hatch for anything the other tools don't cover. The code runs in an async function with `figma` AND `relai` in scope. relai helpers avoid the classic pitfalls: relai.text(parent, chars, {font,size,color}) loads fonts first; relai.autoLayout(direction, props) makes a hugging auto-layout frame; relai.set(node, props) applies layoutMode first and routes width/height through resize; relai.hug(node); relai.focusRing(node); await relai.page(p => ...) finds pages by content, not name; relai.query('FRAME[name^=Card] > TEXT') is a CSS-like search (types, name matchers, descendant/child, comma); relai.placeholder(node) shows a construction veil — remove with (node, false) when done. Errors carry a Hint with the fix; scripts are NOT atomic — on error, partial changes persist, so keep scripts small and idempotent. Nodes created via relai plus any node ids you RETURN are linted for silent mistakes (e.g. spread shadows without clipsContent) and come back as `warnings`. Return ALL created/mutated node ids. Work incrementally; verify with screenshot. When BUILDING UI: call get_design_system first and instantiate the file's own components / bind its variables instead of drawing raw shapes — hand-drawn near-copies of existing components read as drift to the design team. The designer can disable this tool via the plugin's 'Allow code execution' toggle.",
+      "description": "Run JavaScript against the Figma Plugin API inside the plugin sandbox — the escape hatch for anything the other tools don't cover. The code runs in an async function with `figma` AND `relai` in scope. relai helpers avoid the classic pitfalls: relai.text(parent, chars, {font,size,color}) loads fonts first; relai.autoLayout(direction, props) makes a hugging auto-layout frame; relai.set(node, props) applies layoutMode first and routes width/height through resize; relai.hug(node); relai.focusRing(node); await relai.page(p => ...) finds pages by content, not name; relai.query('FRAME[name^=Card] > TEXT') is a CSS-like search (types, name matchers, descendant/child, comma); relai.placeholder(node) shows a construction veil — remove with (node, false) when done. Errors carry a Hint with the fix; scripts are NOT atomic — on error, partial changes persist, so keep scripts small and idempotent. Nodes created via relai plus any node ids you RETURN are linted for silent mistakes (e.g. spread shadows without clipsContent) and come back as `warnings`. Return ALL created/mutated node ids. Work incrementally; verify with screenshot. When BUILDING UI: call get_design_system first and instantiate the file's own components / bind its variables instead of drawing raw shapes — hand-drawn near-copies of existing components read as drift to the design team. Scripts are checked after they run, not before: nodes on no-go pages or outside the scope lock come back as `violations` and warnings, and any change to Relai's own guards or settings is reverted and reported as `law`. The designer can disable this tool via the plugin's 'Allow code execution' toggle.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1452,7 +1452,7 @@
     {
       "name": "manage_pages",
       "category": "document",
-      "description": "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page. Guards: list_guards shows the designer's AI no-go zones; guard/unguard change them — ONLY do that when the designer explicitly asks (guards are theirs; every change shows in their activity feed). Writes into a guarded page are rejected at dispatch.",
+      "description": "Page operations: list all pages, create/rename/delete a page, or set a page's background color. To make a page current, use navigate with switch_page. Guards: list_guards shows the designer's AI no-go zones. guard adds one — ONLY when the designer explicitly asks. unguard is refused (Designer-only) for a zone the designer set: lifting it is done in the panel; only a zone you added in this plugin session can be lifted. Every change shows in the designer's activity feed. Writes into a guarded page are rejected before they run, batch included.",
       "inputSchema": {
         "type": "object",
         "properties": {

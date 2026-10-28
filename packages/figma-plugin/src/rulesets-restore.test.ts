@@ -3,7 +3,6 @@ import { dispatch } from "./dispatcher.js";
 import {
   contentHash,
   KitRefusedError,
-  notifySkippedSeeds,
   reconcileOnLoad,
   restoreFromRuleset,
   rulesetOpResult,
@@ -134,7 +133,6 @@ describe("restore notices", () => {
     const memory = many(MEMORY_MAX_ENTRIES - 1);
     return { memory, seeds: [precedent("s1"), precedent("s2")] };
   };
-  const skippedLine = " — 2 seed precedents skipped, file memory full";
 
   test("the automatic heal returns the kit's date and the skipped seeds for the panel's card, with no toast", async () => {
     const { memory, seeds } = tooMany();
@@ -153,26 +151,25 @@ describe("restore notices", () => {
     expect(await reconcileOnLoad()).toEqual({ healed: true, name: "kit", kitUpdatedAt: "2026-09-01T00:00:00.000Z" });
   });
 
-  test("a panel restore that skips seeds says so in the same words", async () => {
-    const { memory, seeds } = tooMany();
-    setup(memory, seeds);
-    notifySkippedSeeds((await dispatch("restore_from_ruleset", {})) as RestoreResult);
-    expect(notices).toEqual([`Relai: restored conventions from ruleset "kit"${skippedLine}`]);
-  });
-
-  test("a panel link with restore that skips seeds says so too", async () => {
+  test("a panel link with restore reports the skipped seeds for the kit card", async () => {
     const { memory, seeds } = tooMany();
     setup(memory, seeds);
     const out = (await dispatch("link_ruleset", { name: "kit", restore: true })) as { restored: RestoreResult | null };
-    notifySkippedSeeds(out.restored);
-    expect(notices).toEqual([`Relai: restored conventions from ruleset "kit"${skippedLine}`]);
+    expect(rulesetOpResult("link", { restored: out.restored })).toEqual({
+      type: "ruleset-op-result",
+      op: "link",
+      ok: true,
+      precedentsSkipped: { count: 2, limit: MEMORY_MAX_ENTRIES },
+    });
+    expect(notices).toEqual([]);
   });
 
-  test("a panel restore or link that skips nothing stays quiet", async () => {
+  test("a panel restore or link that skips nothing reports no skipped seeds", async () => {
     setup([precedent("a")], [precedent("s1")]);
-    notifySkippedSeeds((await dispatch("restore_from_ruleset", {})) as RestoreResult);
+    const restored = (await dispatch("restore_from_ruleset", {})) as RestoreResult;
+    expect(rulesetOpResult("restore", { restored })).toEqual({ type: "ruleset-op-result", op: "restore", ok: true });
     const out = (await dispatch("link_ruleset", { name: "kit" })) as { restored: RestoreResult | null };
-    notifySkippedSeeds(out.restored);
+    expect(rulesetOpResult("link", { restored: out.restored })).toEqual({ type: "ruleset-op-result", op: "link", ok: true });
     expect(notices).toEqual([]);
   });
 });
