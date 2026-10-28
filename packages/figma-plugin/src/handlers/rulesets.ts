@@ -7,10 +7,11 @@
 // Known limit, by design: clientStorage is per-machine. The ruleset is the
 // law's home, not its only backup — export/import covers moving machines.
 
+import type { KitRefusal, RulesetHealed, RulesetOp, RulesetOpResultMessage } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
-import { readMemory, writeMemory } from "./memory.js";
+import { noteVoiceWrite, readMemory, writeMemory } from "./memory.js";
 import { additionOverflow, type CapacityOverflow, type PrecedentEntry } from "../memory-core.js";
-import { contentHash, newerSide, restoreWouldLoseWork } from "../ruleset-core.js";
+import { contentHash, kitRefusalMessage, newerSide, pushRefusal, restoreRefusal } from "../ruleset-core.js";
 
 export { contentHash } from "../ruleset-core.js";
 
@@ -85,6 +86,7 @@ export function readLink(): RulesetLink | null {
 }
 
 function writeLink(link: RulesetLink | null): void {
+  noteVoiceWrite();
   figma.root.setSharedPluginData(LINK_NS, LINK_KEY, link ? JSON.stringify(link) : "");
 }
 
@@ -101,6 +103,7 @@ function fileConventionsAt(): string {
  * can be adjudicated by date instead of guessed at.
  */
 export function writeFileConventions(content: string): void {
+  noteVoiceWrite();
   figma.root.setSharedPluginData(LINK_NS, CONVENTIONS_KEY, content);
   figma.root.setSharedPluginData(LINK_NS, CONVENTIONS_AT_KEY, content ? nowIso() : "");
 }
@@ -160,6 +163,17 @@ async function requireSet(name: unknown): Promise<{ sets: Ruleset[]; set: Rulese
   return { sets, set: sets[index], index };
 }
 
+/**
+ * A push or restore the kit guard refused. The message is what the agent
+ * reads; `refusal` carries the same facts for the panel's kit card.
+ */
+export class KitRefusedError extends Error {
+  constructor(readonly refusal: KitRefusal) {
+    super(kitRefusalMessage(refusal));
+    this.name = "KitRefusedError";
+  }
+}
+
 /** Seed precedents a restore left out because the file memory can't hold them all. */
 interface SeedsSkipped {
   count: number;
@@ -192,16 +206,8 @@ export async function restoreFromRuleset(force = false): Promise<RestoreResult> 
   const { set } = await requireSet(link.name);
   const before = fileConventions();
   const beforeAt = fileConventionsAt();
-  if (!force && restoreWouldLoseWork(before, beforeAt, set.conventions, set.updatedAt)) {
-    {
-      throw new Error(
-        `Restore would overwrite newer law. This file's conventions (${before.length} chars, written ${beforeAt}) ` +
-          `are more recent than ruleset "${set.name}" (${set.conventions.length} chars, ${set.updatedAt}). ` +
-          `If the file's law is the one to keep, push it up instead (file → kit). ` +
-          `To replace the file anyway, restore with force: true.`
-      );
-    }
-  }
+  const refusal = force ? null : restoreRefusal(before, beforeAt, set);
+  if (refusal) throw new KitRefusedError(refusal);
   writeFileConventions(set.conventions);
   let seeded = 0;
   let skipped: SeedsSkipped | undefined;
@@ -265,19 +271,8 @@ export async function pushToRuleset(
   // (measured 2026-08-12: a kit overwritten with another file's 2,838
   // chars). If the kit has moved since THIS file last synced it, refuse and
   // make the caller look before overwriting.
-  if (
-    !force &&
-    link.lastSyncHash &&
-    set.conventions.length > 0 &&
-    contentHash(set.conventions) !== link.lastSyncHash
-  ) {
-    throw new Error(
-      `Ruleset "${set.name}" has changed since this file last synced it ` +
-        `(kit ${set.conventions.length} chars, updated ${set.updatedAt}` +
-        `${set.updatedBy ? ` by "${set.updatedBy}"` : ""}). ` +
-        `Review with list/export first; pass force:true only if this file's law should replace it.`
-    );
-  }
+  const refusal = force ? null : pushRefusal(link.lastSyncHash, set, file.length);
+  if (refusal) throw new KitRefusedError(refusal);
   sets[index] = { ...set, conventions: file, updatedAt: nowIso(), updatedBy: figma.root.name };
   await writeRulesets(sets);
   writeLink({ name: set.name, lastSyncHash: contentHash(file) });
@@ -301,9 +296,13 @@ export async function postRulesetState(): Promise<void> {
   });
 }
 
-/** Called once on plugin load: heal the merge wound, or surface it. */
+/**
+ * Called once on plugin load: heal the merge wound, or surface it. A heal
+ * returns what the panel's card names: the kit, how old it is, and any seed
+ * precedents left out.
+ */
 export async function reconcileOnLoad(): Promise<
-  { healed: true; name: string } | { healed: false; status: RulesetStatus }
+  ({ healed: true } & RulesetHealed) | { healed: false; status: RulesetStatus }
 > {
   const status = await rulesetStatus();
   if (status.state === "file-empty" && status.autoRestore) {
@@ -311,25 +310,51 @@ export async function reconcileOnLoad(): Promise<
     // to destroy — but say how old the kit is, because a merge wound healed
     // with a stale ancestor still leaves the designer a day behind.
     const r = await restoreFromRuleset(true);
-    figma.notify(restoreNotice(r, status.setUpdatedAt));
-    return { healed: true, name: r.restored };
+    return {
+      healed: true,
+      name: r.restored,
+      ...(status.setUpdatedAt ? { kitUpdatedAt: status.setUpdatedAt } : {}),
+      ...(r.precedentsSkipped ? { precedentsSkipped: skippedCount(r.precedentsSkipped) } : {}),
+    };
   }
   return { healed: false, status };
 }
 
-/** The designer-facing line for a restore — the one wording for the automatic heal and the panel's. */
-function restoreNotice(r: RestoreResult, kitUpdatedAt?: string): string {
-  const age = kitUpdatedAt ? ` (kit last written ${kitUpdatedAt.slice(0, 10)})` : "";
-  const skipped = r.precedentsSkipped ? ` — ${r.precedentsSkipped.count} seed precedents skipped, file memory full` : "";
-  return `Relai: restored conventions from ruleset "${r.restored}"${age}${skipped}`;
+function skippedCount(skipped: SeedsSkipped): { count: number; limit: number } {
+  return { count: skipped.count, limit: skipped.limit };
 }
 
 /**
- * Panel restore (and link + restore): the panel shows the law coming back but
- * not the seeds that stayed out, so say so when some did.
+ * The `ruleset-op-result` message for a panel action. `restored` is the
+ * restore a link or restore ran, if any; `error` is what the action threw.
+ */
+export function rulesetOpResult(
+  op: RulesetOp,
+  outcome: { restored?: RestoreResult | null } | { error: unknown }
+): RulesetOpResultMessage {
+  if ("error" in outcome) {
+    const { error } = outcome;
+    return {
+      type: "ruleset-op-result",
+      op,
+      ok: false,
+      ...(error instanceof KitRefusedError ? { refusal: error.refusal } : {}),
+      message: error instanceof Error ? error.message : String(error),
+    };
+  }
+  const skipped = outcome.restored?.precedentsSkipped;
+  return { type: "ruleset-op-result", op, ok: true, ...(skipped ? { precedentsSkipped: skippedCount(skipped) } : {}) };
+}
+
+/**
+ * Panel restore (and link + restore) as a toast, until the panel reads
+ * `ruleset-op-result` (rulesetOpResult) and says it on the kit card.
  */
 export function notifySkippedSeeds(r: RestoreResult | null): void {
-  if (r?.precedentsSkipped) figma.notify(restoreNotice(r));
+  if (r?.precedentsSkipped)
+    figma.notify(
+      `Relai: restored conventions from ruleset "${r.restored}" — ${r.precedentsSkipped.count} seed precedents skipped, file memory full`
+    );
 }
 
 // ─── Export / import (the future sharing format) ────────────────────
