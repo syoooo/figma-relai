@@ -52,7 +52,8 @@ You control Figma through ~30 consolidated tools. Pairing with the Figma plugin 
   batch_execute — run many plugin-level commands in one round-trip
   execute_figma — run JavaScript against the Figma Plugin API directly
     (the escape hatch when no tool fits; small incremental scripts,
-     screenshot between steps; the designer can disable it)
+     screenshot between steps; checked after it runs;
+     the designer can disable it)
 
 OPERATING PRINCIPLES:
 - Inspect context BEFORE changing things; don't assume selection state
@@ -64,13 +65,14 @@ OPERATING PRINCIPLES:
 - Errors name the node, its type, and the fix — read them, don't retry blindly
 
 READING RESULTS:
-- Writes and failures end with a "[relai]" line saying whether Figma changed:
+- Every call that reached the plugin ends with a "[relai]" line saying
+  whether Figma changed:
   applied (the command ran) · not_applied (nothing changed) ·
   unknown (it may have changed — read the canvas before retrying;
   never resend a write blindly)
 - Failures set isError and name an error code (e.g. timeout, guard_blocked);
   the full receipt is in _meta["${CALL_META_KEY}"]
-- Text over 50,000 characters is cut; the cut notice names a local file
+- Text over 40,000 characters is cut; the cut notice names a local file
   that holds the full result
 
 TARGETING A FILE (every tool except join_room and get_events):
