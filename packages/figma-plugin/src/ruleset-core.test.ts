@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { contentHash, newerSide, restoreWouldLoseWork } from "./ruleset-core.js";
+import {
+  contentHash,
+  kitRefusalMessage,
+  newerSide,
+  pushRefusal,
+  restoreRefusal,
+  restoreWouldLoseWork,
+  type KitSide,
+} from "./ruleset-core.js";
 
 describe("contentHash", () => {
   test("same text hashes the same, different text does not", () => {
@@ -54,5 +62,74 @@ describe("restoreWouldLoseWork", () => {
 
   test("without stamps it does not block — it cannot prove a loss", () => {
     expect(restoreWouldLoseWork("file law", "", "kit law", "")).toBe(false);
+  });
+});
+
+describe("pushRefusal", () => {
+  const kit: KitSide = { name: "kit", conventions: "# kit law", updatedAt: "2026-09-02T00:00:00.000Z", updatedBy: "B" };
+
+  test("kit moved since this file last synced → kit_lease naming size, date and writer", () => {
+    expect(pushRefusal(contentHash("# older"), kit, 12)).toEqual({
+      code: "kit_lease",
+      kit: "kit",
+      kitChars: 9,
+      kitUpdatedAt: "2026-09-02T00:00:00.000Z",
+      updatedBy: "B",
+      fileChars: 12,
+    });
+  });
+
+  test("a kit with no recorded writer leaves updatedBy out", () => {
+    const { updatedBy: _, ...anonymous } = kit;
+    expect(pushRefusal(contentHash("# older"), anonymous, 12)).not.toHaveProperty("updatedBy");
+  });
+
+  test("first push with no lastSyncHash is allowed", () => {
+    expect(pushRefusal("", kit, 12)).toBeNull();
+  });
+
+  test("an empty kit never refuses", () => {
+    expect(pushRefusal(contentHash("# older"), { ...kit, conventions: "" }, 12)).toBeNull();
+  });
+
+  test("same content as last sync is allowed", () => {
+    expect(pushRefusal(contentHash("# kit law"), kit, 12)).toBeNull();
+  });
+});
+
+describe("restoreRefusal", () => {
+  const kit: KitSide = { name: "kit", conventions: "# kit law", updatedAt: "2026-09-01T00:00:00.000Z" };
+
+  test("newer file law → kit_older with both sizes and dates", () => {
+    expect(restoreRefusal("# fresh", "2026-09-10T00:00:00.000Z", kit)).toEqual({
+      code: "kit_older",
+      kit: "kit",
+      kitChars: 9,
+      kitUpdatedAt: "2026-09-01T00:00:00.000Z",
+      fileChars: 7,
+      fileUpdatedAt: "2026-09-10T00:00:00.000Z",
+    });
+  });
+
+  test("empty file is never refused (merge wound)", () => {
+    expect(restoreRefusal("", "2026-09-10T00:00:00.000Z", kit)).toBeNull();
+  });
+
+  test("undated file cannot prove a loss and is allowed", () => {
+    expect(restoreRefusal("# fresh", "", kit)).toBeNull();
+  });
+
+  test("an older file is allowed", () => {
+    expect(restoreRefusal("# stale", "2026-08-01T00:00:00.000Z", kit)).toBeNull();
+  });
+});
+
+describe("kitRefusalMessage", () => {
+  test("names the writer only when the kit recorded one", () => {
+    const lease = pushRefusal(contentHash("x"), { name: "kit", conventions: "y", updatedAt: "T" }, 1)!;
+    expect(kitRefusalMessage(lease)).toBe(
+      `Ruleset "kit" has changed since this file last synced it (kit 1 chars, updated T). ` +
+        `Review with list/export first; pass force:true only if this file's law should replace it.`
+    );
   });
 });

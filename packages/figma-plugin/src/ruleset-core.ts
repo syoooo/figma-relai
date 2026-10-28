@@ -2,6 +2,8 @@
 // handler so they can be tested without a `figma` global (same split as
 // memory-core.ts).
 
+import type { KitRefusal } from "@figma-relai/shared";
+
 /** djb2 — cheap, stable content hash for sync comparison */
 export function contentHash(s: string): string {
   let h = 5381;
@@ -42,4 +44,65 @@ export function restoreWouldLoseWork(
   if (fileConventions.length === 0) return false;
   if (contentHash(fileConventions) === contentHash(setConventions)) return false;
   return newerSide(fileAt, setAt) === "file";
+}
+
+// ─── Kit refusals ───────────────────────────────────────────────────
+// A refused push or restore carries the facts the panel shows in place on the
+// kit card; the error text the agent gets is built from the same facts.
+
+/** The kit fields a refusal reads. */
+export interface KitSide {
+  name: string;
+  conventions: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+/**
+ * Push is force-with-lease: refused when the kit has moved since this file
+ * last synced it. A file that never synced, or an empty kit, has nothing to
+ * lose and is never refused.
+ */
+export function pushRefusal(lastSyncHash: string, set: KitSide, fileChars: number): KitRefusal | null {
+  if (!lastSyncHash || set.conventions.length === 0) return null;
+  if (contentHash(set.conventions) === lastSyncHash) return null;
+  return {
+    code: "kit_lease",
+    kit: set.name,
+    kitChars: set.conventions.length,
+    kitUpdatedAt: set.updatedAt,
+    ...(set.updatedBy ? { updatedBy: set.updatedBy } : {}),
+    fileChars,
+  };
+}
+
+/** Restore is refused when it would replace newer file law with an older kit. */
+export function restoreRefusal(fileConventions: string, fileAt: string, set: KitSide): KitRefusal | null {
+  if (!restoreWouldLoseWork(fileConventions, fileAt, set.conventions, set.updatedAt)) return null;
+  return {
+    code: "kit_older",
+    kit: set.name,
+    kitChars: set.conventions.length,
+    kitUpdatedAt: set.updatedAt,
+    fileChars: fileConventions.length,
+    fileUpdatedAt: fileAt,
+  };
+}
+
+/** The error text for a refusal, as the agent reads it in the tool result. */
+export function kitRefusalMessage(refusal: KitRefusal): string {
+  if (refusal.code === "kit_lease") {
+    return (
+      `Ruleset "${refusal.kit}" has changed since this file last synced it ` +
+      `(kit ${refusal.kitChars} chars, updated ${refusal.kitUpdatedAt}` +
+      `${refusal.updatedBy ? ` by "${refusal.updatedBy}"` : ""}). ` +
+      `Review with list/export first; pass force:true only if this file's law should replace it.`
+    );
+  }
+  return (
+    `Restore would overwrite newer law. This file's conventions (${refusal.fileChars} chars, written ${refusal.fileUpdatedAt}) ` +
+    `are more recent than ruleset "${refusal.kit}" (${refusal.kitChars} chars, ${refusal.kitUpdatedAt}). ` +
+    `If the file's law is the one to keep, push it up instead (file → kit). ` +
+    `To replace the file anyway, restore with force: true.`
+  );
 }

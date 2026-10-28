@@ -6,12 +6,19 @@
 import { registerHandler } from "../dispatcher.js";
 import { collectNodeRefs, isWriteCommand } from "../write-guard.js";
 import {
+  attachPreflight,
+  fingerprint,
+  preflightPrecedents as matchBeforeWrite,
+  VOICE_KEYS,
+  type PrecedentContext,
+  type PrecedentPreflight,
+  type VoiceSnap,
+} from "../wall-core.js";
+import {
   assertCapacity,
   assertUpdateCapacity,
   buildIndex,
   makeId,
-  matchPrecedents,
-  toSurfaced,
   validatePrecedentInput,
   type PrecedentEntry,
   type PrecedentIndex,
@@ -23,8 +30,7 @@ import {
 const MEMORY_NS = "relai";
 const MEMORY_KEY = "memory";
 
-export function readMemory(): PrecedentEntry[] {
-  const raw = figma.root.getSharedPluginData(MEMORY_NS, MEMORY_KEY);
+function parseMemory(raw: string): PrecedentEntry[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -34,17 +40,45 @@ export function readMemory(): PrecedentEntry[] {
   }
 }
 
-let indexCache: PrecedentIndex | null = null;
+export function readMemory(): PrecedentEntry[] {
+  return parseMemory(figma.root.getSharedPluginData(MEMORY_NS, MEMORY_KEY));
+}
+
+// ─── Voice writes ───────────────────────────────────────────────────
+// Precedents, conventions, their timestamp and the ruleset link are reported
+// when a script changes them, never reverted. The post-run check snapshots
+// them around a script; the epoch counts Relai's own writes so a write by
+// one of its own commands while the script awaits is not blamed on it.
+
+let voiceEpoch = 0;
+
+/** Call before Relai itself writes any voice key (memory, conventions, conventionsAt, rulesetLink). */
+export function noteVoiceWrite(): void {
+  voiceEpoch++;
+}
+
+/** The voice keys' fingerprints and Relai's write count, read synchronously. */
+export function snapshotVoice(): VoiceSnap {
+  const prints = {} as VoiceSnap["prints"];
+  for (const key of VOICE_KEYS) prints[key] = fingerprint(figma.root.getSharedPluginData(MEMORY_NS, key));
+  return { epoch: voiceEpoch, prints };
+}
 
 export function writeMemory(entries: PrecedentEntry[]): void {
+  noteVoiceWrite();
   figma.root.setSharedPluginData(MEMORY_NS, MEMORY_KEY, entries.length ? JSON.stringify(entries) : "");
-  indexCache = null;
   postMemoryState(entries);
 }
 
+// Keyed by the stored text, so a write that bypassed writeMemory (a script
+// writing relai/memory directly) is seen at the next match, not after the
+// plugin reopens.
+let indexCache: { raw: string; index: PrecedentIndex } | null = null;
+
 function getIndex(): PrecedentIndex {
-  if (!indexCache) indexCache = buildIndex(readMemory());
-  return indexCache;
+  const raw = figma.root.getSharedPluginData(MEMORY_NS, MEMORY_KEY);
+  if (indexCache?.raw !== raw) indexCache = { raw, index: buildIndex(parseMemory(raw)) };
+  return indexCache.index;
 }
 
 export function postMemoryState(entries?: PrecedentEntry[]): void {
@@ -160,9 +194,11 @@ export async function recordGatePrecedent(
 }
 
 // ─── In-band surfacing ──────────────────────────────────────────────
-// After a successful WRITE, attach precedents whose refs the command touched.
-// Same delivery lane as pitfall hints: public law (API physics) there, this
-// file's private law here.
+// Precedents whose refs a WRITE touches are matched before it runs, against
+// the file as it is then (a delete still finds its node), and ride the
+// result as its first keys. Each command inside a batch is matched on its
+// own. Same delivery lane as pitfall hints: public law (API physics) there,
+// this file's private law here. Matching never blocks a write.
 
 // The file-law family manages memory itself — surfacing on it is circular
 // (and would clobber list_precedents' own `precedents` key).
@@ -175,29 +211,34 @@ const MEMORY_COMMANDS = new Set([
   "set_conventions",
 ]);
 
+/**
+ * Match this file's precedents against a command before it runs. Call it
+ * before dispatch and hand the result to attachPrecedents (and its texts to
+ * the approval card). Null when nothing matched.
+ */
+export function preflightPrecedents(command: string, params: Record<string, unknown>): PrecedentPreflight | null {
+  try {
+    const ctx: PrecedentContext = {
+      pageId: figma.currentPage.id,
+      isWrite: isWriteCommand,
+      nodeRefs: collectNodeRefs,
+      skip: MEMORY_COMMANDS,
+    };
+    return matchBeforeWrite(getIndex(), command, params, ctx);
+  } catch {
+    return null; // surfacing must never break the command itself
+  }
+}
+
+/** Put the precedents matched before the write on the command's result. */
 export function attachPrecedents(
   command: string,
   params: Record<string, unknown>,
-  result: unknown
+  result: unknown,
+  pre: PrecedentPreflight | null = preflightPrecedents(command, params)
 ): unknown {
   try {
-    if (MEMORY_COMMANDS.has(command)) return result;
-    if (!isWriteCommand(command, params)) return result;
-    if (result === null || typeof result !== "object" || Array.isArray(result)) return result;
-    if ("precedents" in (result as Record<string, unknown>)) return result;
-    const tokenIds: string[] = [];
-    for (const key of ["variableId", "targetVariableId"]) {
-      const v = params[key];
-      if (typeof v === "string") tokenIds.push(v);
-    }
-    const hits = matchPrecedents(getIndex(), {
-      tokenIds,
-      nodeIds: collectNodeRefs(params),
-      pageId: figma.currentPage.id,
-    });
-    const surfaced = toSurfaced(hits);
-    if (!surfaced) return result;
-    return { ...(result as Record<string, unknown>), ...surfaced };
+    return attachPreflight(result, pre);
   } catch {
     return result; // surfacing must never break the command itself
   }
