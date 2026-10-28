@@ -46,7 +46,7 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 26. `batch_execute` / `set_properties` with `dryRun:true` → plan returned, canvas untouched.
 27. `manage_conventions` set → get roundtrip (unicode/markdown intact); `get_document_overview` includes the conventions; clearing removes them; panel shows the RULES row.
 28. Approvals BULK: a 10+ command batch shows the approval card; Approve executes fully; Deny returns "Denied by designer" with nothing applied; the MCP side does not time out while the card waits.
-29. Scope lock: parentless creates and out-of-scope targets get a "Scope lock" error (including batch sub-commands); `execute_figma` outside the lock reports SCOPE VIOLATION in warnings.
+29. Scope lock: parentless creates and out-of-scope targets get a "Scope lock" error (including batch sub-commands); `execute_figma` outside the lock reports SCOPE VIOLATION in warnings, and the same script inside `batch_execute` reports it too.
 30. `npx figma-relai doctor` with Figma open → relay ok + plugin online with the file name; with nothing running → actionable warns.
 
 ## 0.3–0.4 additions (memory, guards, dial, gauges)
@@ -55,8 +55,8 @@ Each should return an **immediate, specific error** (never a 30 s timeout):
 32. Panel memory modal: "+ note a precedent" input adds an entry; ✕ deletes it; agent's list_precedents reflects both within one call.
 33. Approval card shows the agent's intent line (or the no-description callout); typed reason becomes a `decision` precedent with the op's refs.
 34. Touch a variable referenced by a precedent → the write result carries `precedents:[…]`; reads never do.
-35. Guard a page from the NO-GO modal → any write targeting nodes on it is rejected with the page named; unguard restores. `manage_pages action:guard` refuses without pageId.
-36. Dial stops: OPEN passes a `delete_variable` silently; RISK stops it (`ghost-risk` tag on the card); BULK also stops execute_figma; ALL stops a single-node write. Legacy settings migrate to the right stop on first load after update.
+35. Guard a page from the NO-GO modal → any write targeting nodes on it is rejected with the page named; unguard **from the panel** restores. `manage_pages action:unguard` on that page is refused with "Designer-only" and points to the panel; a zone the agent added with `manage_pages action:guard` in the same plugin session can be lifted by the agent. `manage_pages action:guard` refuses without pageId.
+36. Dial stops: OPEN passes a `delete_variable` silently; RISK stops it (`ghost-risk` tag on the card); BULK also stops execute_figma, and a `batch_execute` that wraps a single `execute_figma`; ALL stops a single-node write and every `execute_figma`, even one that only reads; a batch of reads at ALL does not ask. Legacy settings migrate to the right stop on first load after update.
 37. Bulk write (10+ nodes) leaves an amber evidence row in the feed and a `bulk_write` event in get_events.
 38. analyze_design voice/readiness/ghosts return on the current page; ghosts criterion line names the live-list rule; validate_design_rules includes advisory `voice_drift` that never fails the run.
 39. User skill in ~/.figma-relai/skills appears as `user:<name>` prompt after server restart; doctor counts it; broken frontmatter is named by doctor and skipped by the server.
@@ -136,6 +136,40 @@ Run these with the 0.8.0 server and the 0.8.0 plugin unless an item says otherwi
 
 ### Results and the relay
 
-77. **Long results go to a local file**: an `execute_figma` returning about 120,000 characters → the text is cut at 50,000, `truncated.total` is right, and the named file under `~/.figma-relai/results/` holds the complete JSON (mode 0600). A plain object `{ id, type, parent, extra }` still comes back whole; a real node still as a summary.
+77. **Long results go to a local file**: an `execute_figma` returning about 120,000 characters → the text is cut at 40,000 (50,000 with a 0.8.0 server), `truncated.total` is right, and the named file under `~/.figma-relai/results/` holds the complete JSON (mode 0600). A plain object `{ id, type, parent, extra }` still comes back whole; a real node still as a summary.
 78. **The real panel's Origin passes, web pages do not**: with the 0.8.0 server, open the plugin in Figma Desktop → it connects (the panel's sandboxed iframe sends Origin `"null"`). Then from a browser page on `http://localhost` run `new WebSocket("ws://localhost:9055")` → the handshake fails, and the server logs "refused a connection from origin".
 79. **Version mismatch**: new server with a 0.7.11 plugin, and a 0.7.11 server (`npx figma-relai@0.7.11`) with the new plugin → both read and write; under the old server large results are still cut at 50,000 by the plugin; an old panel's Stop shows as `unknown` on the new server.
+
+## 0.8.1 additions — walls and the panel
+
+Run these on a scratch file with at least one page fenced off in the panel, code execution on, and the dial at RISK unless the item says otherwise.
+
+### Walls against the agent in this session
+
+80. **Designer-only**: `batch_execute` with `set_guards {pages: []}` on a file with a guard → refused with `designer_only`, vermilion in the feed, the guard still on.
+81. **Wrapped commands ask**: at RISK, `batch_execute [delete_variable]` shows the card (tag `ghost-risk`); at BULK, `batch_execute [execute_figma]` shows the card with "contains execute_code". A batch nested four levels deep is refused with `invalid_params`.
+82. **Bulk set_text is checked item by item**: with a non-fenced current page, a multi-node `set_text` whose items include a text node on a fenced page → `guard_blocked`, and nothing was written.
+83. **Settings tamper**: a script writes `relai.settings` (dial OPEN, code on, lock off) → the next write still obeys the panel's dial and lock; the result carries `law_restored`; reload the plugin → the panel shows the designer's values. With code execution off in the panel, a script that set `allowCodeExec: true` in storage does not make the next `execute_figma` run.
+84. **The panel handler is out of reach**: a script returns `typeof figma.ui.onmessage` → `"undefined"`.
+85. **Guard tamper**: a script clears `relai/guards` → the result has the LAW RESTORED warning, the guard is back, and the feed shows a pinned vermilion law line. In one batch, a script that clears the guards followed by a write into the fenced page → the write is refused.
+86. **The designer is never overwritten**: start a 20-second script; while it runs, lift a guard in the panel → after the script that guard stays lifted, nothing else changed. Change a setting in the panel within 3 seconds after a script ends → it is not applied, the switch goes back, and the feed says to try again.
+87. **Delayed write**: a script schedules a guard clear with `setTimeout` and returns → the next command restores it. Close the plugin right after the script → the guard is still on when reopened.
+88. **A script that reaches across a fence**: a script that creates a node on a fenced page with `relai.autoLayout` and returns its id → `violations` (kind `guard`, the page named), a `script_breach` notice pinned in the feed, and the command's row in law style. The same script ending in `throw` → a `script_error` whose message carries the GUARD VIOLATION warning, and the same pinned notice.
+89. **Precedents before the write**: with a precedent anchored on a node, a RISK-level delete of it shows the precedent on the approval card; a plain write's result lists `precedents` first; a batch touching it carries the precedent on that item.
+
+### The panel does not go quiet
+
+90. **Approval countdown**: an approval card shows the seconds left, turns amber at 30, shows ×N when more are queued; left alone for 120 s its row reads that it timed out.
+91. **Kit refusals stay on the card**: two files linked to one kit; push from A, then push from B → B's card stays open and names the kit's size, date and the file that last wrote it; overwriting takes a second click. "Pull from the kit" when the file is newer still overwrites at once, with the result shown in place.
+92. **The heal leaves a card**: after a branch merge wipes the law with auto-restore on, reopen the plugin → a card names the kit, its date and any skipped seeds, until dismissed.
+93. **A refused panel action is undone**: while a script runs, flip the code toggle in the panel → it flips back and the feed says the action was not applied.
+94. **Errors without toasts**: trigger a failing command and a failing precedent note in the panel → no Figma toast; the feed row, or the line under the note's input, says what failed.
+
+### Results and the server
+
+95. **A closed plugin fails the call at once**: start a 20-second `execute_figma`, then close the plugin → the call fails within a second or two with `link_dropped` / `unknown`, not after its timeout.
+96. **Reads carry a receipt**: `get_document_overview` without `room` → its result ends with a `[relai]` line naming the file. A failing command's `[relai]` line names the file too.
+97. **Results fit under 50,000**: a script returning 3,000 × 40 characters → the cut text, the notice and the `[relai]` line together stay under 50,000 characters, so the client keeps it inline.
+98. **The write log says why**: deny one approval, let one time out and Stop one → `get_events scope:"agent"` lists them as denied, timeout and stopped.
+99. **The panel reports itself lost**: start a 20-second script and, while it runs, stop the only MCP client (the relay goes with it) → when the script ends the feed shows a `panel_lost` notice saying the relay link dropped.
+
