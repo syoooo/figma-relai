@@ -195,8 +195,9 @@ export class FigmaConnection {
   // Rooms the current socket has joined at the relay. Cleared on close: the
   // relay forgets them, and a room a single call names is joined again on use.
   private joinedRooms = new Set<string>();
-  // Plugin commands on the wire, so a dropped link can be reported per call
-  private inflight = new Set<string>();
+  // Plugin commands on the wire and the room each went to, so a dropped link
+  // or a plugin that left its room can be reported per call
+  private inflight = new Map<string, string>();
   private resultMetaById = new Map<string, ResultMeta>();
   // Did the caller NAME this room, or did we pick it for them? A room the
   // caller aimed at is never traded for a different one — they may be waiting
@@ -293,8 +294,14 @@ export class FigmaConnection {
               const plugin = json.peers.find((p: { role?: string }) => p.role === "plugin") as
                 | { meta?: PeerMeta }
                 | undefined;
+              const wasPresent = this.presenceByRoom.get(json.room) === true;
               this.presenceByRoom.set(json.room, plugin !== undefined);
               if (plugin?.meta) this.pluginMetaByRoom.set(json.room, plugin.meta);
+              // The plugin left (closed, or its file was closed): nothing will
+              // answer what it was running, so fail those calls now instead of
+              // at their timeout. Only a plugin seen present can leave — an
+              // older plugin that joins without a role never reads as present.
+              if (wasPresent && plugin === undefined) this.rejectInflightInRoom(json.room);
             }
             return;
           }
@@ -375,7 +382,7 @@ export class FigmaConnection {
           hosting === false
             ? " If the client that hosted the relay exited, this process takes over hosting in about 2 seconds."
             : "";
-        for (const id of this.inflight) {
+        for (const id of this.inflight.keys()) {
           this.tracker.reject(
             id,
             new RelaiError(
@@ -408,6 +415,21 @@ export class FigmaConnection {
     });
 
     return this.connectPromise;
+  }
+
+  private rejectInflightInRoom(room: string): void {
+    for (const [id, inRoom] of this.inflight) {
+      if (inRoom !== room) continue;
+      this.inflight.delete(id);
+      this.tracker.reject(
+        id,
+        new RelaiError(
+          "link_dropped",
+          `The Figma plugin in room ${room} closed while this command was in flight — it may already have applied. ` +
+            `Reopen the plugin, then re-read the file before retrying.`
+        )
+      );
+    }
   }
 
   // Disconnect and stop reconnection
@@ -768,7 +790,7 @@ export class FigmaConnection {
     try {
       result = await new Promise((resolve, reject) => {
         this.tracker.add(id, resolve, reject, timeoutMs);
-        this.inflight.add(id);
+        this.inflight.set(id, room);
         logger.info(`Sending command: ${command}`);
         logger.debug(`Request: ${JSON.stringify(request)}`);
         try {

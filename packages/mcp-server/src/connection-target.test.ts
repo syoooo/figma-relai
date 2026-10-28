@@ -297,6 +297,45 @@ describe("dropped link", () => {
     expect(receiptOf(err)).toMatchObject({ command: "create_frame", room: "room-a", outcome: "unknown", code: "link_dropped" });
   });
 
+  test("a plugin that closes mid-call fails the call at once with link_dropped", async () => {
+    await relay();
+    const alpha = await plugin("room-a", { fileName: "Alpha" }, () => null); // never answers
+    const conn = connection();
+    await conn.joinRoom("room-a");
+
+    const t0 = Date.now();
+    const pending = failure(conn.sendCommandDetailed("execute_code", {}, 5000));
+    await new Promise((r) => setTimeout(r, 50));
+    await alpha.leave();
+    const err = await pending;
+
+    expect(Date.now() - t0).toBeLessThan(1500);
+    expect(err.code).toBe("link_dropped");
+    expect(err.outcome).toBe("unknown");
+    expect(err.message).toContain("room-a");
+    expect(receiptOf(err)).toMatchObject({ command: "execute_code", room: "room-a", outcome: "unknown" });
+  });
+
+  test("a plugin leaving another room leaves this room's call alone", async () => {
+    await relay();
+    let answerNow: (() => void) | null = null;
+    const alpha = await plugin("room-a", { fileName: "Alpha" }, (cmd) => {
+      answerNow = () => alpha.send({ id: cmd.id, result: { ok: true } });
+      return null;
+    });
+    const beta = await plugin("room-b", { fileName: "Beta" });
+    const conn = connection();
+    await conn.joinRoom("room-a");
+    await conn.sendCommandDetailed("get_selection", {}, 5000, { room: "room-b" });
+
+    const pending = conn.sendCommandDetailed("get_selection", {}, 5000);
+    await new Promise((r) => setTimeout(r, 50));
+    await beta.leave();
+    answerNow!();
+    const { receipt } = await pending;
+    expect(receipt.outcome).toBe("applied");
+  });
+
   test("after a reconnect, the default room and a room a call named both work again", async () => {
     const port = PORT + 2;
     const { sockets } = await closableRelay(port);
