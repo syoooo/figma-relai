@@ -3127,6 +3127,12 @@
     // The plugin's answer settles its row whether or not the relay link is up.
     // With the link down the answer goes nowhere, and the row says so instead
     // of spinning on.
+    // The plugin compares these across a command, so a panel reloaded or cut
+    // off from the relay while a command runs is reported, not silent
+    function postRelayState(connected) {
+      parent.postMessage({ pluginMessage: { type: 'relay-state', connected: connected } }, '*');
+    }
+
     function relayAnswer(id, message) {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'message', room: roomName, id: id, message: message }));
@@ -3294,6 +3300,7 @@
         relayUp = true;
         agentPresent = false;
         showConnected();
+        postRelayState(true);
 
         // Capability probe — the relay answers with what the server process can
         // reach (e.g. a Figma access token), never with any secret itself.
@@ -3363,6 +3370,7 @@
 
       ws.onclose = function () {
         ws = null;
+        if (opened) postRelayState(false);
         if (!wantConnection) {
           setSetupStatus('off');
           showSetup();
@@ -3630,6 +3638,7 @@
     };
 
     applyI18n();
+    parent.postMessage({ pluginMessage: { type: 'panel-hello', relayConnected: false } }, '*');
     // Fallback: if the main thread never sends settings (unexpected), still
     // provide a usable setup screen after a short wait
     setTimeout(function () {
