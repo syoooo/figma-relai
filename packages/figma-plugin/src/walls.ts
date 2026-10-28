@@ -49,7 +49,9 @@ let dropLegacyLock = false;
 let ready: Promise<unknown> = Promise.resolve();
 
 // No-go zones an agent added in this plugin session; only these may an agent
-// lift again. Reopening the plugin empties it.
+// lift again. Reopening the plugin empties it. The set_guards handler in
+// handlers/guards.ts keeps the same set by the same rules (writeGuards below
+// mirrors setGuardedPages), so this check and the handler always agree.
 let agentAdded = new Set<string>();
 
 // Counts Relai's own writes to voice data, so a script is never blamed for them
@@ -204,14 +206,7 @@ export function commitFromPanel(patch: PanelWallPatch): void {
     applyLock(walls.scopeLock);
     settingsChanged = true;
   }
-  if (patch.guards !== undefined) {
-    const before = new Set(walls.guards);
-    const written = setGuardedPages(patch.guards).pages;
-    const after = new Set(written);
-    for (const id of before) if (!after.has(id)) agentAdded.delete(id);
-    for (const id of after) if (!before.has(id)) agentAdded.delete(id);
-    walls.guards = written;
-  }
+  if (patch.guards !== undefined) walls.guards = writeGuards(patch.guards);
   if (settingsChanged) void persistSettings(true);
 }
 
@@ -236,6 +231,18 @@ export function judgeAgentGuards(params: Record<string, unknown>): string[] {
   return verdict.next;
 }
 
+/**
+ * Every no-go write that is not an agent's set_guards: the panel, an accepted
+ * proposal, a write-back. A zone that changes here is the designer's from now
+ * on: one lifted or added, and one put back after something cleared it.
+ */
+function writeGuards(pages: string[]): string[] {
+  const before = new Set(readGuards().pages);
+  const written = setGuardedPages(pages).pages;
+  agentAdded = new Set([...agentAdded].filter((id) => before.has(id) && written.includes(id)));
+  return written;
+}
+
 // ── Checks ──────────────────────────────────────────────────────────
 
 function readSeenGuards(): string[] {
@@ -246,7 +253,7 @@ function applyReconcile(r: ReturnType<typeof reconcileWalls>, writeSettings: boo
   const lockBefore = walls.scopeLock;
   walls = r.next;
   if (walls.scopeLock !== lockBefore) applyLock(walls.scopeLock);
-  if (r.writeGuards) setGuardedPages(r.writeGuards);
+  if (r.writeGuards) writeGuards(r.writeGuards);
   else if (r.notices.some((n) => "key" in n && n.key === "guards")) refreshGuardsUI();
   if (r.writeSettings && writeSettings) void persistSettings(false);
 }
@@ -313,7 +320,7 @@ export function checkOnClose(): void {
   const missing = walls.guards.filter((id) => !seen.includes(id));
   if (missing.length === 0) return;
   try {
-    setGuardedPages([...new Set([...seen, ...walls.guards])]);
+    writeGuards([...new Set([...seen, ...walls.guards])]);
   } catch {
     // The data was written before the panel refresh threw
   }

@@ -27,4 +27,12 @@ describe("the panel channel", () => {
     });
     expect(writers).toEqual(["walls.ts"]);
   });
+
+  test("execute_figma checks the walls held in walls.ts", () => {
+    // execute-code.ts refuses to run until main.ts hands it the copy
+    expect(code(read("main.ts"))).toMatch(
+      /setCodeRunWalls\(\{ currentWalls, snapshotVoice, scriptStarted, scriptEnded, checkpoint \}\)/
+    );
+    expect(code(read("main.ts"))).toMatch(/from "\.\/walls\.js"/);
+  });
 });

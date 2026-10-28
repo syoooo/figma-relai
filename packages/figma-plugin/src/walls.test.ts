@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import type { LawNotice } from "@figma-relai/shared";
 import {
   checkOnClose,
@@ -19,6 +19,8 @@ import {
   SETTINGS_KEY,
 } from "./walls.js";
 import { isScopeLocked } from "./write-guard.js";
+import { dispatch, setGuardEnforcer } from "./dispatcher.js";
+import { enforcePageGuards } from "./handlers/guards.js";
 
 // Just enough of the figma global for the walls: pages, the file's shared
 // plugin data, clientStorage and the panel channel.
@@ -294,6 +296,31 @@ describe("the dispatch check", () => {
     passed.length = 0;
     await expect(enforce("set_guards", { pages: [] })).rejects.toMatchObject({ code: "designer_only" });
     expect(passed).toEqual([]);
+  });
+});
+
+describe("set_guards through the real handler", () => {
+  // The handler keeps its own set of agent zones; it must agree with the copy
+  afterAll(() => setGuardEnforcer(enforcePageGuards));
+
+  test("an agent lifts its own zone and the lift stays", async () => {
+    setGuardEnforcer(wallEnforcer(enforcePageGuards));
+    await load({});
+    await dispatch("set_guards", { add: ["1:3"] });
+    expect([storedGuards(), currentWalls().guards]).toEqual([["1:3"], ["1:3"]]);
+    await dispatch("set_guards", { remove: ["1:3"] });
+    expect([storedGuards(), currentWalls().guards]).toEqual([[], []]);
+    expect(await checkpoint("entry")).toEqual([]);
+  });
+
+  test("an agent zone put back after a script cleared it is the designer's, in the copy and the handler alike", async () => {
+    setGuardEnforcer(wallEnforcer(enforcePageGuards));
+    await load({});
+    await dispatch("set_guards", { add: ["1:3"] });
+    guards(); // a script clears the list
+    await expect(dispatch("set_guards", { remove: ["1:3"] })).rejects.toMatchObject({ code: "designer_only" });
+    expect([storedGuards(), currentWalls().guards]).toEqual([["1:3"], ["1:3"]]);
+    expect(kinds(collectNotices())).toEqual(["law_restored:guards"]);
   });
 });
 

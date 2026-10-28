@@ -24,7 +24,7 @@ import "./handlers/image-fill.js";
 import "./handlers/library.js";
 import "./handlers/audit.js";
 import "./handlers/batch.js";
-import "./handlers/execute-code.js";
+import { setCodeRunWalls } from "./handlers/execute-code.js";
 import "./handlers/memory.js";
 import "./handlers/guards.js";
 import "./handlers/audits-extra.js";
@@ -41,32 +41,34 @@ import { sendProgressUpdate } from "./progress.js";
 import { createApprovalGate } from "./approval-gate.js";
 import {
   attachPrecedents,
+  preflightPrecedents,
   readMemory,
   recordGatePrecedent,
   recordPrecedent,
   removePrecedentById,
 } from "./handlers/memory.js";
 import { enforcePageGuards, guardsStatePayload, refreshGuardsUI, readGuards } from "./handlers/guards.js";
-import { reconcileOnLoad, rulesetStatus, postRulesetState, type RestoreResult } from "./handlers/rulesets.js";
+import {
+  reconcileOnLoad,
+  rulesetOpResult,
+  rulesetStatus,
+  postRulesetState,
+  type RestoreResult,
+} from "./handlers/rulesets.js";
 import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timeline.js";
 import { pendingProposals } from "./handlers/proposals.js";
 import { postFileIdentity } from "./handlers/file-identity.js";
 import { createWindowControls, DEFAULT_WINDOW_SIZE } from "./window-controls.js";
 import { checkExpectedFile, denialError, resultMeta, toErrorPayload, type Phase } from "./call-outcome.js";
-import { buildIndex } from "./memory-core.js";
 import {
-  attachPreflight,
   batchApproval,
   cardPrecedents,
   isConfirmLevel,
   isDesignerOnlyMessage,
   lawRestoredWarning,
   MAX_BATCH_DEPTH,
-  preflightPrecedents,
   wallsKey,
   type CommandRules,
-  type PrecedentPreflight,
-  type VoiceSnap,
 } from "./wall-core.js";
 import {
   checkOnClose,
@@ -78,7 +80,6 @@ import {
   initWalls,
   notePanelBoot,
   noteRelayState,
-  noteVoiceWrite,
   panelLost,
   panelVerdict,
   persistOtherSettings,
@@ -91,14 +92,24 @@ import {
 } from "./walls.js";
 import {
   RelaiError,
+  type ApprovalCause,
   type LawNotice,
   type LawNoticeMessage,
+  type RulesetHealed,
   type RulesetOp,
+  type WriteLogWhy,
   type WsCallInfo,
 } from "@figma-relai/shared";
 
 // Commands that count as a full check-up for the gentle reminder
 const CHECKUP_COMMANDS = new Set(["audit_readiness", "audit_ghosts"]);
+
+// Why a write the approval card closed on never ran, for the write log
+const WHY_NOT_RUN: Record<ApprovalCause, WriteLogWhy> = {
+  designer: "denied",
+  timeout: "timeout",
+  stop: "stopped",
+};
 
 // Show the plugin UI
 figma.showUI(__html__, { ...DEFAULT_WINDOW_SIZE, themeColors: true });
@@ -107,6 +118,9 @@ const handleWindowMessage = createWindowControls(figma.ui);
 // Every dispatch, nested batch commands included, checks the walls against
 // the plugin's own copy before the page-guard check runs
 setGuardEnforcer(wallEnforcer(enforcePageGuards));
+// execute_figma reads the code toggle from that copy and checks the walls
+// after every script, thrown or not
+setCodeRunWalls({ currentWalls, snapshotVoice, scriptStarted, scriptEnded, checkpoint });
 
 // Room identity is per FILE, not per install. clientStorage is shared by every
 // file this plugin opens on the machine, so a single saved room name makes two
@@ -153,11 +167,13 @@ const fileWallsKey = wallsKey({ seed: figma.root.getPluginData("roomSeed"), file
 initWalls(fileWallsKey).then(async ({ store, resolved }) => {
   // Heal the merge wound first: a linked file whose law was wiped gets it
   // back automatically when the ruleset's auto switch is on.
-  let rulesetHealed: { name: string } | null = null;
+  let rulesetHealed: RulesetHealed | null = null;
   try {
-    noteVoiceWrite();
     const recon = await reconcileOnLoad();
-    if (recon.healed) rulesetHealed = { name: recon.name };
+    if (recon.healed) {
+      const { healed: _healed, ...healed } = recon;
+      rulesetHealed = healed;
+    }
   } catch {
     // Reconciliation must never block the panel from opening
   }
@@ -207,7 +223,6 @@ const approvalGate = createApprovalGate({
   // A typed reason becomes a decision precedent in file memory
   onSettled: ({ command, params, approved, reason }) => {
     if (!reason) return;
-    noteVoiceWrite();
     void recordGatePrecedent(command, params, approved, reason);
   },
 });
@@ -225,51 +240,15 @@ const SHAPE_RULES: CommandRules = {
   bulkThreshold: Number.POSITIVE_INFINITY,
 };
 
-// Commands that write precedents, conventions or the ruleset link. When one
-// runs in the same command as a script, Relai's own write is not blamed on it.
-const VOICE_COMMAND = /precedent|convention|ruleset/;
-
-function anyWrapped(command: string, params: Params, test: (command: string) => boolean, depth = 0): boolean {
-  if (test(command)) return true;
-  if (command !== "batch_execute" || !Array.isArray(params.commands) || depth >= MAX_BATCH_DEPTH) return false;
-  return params.commands.some(
-    (item) =>
-      typeof item === "object" &&
-      item !== null &&
-      typeof (item as Params).command === "string" &&
-      anyWrapped((item as Params).command as string, ((item as Params).params as Params) ?? {}, test, depth + 1)
-  );
-}
-
-// The memory and convention commands surface no precedents of their own
-const PRECEDENT_SKIP = new Set([
-  "record_precedent",
-  "list_precedents",
-  "update_precedent",
-  "remove_precedent",
-  "get_conventions",
-  "set_conventions",
-]);
-
-/** Precedents matched against the file as it is before the write. */
-function preflight(command: string, params: Params): PrecedentPreflight | null {
-  if (PRECEDENT_SKIP.has(command) || !isWriteCommand(command, params)) return null;
-  try {
-    return preflightPrecedents(buildIndex(readMemory()), command, params, {
-      pageId: figma.currentPage.id,
-      isWrite: isWriteCommand,
-      nodeRefs: collectNodeRefs,
-      skip: PRECEDENT_SKIP,
-    });
-  } catch {
-    return null; // surfacing must never break the command itself
-  }
-}
-
-/** An object result carries the wall notices as `law`, with a warning when something was put back. */
+/**
+ * An object result carries the wall notices as `law`, after any the handler
+ * already put there (execute_code's own check), with a warning when this
+ * command's checks put something back.
+ */
 function withLaw(result: unknown, notices: LawNotice[]): unknown {
   if (notices.length === 0 || result === null || typeof result !== "object" || Array.isArray(result)) return result;
-  const out: Params = { ...(result as Params), law: notices };
+  const own = (result as Params).law;
+  const out: Params = { ...(result as Params), law: [...(Array.isArray(own) ? own : []), ...notices] };
   const warning = lawRestoredWarning(notices);
   if (warning) out.warnings = [...(Array.isArray(out.warnings) ? out.warnings : []), warning];
   return out;
@@ -332,7 +311,6 @@ const onPanelMessage = async (msg: any) => {
 
   if (msg.type === "memory-record") {
     try {
-      noteVoiceWrite();
       await recordPrecedent({ text: msg.text, kind: msg.kind, source: "manual" });
     } catch (error) {
       figma.ui.postMessage({
@@ -347,7 +325,6 @@ const onPanelMessage = async (msg: any) => {
 
   if (msg.type === "memory-remove") {
     try {
-      noteVoiceWrite();
       removePrecedentById(msg.id as string);
     } catch {
       // Entry already gone — panel state refresh follows regardless
@@ -370,7 +347,6 @@ const onPanelMessage = async (msg: any) => {
     // panel keeps the kit card open until the result arrives.
     const op = msg.op as RulesetOp;
     try {
-      noteVoiceWrite();
       const name = typeof msg.name === "string" ? msg.name : undefined;
       let restored: RestoreResult | null = null;
       if (op === "save-from-file") await dispatch("save_ruleset", { name, fromFile: true });
@@ -391,23 +367,10 @@ const onPanelMessage = async (msg: any) => {
       } else if (op === "import") {
         await dispatch("import_ruleset", { markdown: msg.markdown });
       }
-      const skipped = restored?.precedentsSkipped;
-      figma.ui.postMessage({
-        type: "ruleset-op-result",
-        op,
-        ok: true,
-        ...(skipped ? { precedentsSkipped: { count: skipped.count, limit: skipped.limit } } : {}),
-      });
+      figma.ui.postMessage(rulesetOpResult(op, { restored }));
     } catch (error) {
       // A refused push or restore carries why, for the kit card
-      const refusal = (error as { refusal?: unknown } | null)?.refusal;
-      figma.ui.postMessage({
-        type: "ruleset-op-result",
-        op,
-        ok: false,
-        message: error instanceof Error ? error.message : String(error),
-        ...(refusal && typeof refusal === "object" ? { refusal } : {}),
-      });
+      figma.ui.postMessage(rulesetOpResult(op, { error }));
       void postRulesetState();
     }
     return;
@@ -415,7 +378,6 @@ const onPanelMessage = async (msg: any) => {
 
   if (msg.type === "memory-promote") {
     try {
-      noteVoiceWrite();
       const out = (await dispatch("promote_precedent", { id: msg.id })) as { ruleset: string };
       figma.notify(`Promoted into ruleset "${out.ruleset}"`);
     } catch (error) {
@@ -447,7 +409,6 @@ const onPanelMessage = async (msg: any) => {
       commitFromPanel({ guards: [...new Set([...readGuards().pages, ...proposal.pages.map((p) => p.id)])] });
       const names = proposal.pages.map((p) => p.name).join(", ");
       try {
-        noteVoiceWrite();
         await recordPrecedent({
           kind: "decision",
           text: `enabled page guard for ${names} — ${proposal.reason}`,
@@ -587,7 +548,8 @@ const onPanelMessage = async (msg: any) => {
         return;
       }
 
-      const pre = preflight(command, params || {});
+      // This file's precedents, matched against the file before the write
+      const pre = preflightPrecedents(command, params || {});
 
       if (needsApproval(currentWalls().confirmLevel, command, params ?? {})) {
         const verdict = await approvalGate.request(id, command, params ?? {}, cardPrecedents(pre));
@@ -598,6 +560,9 @@ const onPanelMessage = async (msg: any) => {
           cause: verdict.verdict === "approved" ? "designer" : verdict.cause,
         });
         if (verdict.verdict === "denied") {
+          if (write) {
+            void appendWriteLog(command, collectNodeRefs(params || {}), false, undefined, WHY_NOT_RUN[verdict.cause]);
+          }
           refuse(denialError(verdict.cause));
           closeNotices();
           return;
@@ -612,32 +577,19 @@ const onPanelMessage = async (msg: any) => {
       phase = "handler";
       runningCommands.set(id, command);
       beginCommand();
-      // Scripts: fingerprint the voice data before, check every wall after,
-      // and treat the panel as possibly impersonated meanwhile
-      let voicePre: VoiceSnap | null = null;
-      if (runsCode) {
-        voicePre = snapshotVoice();
-        if (anyWrapped(command, params || {}, (c) => VOICE_COMMAND.test(c))) noteVoiceWrite();
-        scriptStarted();
-      }
       let result: unknown;
       try {
         result = await dispatch(command, dispatchParams);
       } finally {
         endCommand();
         runningCommands.delete(id);
-        if (voicePre) {
-          scriptEnded();
-          notices.push(...(await checkpoint("after_code", voicePre)));
-        }
       }
       phase = "after";
       clearCancelled(params?.commandId as string | undefined);
 
-      // In-band surfacing: this file's own precedents ride the result. Those
-      // matched before the write come first; a write that matched nothing
-      // then is checked again against the file after it.
-      result = attachPrecedents(command, params || {}, attachPreflight(result, pre));
+      // In-band surfacing: this file's own precedents, matched before the
+      // write, ride the result as its first keys.
+      result = attachPrecedents(command, params || {}, result, pre);
 
       // Auto-evidence marker: big writes leave a flag in the feed + session
       // log so the batch is findable later (checkpoint/verify are the agent's
@@ -657,12 +609,17 @@ const onPanelMessage = async (msg: any) => {
       }
       if (CHECKUP_COMMANDS.has(command)) void stampCheckup();
 
-      const law = closeNotices();
-      result = withLaw(result, law);
-      const violations =
-        result !== null && typeof result === "object" && Array.isArray((result as Params).violations)
-          ? (result as Params).violations
+      closeNotices();
+      result = withLaw(result, notices);
+      // The panel row gets the same notices and violations as the result (a
+      // batch's array result has no room for them; the row still gets this
+      // command's own)
+      const field = (key: string) =>
+        result !== null && typeof result === "object" && Array.isArray((result as Params)[key])
+          ? ((result as Params)[key] as unknown[])
           : undefined;
+      const law = field("law") ?? (notices.length > 0 ? notices : undefined);
+      const violations = field("violations");
 
       // Piggyback designer activity that happened since the last command
       const events = drainEvents();
@@ -671,7 +628,7 @@ const onPanelMessage = async (msg: any) => {
         id,
         result,
         meta: resultMeta(command, write, result, figma.root.name),
-        ...(law.length > 0 ? { law } : {}),
+        ...(law ? { law } : {}),
         ...(violations ? { violations } : {}),
         ...(events.length > 0 ? { events } : {}),
       });
