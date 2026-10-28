@@ -41,18 +41,24 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
           case "list_guards":
             result = await sendCommand("get_guards", {});
             break;
-          case "guard":
-          case "unguard": {
-            if (!pageId) throw new Error(`${action} needs pageId`);
+          case "guard": {
+            if (!pageId) throw new Error("guard needs pageId");
+            // A plugin that knows `add` uses it and ignores `pages`, so a zone
+            // the designer adds meanwhile is never read as lifted. `pages`, the
+            // full list, is for an older plugin.
             const state = (await sendCommand("get_guards", {})) as {
               pages: Array<{ id: string; guarded: boolean }>;
             };
             const current = state.pages.filter((p) => p.guarded).map((p) => p.id);
-            const next =
-              action === "guard"
-                ? [...new Set([...current, pageId])]
-                : current.filter((id) => id !== pageId);
-            result = await sendCommand("set_guards", { pages: next });
+            result = await sendCommand("set_guards", { add: [pageId], pages: [...new Set([...current, pageId])] });
+            break;
+          }
+          case "unguard": {
+            if (!pageId) throw new Error("unguard needs pageId");
+            // The plugin decides: it lifts only a zone an agent added in this
+            // plugin session and refuses the rest as designer-only. No `pages`
+            // is sent, so an older plugin, which would lift anything, refuses it.
+            result = await sendCommand("set_guards", { remove: [pageId] });
             break;
           }
         }

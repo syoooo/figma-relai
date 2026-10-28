@@ -1,11 +1,13 @@
 // Page guards — designer-declared no-go zones, stored in the file and
 // enforced at dispatch so every write path (including batch_execute's nested
-// commands) is covered. The designer edits guards in the panel; agents can
-// read them, and may SET them only through the same command surface (which
-// the designer sees in the activity feed).
+// commands) is covered. The designer edits guards in the panel. Agents can
+// read them and add a zone through set_guards (the designer sees it in the
+// activity feed); lifting one is designer-only, except a zone an agent added
+// in this same plugin session.
 import { RelaiError } from "@figma-relai/shared";
 import { collectNodeRefs, isWriteCommand } from "../write-guard.js";
 import { registerHandler, setGuardEnforcer } from "../dispatcher.js";
+import { designerOnlyGuardMessage, guardChangeVerdict } from "../wall-core.js";
 
 const GUARDS_NS = "relai";
 const GUARDS_KEY = "guards";
@@ -47,11 +49,28 @@ export function postGuardsState(): void {
   figma.ui.postMessage({ type: "guards-state", ...guardsStatePayload() });
 }
 
-export function setGuardedPages(pageIds: string[]): GuardsData {
+// Zones an agent added through set_guards since the plugin opened; only these
+// may an agent lift again. Module state, so it starts empty on every open.
+let agentAddedGuards = new Set<string>();
+
+function writeGuardedPages(pageIds: string[]): GuardsData {
   const valid = new Set(figma.root.children.map((p) => p.id));
   const pages = [...new Set(pageIds.filter((id) => valid.has(id)))];
   const data = { pages };
   writeGuards(data);
+  return data;
+}
+
+/**
+ * The designer's write (the panel, an accepted proposal). A zone the designer
+ * lifts or adds here is theirs from now on, so it leaves the agent's set: an
+ * agent that added a zone the designer later re-added cannot lift it.
+ */
+export function setGuardedPages(pageIds: string[]): GuardsData {
+  const before = new Set(readGuards().pages);
+  const data = writeGuardedPages(pageIds);
+  const after = new Set(data.pages);
+  agentAddedGuards = new Set([...agentAddedGuards].filter((id) => before.has(id) && after.has(id)));
   return data;
 }
 
@@ -116,7 +135,9 @@ export async function enforcePageGuards(
     }
     return;
   }
-  for (const id of refs.slice(0, 200)) {
+  // Every ref is checked: a bulk text edit can name hundreds of nodes, and the
+  // one past any cut-off would otherwise slip into a guarded page
+  for (const id of refs) {
     const pageId = await pageOfNode(id);
     if (pageId && guarded.has(pageId)) {
       throw new RelaiError(
@@ -161,13 +182,25 @@ export function refreshGuardsUI(): void {
 
 registerHandler("get_guards", async () => guardsStatePayload());
 
+// Only agents reach this handler (the panel and accepted proposals call
+// setGuardedPages directly), so the check here covers top-level calls and
+// set_guards wrapped in batch_execute alike.
 registerHandler("set_guards", async (params) => {
-  const pageIds = Array.isArray(params.pages)
-    ? (params.pages as unknown[]).filter((p): p is string => typeof p === "string")
-    : null;
-  if (!pageIds) throw new Error("set_guards needs pages: string[] (page IDs to guard; [] clears).");
-  const data = setGuardedPages(pageIds);
-  return { guarded: data.pages, count: data.pages.length };
+  const pages = figma.root.children;
+  const change = guardChangeVerdict(
+    readGuards().pages,
+    params,
+    agentAddedGuards,
+    new Set(pages.map((p) => p.id))
+  );
+  if (change.invalid) throw new RelaiError("invalid_params", change.invalid);
+  if (!change.ok) {
+    const refused = change.refused.map((id) => ({ id, name: pages.find((p) => p.id === id)?.name ?? id }));
+    throw new RelaiError("designer_only", designerOnlyGuardMessage(refused));
+  }
+  const data = writeGuardedPages(change.next);
+  agentAddedGuards = new Set(change.agentAdded);
+  return { guarded: data.pages, count: data.pages.length, added: change.added, lifted: change.removed };
 });
 
 setGuardEnforcer(enforcePageGuards);
