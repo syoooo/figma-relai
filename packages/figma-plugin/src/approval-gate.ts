@@ -3,21 +3,15 @@
 // answers its card, presses Stop, or nobody answers before the timeout.
 // While it waits, a periodic keepalive holds the MCP side's timeout open.
 // Everything that touches Figma is passed in, so the gate runs in tests.
+// The card carries its deadline, so the panel can count down to it.
+import type { ApprovalCause, ApprovalRequestMessage } from "@figma-relai/shared";
 import { describeScale } from "./write-guard.js";
 
-export type ApprovalCause = "designer" | "timeout" | "stop";
+export type { ApprovalCause, ApprovalRequestMessage };
 
 export type ApprovalVerdict =
   | { verdict: "approved" }
   | { verdict: "denied"; cause: ApprovalCause; reason?: string };
-
-export interface ApprovalRequestMessage {
-  type: "approval-request";
-  id: string;
-  command: string;
-  scale: string;
-  intent: string;
-}
 
 export interface ApprovalSettled {
   id: string;
@@ -38,6 +32,7 @@ export interface ApprovalGateOptions {
   keepalive: (id: string, command: string, params: Record<string, unknown>) => void;
   // Runs once per request, before the request's promise resolves
   onSettled?: (settled: ApprovalSettled) => void;
+  now?: () => number;
   setTimer?: (fn: () => void, ms: number) => unknown;
   clearTimer?: (handle: unknown) => void;
   setRepeat?: (fn: () => void, ms: number) => unknown;
@@ -45,7 +40,13 @@ export interface ApprovalGateOptions {
 }
 
 export interface ApprovalGate {
-  request(id: string, command: string, params: Record<string, unknown>): Promise<ApprovalVerdict>;
+  // `precedents`: texts the command matched before the write, shown on the card
+  request(
+    id: string,
+    command: string,
+    params: Record<string, unknown>,
+    precedents?: string[]
+  ): Promise<ApprovalVerdict>;
   // Settles a waiting request; an id that is not waiting is ignored
   answer(id: string, approved: boolean, reason?: string, cause?: ApprovalCause): void;
   pendingCount(): number;
@@ -58,13 +59,15 @@ export function createApprovalGate(options: ApprovalGateOptions): ApprovalGate {
   const clearRepeat =
     options.clearRepeat ?? ((h) => clearInterval(h as ReturnType<typeof setInterval>));
 
+  const now = options.now ?? (() => Date.now());
+
   const pending = new Map<
     string,
     (approved: boolean, reason: string | undefined, cause: ApprovalCause) => void
   >();
 
   return {
-    request(id, command, params) {
+    request(id, command, params, precedents) {
       return new Promise((resolve) => {
         const keepalive = setRepeat(() => options.keepalive(id, command, params), options.keepaliveMs);
         const timeout = setTimer(() => settle(false, undefined, "timeout"), options.timeoutMs);
@@ -87,6 +90,9 @@ export function createApprovalGate(options: ApprovalGateOptions): ApprovalGate {
           command,
           scale: describeScale(command, params),
           intent: describeIntent(command, params),
+          timeoutMs: options.timeoutMs,
+          deadline: now() + options.timeoutMs,
+          ...(precedents && precedents.length > 0 ? { precedents } : {}),
         });
       });
     },
