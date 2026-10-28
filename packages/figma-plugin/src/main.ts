@@ -24,7 +24,7 @@ import "./handlers/image-fill.js";
 import "./handlers/library.js";
 import "./handlers/audit.js";
 import "./handlers/batch.js";
-import "./handlers/execute-code.js";
+import { setCodeRunWalls } from "./handlers/execute-code.js";
 import "./handlers/memory.js";
 import "./handlers/guards.js";
 import "./handlers/audits-extra.js";
@@ -33,33 +33,26 @@ import "./handlers/timeline.js";
 import "./handlers/proposals.js";
 import "./handlers/file-identity.js";
 
-import { dispatch, hasHandler, cancelCommand, clearCancelled } from "./dispatcher.js";
+
+import { dispatch, hasHandler, cancelCommand, clearCancelled, setGuardEnforcer } from "./dispatcher.js";
 import { beginCommand, endCommand, pushEvent, drainEvents } from "./event-buffer.js";
-import {
-  needsApproval,
-  migrateConfirmLevel,
-  setScopeLock,
-  clearScopeLock,
-  scopeLockState,
-  type ApprovalMode,
-  type ConfirmLevel,
-} from "./write-guard.js";
+import { needsApproval, scopeLockState, taxTier, collectNodeRefs, isWriteCommand } from "./write-guard.js";
 import { sendProgressUpdate } from "./progress.js";
 import { createApprovalGate } from "./approval-gate.js";
 import {
   attachPrecedents,
+  preflightPrecedents,
   readMemory,
   recordGatePrecedent,
   recordPrecedent,
   removePrecedentById,
 } from "./handlers/memory.js";
-import { guardsStatePayload, refreshGuardsUI, setGuardedPages, readGuards } from "./handlers/guards.js";
-import { collectNodeRefs, isWriteCommand } from "./write-guard.js";
+import { enforcePageGuards, guardsStatePayload, refreshGuardsUI, readGuards } from "./handlers/guards.js";
 import {
   reconcileOnLoad,
+  rulesetOpResult,
   rulesetStatus,
   postRulesetState,
-  notifySkippedSeeds,
   type RestoreResult,
 } from "./handlers/rulesets.js";
 import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timeline.js";
@@ -67,50 +60,67 @@ import { pendingProposals } from "./handlers/proposals.js";
 import { postFileIdentity } from "./handlers/file-identity.js";
 import { createWindowControls, DEFAULT_WINDOW_SIZE } from "./window-controls.js";
 import { checkExpectedFile, denialError, resultMeta, toErrorPayload, type Phase } from "./call-outcome.js";
-import { RelaiError, type WsCallInfo } from "@figma-relai/shared";
+import {
+  batchApproval,
+  cardPrecedents,
+  isConfirmLevel,
+  isDesignerOnlyMessage,
+  lawRestoredWarning,
+  MAX_BATCH_DEPTH,
+  wallsKey,
+  type CommandRules,
+} from "./wall-core.js";
+import {
+  checkOnClose,
+  checkpoint,
+  codeExecDisabled,
+  collectNotices,
+  commitFromPanel,
+  currentWalls,
+  initWalls,
+  notePanelBoot,
+  noteRelayState,
+  panelLost,
+  panelVerdict,
+  persistOtherSettings,
+  probePanel,
+  scriptEnded,
+  scriptStarted,
+  snapshotVoice,
+  wallEnforcer,
+  type PanelWallPatch,
+} from "./walls.js";
+import {
+  RelaiError,
+  type ApprovalCause,
+  type LawNotice,
+  type LawNoticeMessage,
+  type RulesetHealed,
+  type RulesetOp,
+  type WriteLogWhy,
+  type WsCallInfo,
+} from "@figma-relai/shared";
 
 // Commands that count as a full check-up for the gentle reminder
 const CHECKUP_COMMANDS = new Set(["audit_readiness", "audit_ghosts"]);
+
+// Why a write the approval card closed on never ran, for the write log
+const WHY_NOT_RUN: Record<ApprovalCause, WriteLogWhy> = {
+  designer: "denied",
+  timeout: "timeout",
+  stop: "stopped",
+};
 
 // Show the plugin UI
 figma.showUI(__html__, { ...DEFAULT_WINDOW_SIZE, themeColors: true });
 const handleWindowMessage = createWindowControls(figma.ui);
 
-// Designer-facing settings persisted across plugin restarts
-interface RelaiSettings {
-  room?: string; // legacy (pre-0.7.9): one room for every file — the collision bug
-  roomsByFile?: Record<string, string>;
-  autoConnect?: boolean;
-  allowCodeExec?: boolean;
-  locale?: "en" | "ja" | "zh";
-  client?: "claude" | "codex" | "cursor";
-  requireApproval?: ApprovalMode; // legacy (pre-0.4)
-  confirmHighRisk?: boolean; // legacy (pre-0.4)
-  confirmLevel?: ConfirmLevel;
-  /**
-   * A lock the designer set stays set. Reloading the plugin (or reopening the
-   * file) used to drop it silently, which is a safety regression: the panel
-   * came back with the switch off and nobody noticed.
-   */
-  scopeLock?: { ids: string[]; names: string[] };
-}
-
-function effectiveConfirmLevel(s: RelaiSettings): ConfirmLevel {
-  return s.confirmLevel ?? migrateConfirmLevel(s.requireApproval, s.confirmHighRisk);
-}
-
-const SETTINGS_KEY = "relai.settings";
-
-// Cached so the approval gate can read the current mode synchronously
-let currentSettings: RelaiSettings = {};
-
-async function loadSettings(): Promise<RelaiSettings> {
-  try {
-    return ((await figma.clientStorage.getAsync(SETTINGS_KEY)) as RelaiSettings) ?? {};
-  } catch {
-    return {};
-  }
-}
+// Every dispatch, nested batch commands included, checks the walls against
+// the plugin's own copy before the page-guard check runs
+setGuardEnforcer(wallEnforcer(enforcePageGuards));
+// execute_figma reads the code toggle from that copy and checks the walls
+// after every script, thrown or not
+setCodeRunWalls({ currentWalls, snapshotVoice, scriptStarted, scriptEnded, checkpoint });
 
 // Room identity is per FILE, not per install. clientStorage is shared by every
 // file this plugin opens on the machine, so a single saved room name makes two
@@ -128,29 +138,57 @@ function getFileId(): string {
   return seed + ":" + figma.root.name;
 }
 
-// Send persisted settings to the UI so it can restore the room + auto-connect
-loadSettings().then(async (settings) => {
-  currentSettings = settings;
-  // Restore the lock before anything can be dispatched — a lock that comes
-  // back off after a reload is worse than no lock, because the switch lies.
-  if (settings.scopeLock?.ids?.length) {
-    setScopeLock(settings.scopeLock.ids, settings.scopeLock.names ?? []);
-  }
+// Settings fields that are walls: they reach storage only through walls.ts
+const WALL_SETTING_FIELDS = new Set([
+  "confirmLevel",
+  "allowCodeExec",
+  "scopeLock",
+  "wallsByFile",
+  "requireApproval",
+  "confirmHighRisk",
+]);
+
+const postLaw = (notices: LawNotice[], commandId?: string, command?: string) => {
+  if (notices.length === 0) return;
+  const message: LawNoticeMessage = {
+    type: "law-notice",
+    ...(commandId !== undefined ? { commandId } : {}),
+    ...(command !== undefined ? { command } : {}),
+    notices,
+  };
+  figma.ui.postMessage(message);
+};
+
+// Load this file's walls (the one time storage is trusted), then send the
+// panel what it restores: room, auto-connect, this file's walls, the law
+const fileId = getFileId();
+// getFileId() made sure the file has a seed or a fileKey, so there is a key
+const fileWallsKey = wallsKey({ seed: figma.root.getPluginData("roomSeed"), fileKey: figma.fileKey })!;
+initWalls(fileWallsKey).then(async ({ store, resolved }) => {
   // Heal the merge wound first: a linked file whose law was wiped gets it
   // back automatically when the ruleset's auto switch is on.
-  let rulesetHealed: string | null = null;
+  let rulesetHealed: RulesetHealed | null = null;
   try {
     const recon = await reconcileOnLoad();
-    if (recon.healed) rulesetHealed = recon.name;
+    if (recon.healed) {
+      const { healed: _healed, ...healed } = recon;
+      rulesetHealed = healed;
+    }
   } catch {
     // Reconciliation must never block the panel from opening
   }
   const lastCheckup = await getLastCheckup();
+  const settings: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(store)) {
+    if (!WALL_SETTING_FIELDS.has(key)) settings[key] = value;
+  }
+  const walls = currentWalls();
   figma.ui.postMessage({
     type: "init-settings",
-    settings,
+    settings: { ...settings, confirmLevel: walls.confirmLevel, allowCodeExec: walls.allowCodeExec },
+    walls: { confirmLevel: walls.confirmLevel, allowCodeExec: walls.allowCodeExec, perFile: resolved.perFile },
     fileName: figma.root.name,
-    fileId: getFileId(),
+    fileId,
     hasConventions: figma.root.getSharedPluginData("relai", "conventions").length > 0,
     conventionsContent: figma.root.getSharedPluginData("relai", "conventions"),
     memory: readMemory(),
@@ -184,26 +222,81 @@ const approvalGate = createApprovalGate({
     }),
   // A typed reason becomes a decision precedent in file memory
   onSettled: ({ command, params, approved, reason }) => {
-    if (reason) void recordGatePrecedent(command, params, approved, reason);
+    if (!reason) return;
+    void recordGatePrecedent(command, params, approved, reason);
   },
 });
+
+// ── What a command wraps ────────────────────────────────────────────
+
+type Params = Record<string, unknown>;
+
+// Only the counts of batchApproval are read here (nesting depth, scripts);
+// whether the batch asks is write-guard.ts's needsApproval
+const SHAPE_RULES: CommandRules = {
+  isWrite: isWriteCommand,
+  taxTier,
+  needsApproval: () => false,
+  bulkThreshold: Number.POSITIVE_INFINITY,
+};
+
+/**
+ * An object result carries the wall notices as `law`, after any the handler
+ * already put there (execute_code's own check), with a warning when this
+ * command's checks put something back.
+ */
+function withLaw(result: unknown, notices: LawNotice[]): unknown {
+  if (notices.length === 0 || result === null || typeof result !== "object" || Array.isArray(result)) return result;
+  const own = (result as Params).law;
+  const out: Params = { ...(result as Params), law: [...(Array.isArray(own) ? own : []), ...notices] };
+  const warning = lawRestoredWarning(notices);
+  if (warning) out.warnings = [...(Array.isArray(out.warnings) ? out.warnings : []), warning];
+  return out;
+}
 
 // Commands inside their handler, by request id, so a Stop can be
 // acknowledged to the server only for a command that is still running
 const runningCommands = new Map<string, string>();
 
-// Handle messages from the UI
-figma.ui.onmessage = async (msg: any) => {
+// ── Messages from the panel ─────────────────────────────────────────
+// Registered with figma.ui.on, not assigned to figma.ui.onmessage: a script
+// run through execute_figma gets the same figma object and could otherwise
+// call this handler directly and act as the designer.
+const onPanelMessage = async (msg: any) => {
   if (handleWindowMessage(msg)) return;
 
-  if (msg.type === "save-settings") {
-    const current = await loadSettings();
-    currentSettings = { ...current, ...(msg.settings as RelaiSettings) };
-    try {
-      await figma.clientStorage.setAsync(SETTINGS_KEY, currentSettings);
-    } catch {
-      // Persistence is best-effort
+  // The panel announces itself when it loads and reports its relay link, so
+  // a panel replaced or cut off during a command can be noticed
+  if (msg.type === "panel-hello") {
+    notePanelBoot(msg.relayConnected === true);
+    return;
+  }
+  if (msg.type === "relay-state") {
+    noteRelayState(msg.connected === true);
+    return;
+  }
+
+  // A script can replace the panel and post as it. While one runs, and for a
+  // moment after, messages only the designer may send are not applied.
+  if (isDesignerOnlyMessage(msg.type)) {
+    const verdict = panelVerdict(msg.type);
+    if (!verdict.accept) {
+      postLaw([{ kind: "panel_message_refused", message: msg.type, reason: verdict.reason }]);
+      return;
     }
+  }
+
+  if (msg.type === "save-settings") {
+    const patch = (msg.settings ?? {}) as Params;
+    const walls: PanelWallPatch = {};
+    if (isConfirmLevel(patch.confirmLevel)) walls.confirmLevel = patch.confirmLevel;
+    if (typeof patch.allowCodeExec === "boolean") walls.allowCodeExec = patch.allowCodeExec;
+    commitFromPanel(walls);
+    const others: Params = {};
+    for (const [key, value] of Object.entries(patch)) {
+      if (!WALL_SETTING_FIELDS.has(key)) others[key] = value;
+    }
+    if (Object.keys(others).length > 0) await persistOtherSettings(others);
     return;
   }
 
@@ -220,7 +313,12 @@ figma.ui.onmessage = async (msg: any) => {
     try {
       await recordPrecedent({ text: msg.text, kind: msg.kind, source: "manual" });
     } catch (error) {
-      figma.notify(error instanceof Error ? error.message : String(error), { error: true });
+      figma.ui.postMessage({
+        type: "memory-op-result",
+        op: "record",
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
     return;
   }
@@ -235,7 +333,7 @@ figma.ui.onmessage = async (msg: any) => {
   }
 
   if (msg.type === "guards-set") {
-    setGuardedPages(Array.isArray(msg.pages) ? (msg.pages as string[]) : []);
+    commitFromPanel({ guards: Array.isArray(msg.pages) ? (msg.pages as string[]) : [] });
     return;
   }
 
@@ -245,19 +343,21 @@ figma.ui.onmessage = async (msg: any) => {
   }
 
   if (msg.type === "ruleset-op") {
-    // Panel ruleset actions route through the same handlers agents use.
+    // Panel ruleset actions route through the same handlers agents use; the
+    // panel keeps the kit card open until the result arrives.
+    const op = msg.op as RulesetOp;
     try {
-      const op = msg.op as string;
       const name = typeof msg.name === "string" ? msg.name : undefined;
+      let restored: RestoreResult | null = null;
       if (op === "save-from-file") await dispatch("save_ruleset", { name, fromFile: true });
       else if (op === "link") {
         const out = (await dispatch("link_ruleset", { name, restore: msg.restore === true })) as {
           restored: RestoreResult | null;
         };
-        notifySkippedSeeds(out.restored);
+        restored = out.restored;
       } else if (op === "unlink") await dispatch("unlink_ruleset", {});
       else if (op === "restore")
-        notifySkippedSeeds((await dispatch("restore_from_ruleset", { force: msg.force === true })) as RestoreResult);
+        restored = (await dispatch("restore_from_ruleset", { force: msg.force === true })) as RestoreResult;
       else if (op === "push") await dispatch("push_to_ruleset", {});
       else if (op === "delete") await dispatch("delete_ruleset", { name });
       else if (op === "set-auto") await dispatch("save_ruleset", { name, autoRestore: msg.autoRestore === true });
@@ -267,8 +367,10 @@ figma.ui.onmessage = async (msg: any) => {
       } else if (op === "import") {
         await dispatch("import_ruleset", { markdown: msg.markdown });
       }
+      figma.ui.postMessage(rulesetOpResult(op, { restored }));
     } catch (error) {
-      figma.notify(error instanceof Error ? error.message : String(error), { error: true });
+      // A refused push or restore carries why, for the kit card
+      figma.ui.postMessage(rulesetOpResult(op, { error }));
       void postRulesetState();
     }
     return;
@@ -279,7 +381,13 @@ figma.ui.onmessage = async (msg: any) => {
       const out = (await dispatch("promote_precedent", { id: msg.id })) as { ruleset: string };
       figma.notify(`Promoted into ruleset "${out.ruleset}"`);
     } catch (error) {
-      figma.notify(error instanceof Error ? error.message : String(error), { error: true });
+      figma.ui.postMessage({
+        type: "memory-op-result",
+        op: "promote",
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+        id: msg.id as string,
+      });
     }
     return;
   }
@@ -298,8 +406,7 @@ figma.ui.onmessage = async (msg: any) => {
     const proposal = pendingProposals.get(msg.id as string);
     pendingProposals.delete(msg.id as string);
     if (proposal && msg.accepted === true) {
-      const current = readGuards().pages;
-      setGuardedPages([...new Set([...current, ...proposal.pages.map((p) => p.id)])]);
+      commitFromPanel({ guards: [...new Set([...readGuards().pages, ...proposal.pages.map((p) => p.id)])] });
       const names = proposal.pages.map((p) => p.name).join(", ");
       try {
         await recordPrecedent({
@@ -326,13 +433,10 @@ figma.ui.onmessage = async (msg: any) => {
       const ids = sel.length > 0 ? sel.map((n) => n.id) : [figma.currentPage.id];
       const names =
         sel.length > 0 ? sel.slice(0, 3).map((n) => n.name) : [figma.currentPage.name];
-      setScopeLock(ids, names);
-      currentSettings.scopeLock = { ids, names };
+      commitFromPanel({ scopeLock: { ids, names } });
     } else {
-      clearScopeLock();
-      delete currentSettings.scopeLock;
+      commitFromPanel({ scopeLock: null });
     }
-    void figma.clientStorage.setAsync(SETTINGS_KEY, currentSettings);
     figma.ui.postMessage({
       type: "scope-lock-state",
       ...scopeLockState(),
@@ -384,12 +488,25 @@ figma.ui.onmessage = async (msg: any) => {
     const write = typeof command === "string" && isWriteCommand(command, params || {});
     let phase: Phase = "preflight";
 
+    // The file name rides failures too, so the server can name the file on
+    // every receipt, not only on successes
     const refuse = (error: RelaiError) =>
       figma.ui.postMessage({
         type: "command-error",
         id,
-        error: toErrorPayload(error, { phase, write, command }),
+        error: { ...toErrorPayload(error, { phase, write, command }), file: figma.root.name },
       });
+
+    // What the walls did around this command, for the panel and the result
+    const notices: LawNotice[] = [];
+    const panelBefore = probePanel();
+    const closeNotices = (): LawNotice[] => {
+      notices.push(...collectNotices());
+      const lost = panelLost(panelBefore);
+      if (lost) notices.push(lost);
+      postLaw(notices, id, typeof command === "string" ? command : undefined);
+      return notices;
+    };
 
     try {
       if (!hasHandler(command)) {
@@ -409,11 +526,45 @@ figma.ui.onmessage = async (msg: any) => {
         return;
       }
 
-      if (needsApproval(effectiveConfirmLevel(currentSettings), command, params ?? {})) {
-        const verdict = await approvalGate.request(id, command, params ?? {});
-        figma.ui.postMessage({ type: "approval-settled", id, approved: verdict.verdict === "approved" });
+      const shape = command === "batch_execute" ? batchApproval("open", params?.commands, SHAPE_RULES) : null;
+      if (shape?.tooDeep) {
+        refuse(
+          new RelaiError(
+            "invalid_params",
+            `batch_execute nests deeper than ${MAX_BATCH_DEPTH} levels. Flatten the batch and send it again.`
+          )
+        );
+        return;
+      }
+
+      // Storage against the plugin's copy, before anything is judged: a
+      // write a script left behind on a timer is put back here
+      notices.push(...(await checkpoint("entry")));
+
+      const runsCode = command === "execute_code" || (shape?.codeRuns ?? 0) > 0;
+      if (runsCode && !currentWalls().allowCodeExec) {
+        refuse(codeExecDisabled());
+        closeNotices();
+        return;
+      }
+
+      // This file's precedents, matched against the file before the write
+      const pre = preflightPrecedents(command, params || {});
+
+      if (needsApproval(currentWalls().confirmLevel, command, params ?? {})) {
+        const verdict = await approvalGate.request(id, command, params ?? {}, cardPrecedents(pre));
+        figma.ui.postMessage({
+          type: "approval-settled",
+          id,
+          approved: verdict.verdict === "approved",
+          cause: verdict.verdict === "approved" ? "designer" : verdict.cause,
+        });
         if (verdict.verdict === "denied") {
+          if (write) {
+            void appendWriteLog(command, collectNodeRefs(params || {}), false, undefined, WHY_NOT_RUN[verdict.cause]);
+          }
           refuse(denialError(verdict.cause));
+          closeNotices();
           return;
         }
       }
@@ -436,9 +587,9 @@ figma.ui.onmessage = async (msg: any) => {
       phase = "after";
       clearCancelled(params?.commandId as string | undefined);
 
-      // In-band surfacing: this file's own precedents ride the result the
-      // moment a write touches something they reference.
-      result = attachPrecedents(command, params || {}, result);
+      // In-band surfacing: this file's own precedents, matched before the
+      // write, ride the result as its first keys.
+      result = attachPrecedents(command, params || {}, result, pre);
 
       // Auto-evidence marker: big writes leave a flag in the feed + session
       // log so the batch is findable later (checkpoint/verify are the agent's
@@ -458,6 +609,18 @@ figma.ui.onmessage = async (msg: any) => {
       }
       if (CHECKUP_COMMANDS.has(command)) void stampCheckup();
 
+      closeNotices();
+      result = withLaw(result, notices);
+      // The panel row gets the same notices and violations as the result (a
+      // batch's array result has no room for them; the row still gets this
+      // command's own)
+      const field = (key: string) =>
+        result !== null && typeof result === "object" && Array.isArray((result as Params)[key])
+          ? ((result as Params)[key] as unknown[])
+          : undefined;
+      const law = field("law") ?? (notices.length > 0 ? notices : undefined);
+      const violations = field("violations");
+
       // Piggyback designer activity that happened since the last command
       const events = drainEvents();
       figma.ui.postMessage({
@@ -465,6 +628,8 @@ figma.ui.onmessage = async (msg: any) => {
         id,
         result,
         meta: resultMeta(command, write, result, figma.root.name),
+        ...(law ? { law } : {}),
+        ...(violations ? { violations } : {}),
         ...(events.length > 0 ? { events } : {}),
       });
     } catch (error) {
@@ -484,15 +649,17 @@ figma.ui.onmessage = async (msg: any) => {
       if (write) {
         void appendWriteLog(command, collectNodeRefs(params || {}), false);
       }
+      closeNotices();
+      // The activity feed records the failure; no toast on top of it
       figma.ui.postMessage({
         type: "command-error",
         id,
-        error: { ...payload, nodeId, nodeType },
+        error: { ...payload, nodeId, nodeType, file: figma.root.name },
       });
-      figma.notify(`Error: ${payload.message}`, { error: true });
     }
   }
 };
+figma.ui.on("message", onPanelMessage);
 
 // ── Designer activity listeners ─────────────────────────────────────
 figma.on("selectionchange", () => {
@@ -524,6 +691,8 @@ figma.on("currentpagechange", () => {
   refreshGuardsUI(); // page list may have changed (create/rename/delete)
 });
 
+// A script that cleared a no-go zone and then closed the plugin leaves it
+// cleared unless it is put back here, synchronously
 figma.on("close", () => {
-  // Cleanup on plugin close
+  checkOnClose();
 });

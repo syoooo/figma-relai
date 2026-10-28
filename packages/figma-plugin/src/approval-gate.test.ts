@@ -14,6 +14,7 @@ function harness() {
     post: (m) => posted.push(m),
     keepalive: (id) => keepalives.push(id),
     onSettled: (s) => settled.push(s),
+    now: () => 1000,
     setTimer: (fn, ms) => (timers.set(next, { fn, ms, repeat: false }), next++),
     clearTimer: (h) => timers.delete(h as number),
     setRepeat: (fn, ms) => (timers.set(next, { fn, ms, repeat: true }), next++),
@@ -30,8 +31,24 @@ describe("approval gate", () => {
     const { gate, posted } = harness();
     void gate.request("c1", "execute_code", { description: "  rebuild the table  " });
     expect(posted).toEqual([
-      { type: "approval-request", id: "c1", command: "execute_code", scale: expect.any(String), intent: "rebuild the table" },
+      {
+        type: "approval-request",
+        id: "c1",
+        command: "execute_code",
+        scale: expect.any(String),
+        intent: "rebuild the table",
+        timeoutMs: 120000,
+        deadline: 121000,
+      },
     ]);
+  });
+
+  test("the card shows the precedents the command matched, none when it matched none", () => {
+    const { gate, posted } = harness();
+    void gate.request("c1", "delete_node", {}, ["keep the hero"]);
+    void gate.request("c2", "delete_node", {}, []);
+    expect(posted[0]).toMatchObject({ id: "c1", precedents: ["keep the hero"] });
+    expect(posted[1]).not.toHaveProperty("precedents");
   });
 
   test("the designer's answer settles it and clears both timers", async () => {
