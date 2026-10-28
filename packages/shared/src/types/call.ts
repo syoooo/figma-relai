@@ -213,6 +213,7 @@ export interface PluginErrorPayload {
   retry?: RetryClass; // overrides the code's default
   partial?: boolean; // some items were written before the failure
   cancelled?: boolean; // set by older plugins and panels on denial or Stop; not trusted on its own
+  file?: string; // the file the failing command ran in
 }
 
 // ── MCP result metadata ─────────────────────────────────────────────
