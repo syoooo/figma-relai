@@ -107,7 +107,7 @@ describe("execute_code", () => {
     expect(events).toEqual([]);
   });
 
-  test("an older server gets a cut under Claude Code's 50,000-character limit; a protocol 2 server gets the whole result", async () => {
+  test("an older server gets a cut under the 50,000-character limit some clients have; a protocol 2 server gets the whole result", async () => {
     expect(LEGACY_MAX_RESULT_CHARS).toBeLessThan(50000);
     const code = `return "x".repeat(${LEGACY_MAX_RESULT_CHARS * 2});`;
     const legacy = (await dispatch("execute_code", { code })) as { result: unknown; truncated?: unknown };

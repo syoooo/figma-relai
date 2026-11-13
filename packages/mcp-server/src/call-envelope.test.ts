@@ -260,7 +260,7 @@ describe("long results", () => {
     expect(texts(result)[0]!.length).toBeLessThan(MAX_TEXT_CHARS + 300);
   });
 
-  test("a cut result, notice and receipt line included, stays under Claude Code's 50,000-character limit", async () => {
+  test("a cut result, notice and receipt line included, stays under the 50,000-character limit some clients have", async () => {
     const pluginMeta: ResultMeta = { protocol: 2, write: false, file: "A file with a long name ".repeat(4), outcome: "applied" };
     const env = envelope(viaTracker((t, id) => t.resolve(id, { data: "\"".repeat(200000) }, pluginMeta)));
     registerAllTools(env.server, env.sendCommand);

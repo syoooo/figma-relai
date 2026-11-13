@@ -38,8 +38,8 @@ import { writeResultFile } from "./result-files.js";
 // - stores the machine-readable CallMeta under _meta[CALL_META_KEY].
 
 /**
- * Text longer than this is cut before it reaches the model. Claude Code moves
- * a tool result over 50,000 characters out to a file, which the model then
+ * Text longer than this is cut before it reaches the model. Some MCP clients
+ * move a tool result over 50,000 characters out to a file, which the model then
  * has to open; this leaves room under that for the cut notice, the receipt
  * line and any other text block.
  */
