@@ -481,7 +481,12 @@ describe("needsApproval batch", () => {
       [sub("execute_code"), sub("delete_variable"), sub("delete_style"), sub("flatten_node", { nodeId: "1:1" })],
       rules
     );
-    expect(batchScale(v)).toBe("4 commands · contains execute_code · 2 ghost-risk · 1 irreversible");
+    expect(batchScale(v)).toEqual([
+      { key: "commands", n: 4 },
+      { key: "code" },
+      { key: "ghost_n", n: 2 },
+      { key: "irreversible_n", n: 1 },
+    ]);
   });
 });
 

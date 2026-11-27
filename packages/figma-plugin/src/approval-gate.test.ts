@@ -35,7 +35,7 @@ describe("approval gate", () => {
         type: "approval-request",
         id: "c1",
         command: "execute_code",
-        scale: expect.any(String),
+        scale: [],
         intent: "rebuild the table",
         timeoutMs: 120000,
         deadline: 121000,

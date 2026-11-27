@@ -913,7 +913,7 @@
     </div>
     <div class="header-actions">
       <button class="compact-stop" id="compactStop" type="button" onclick="stopAll()"><span data-i18n="stop">STOP</span><span class="halt-n" id="compactStopN"></span></button>
-      <div class="seg" role="group" aria-label="Language">
+      <div class="seg" role="group" data-i18n-aria="aria_language" aria-label="Language">
         <button id="langEn" onclick="setLang('en')">EN</button>
         <button id="langJa" onclick="setLang('ja')">日</button>
         <button id="langZh" onclick="setLang('zh')">中</button>
@@ -945,7 +945,7 @@
     <!-- Shown when the relay can't be reached: the MCP server isn't running -->
     <div class="panel" id="mcpHint" style="display:none; margin-top: var(--sp-12);">
       <div class="hint-text" data-i18n-html="mcp_hint">The relay lives inside the MCP server — <b>no server detected on ports 9055–9057.</b> Register it in your AI client, then start a conversation:</div>
-      <div class="seg client-seg" role="group" aria-label="AI client">
+      <div class="seg client-seg" role="group" data-i18n-aria="aria_client" aria-label="AI client">
         <button id="clientClaude" onclick="setClient('claude')">CLAUDE</button>
         <button id="clientCodex" onclick="setClient('codex')">CODEX</button>
         <button id="clientCursor" onclick="setClient('cursor')">CURSOR</button>
@@ -978,7 +978,7 @@
         <span class="chip"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M72,104a16,16,0,1,1,16,16A16,16,0,0,1,72,104Zm96,16a16,16,0,1,0-16-16A16,16,0,0,0,168,120Zm68-40V192a36,36,0,0,1-36,36H56a36,36,0,0,1-36-36V80A36,36,0,0,1,56,44h60V16a12,12,0,0,1,24,0V44h60A36,36,0,0,1,236,80Zm-24,0a12,12,0,0,0-12-12H56A12,12,0,0,0,44,80V192a12,12,0,0,0,12,12H200a12,12,0,0,0,12-12Zm-12,82a30,30,0,0,1-30,30H86a30,30,0,0,1,0-60h84A30,30,0,0,1,200,162Zm-80-6v12h16V156ZM86,168H96V156H86a6,6,0,0,0,0,12Zm90-6a6,6,0,0,0-6-6H160v12h10A6,6,0,0,0,176,162Z"/></svg></span> AGENT <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText"></span></span></span>
       </div>
       <div class="chip-group">
-        <span class="chip" id="tokenChip" style="display:none" title="" onclick="onTokenChipClick()"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M198.15,96A44,44,0,0,0,168,20H96A44,44,0,0,0,65.85,96a43.9,43.9,0,0,0,1.23,65.12A48,48,0,1,0,148,196V167.17A44,44,0,0,0,198.15,96ZM188,64a20,20,0,0,1-20,20H148V44h20A20,20,0,0,1,188,64ZM76,64A20,20,0,0,1,96,44h28V84H96A20,20,0,0,1,76,64Zm20,84a20,20,0,0,1,0-40h28v40H96Zm28,48a24,24,0,1,1-24-24h24Zm44-48a20,20,0,1,1,20-20A20,20,0,0,1,168,148Z"/></svg></span> ACCESS TOKEN <span class="val muted" id="tokenVal"><span class="lamp off" id="tokenLamp"></span> <span id="tokenText"></span></span></span>
+        <span class="chip" id="tokenChip" style="display:none" title="" onclick="onTokenChipClick()"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M198.15,96A44,44,0,0,0,168,20H96A44,44,0,0,0,65.85,96a43.9,43.9,0,0,0,1.23,65.12A48,48,0,1,0,148,196V167.17A44,44,0,0,0,198.15,96ZM188,64a20,20,0,0,1-20,20H148V44h20A20,20,0,0,1,188,64ZM76,64A20,20,0,0,1,96,44h28V84H96A20,20,0,0,1,76,64Zm20,84a20,20,0,0,1,0-40h28v40H96Zm28,48a24,24,0,1,1-24-24h24Zm44-48a20,20,0,1,1,20-20A20,20,0,0,1,168,148Z"/></svg></span> <span data-i18n="token_chip">ACCESS TOKEN</span> <span class="val muted" id="tokenVal"><span class="lamp off" id="tokenLamp"></span> <span id="tokenText"></span></span></span>
       </div>
     </div>
 
@@ -989,17 +989,17 @@
         <span class="branch" id="branchTag" title=""><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M236,64a36,36,0,1,0-48,33.94V112a4,4,0,0,1-4,4H96a27.8,27.8,0,0,0-4,.29V97.94a36,36,0,1,0-24,0v60.12a36,36,0,1,0,24,0V144a4,4,0,0,1,4-4h88a28,28,0,0,0,28-28V97.94A36.07,36.07,0,0,0,236,64ZM80,52A12,12,0,1,1,68,64,12,12,0,0,1,80,52Zm0,152a12,12,0,1,1,12-12A12,12,0,0,1,80,204ZM200,76a12,12,0,1,1,12-12A12,12,0,0,1,200,76Z"/></svg><span id="branchName"></span></span>
       </div>
       <div class="leader-row conv-row" id="convRow" onclick="openConvModal()">
-        <span class="key">RULES</span>
+        <span class="key" data-i18n="rules_label">RULES</span>
         <span class="dots"></span>
         <span class="val muted" id="convRowVal"><span class="view-link">view</span></span>
       </div>
       <div class="leader-row conv-row" id="memRow" onclick="openMemModal()">
-        <span class="key">MEMORY</span>
+        <span class="key" data-i18n="memory_label">MEMORY</span>
         <span class="dots"></span>
         <span class="val muted"><span id="memCount">0</span> · <span class="view-link" data-i18n="conventions_view">view</span></span>
       </div>
       <div class="leader-row conv-row" id="guardRow" onclick="openGuardsModal()">
-        <span class="key">NO-GO</span>
+        <span class="key" data-i18n="guards_label">NO-GO</span>
         <span class="dots"></span>
         <span class="val muted"><span id="guardsCount">0</span> · <span class="view-link" data-i18n="guards_edit">edit</span></span>
       </div>
@@ -1010,11 +1010,11 @@
     <div class="modal-overlay" id="convModal" onclick="if (event.target === this) closeConvModal()">
       <div class="panel modal-box">
         <div class="modal-head">
-          <span class="key">RULES</span>
+          <span class="key" data-i18n="rules_label">RULES</span>
           <span class="conv-from" id="convFrom"></span>
           <span class="dots"></span>
-          <button class="modal-close" onclick="closeConvModal(); openRulesetModal()" aria-label="kit settings">&#9881;</button>
-          <button class="modal-close" onclick="closeConvModal()" aria-label="close">&#10005;</button>
+          <button class="modal-close" onclick="closeConvModal(); openRulesetModal()" data-i18n-aria="aria_kit_settings" aria-label="kit settings">&#9881;</button>
+          <button class="modal-close" onclick="closeConvModal()" data-i18n-aria="aria_close" aria-label="close">&#10005;</button>
         </div>
         <div class="conv-text" id="convText"></div>
       </div>
@@ -1024,9 +1024,9 @@
     <div class="modal-overlay" id="memModal" onclick="if (event.target === this) closeMemModal()">
       <div class="panel modal-box">
         <div class="modal-head">
-          <span class="key">MEMORY</span>
+          <span class="key" data-i18n="memory_label">MEMORY</span>
           <span class="dots"></span>
-          <button class="modal-close" onclick="closeMemModal()" aria-label="close">&#10005;</button>
+          <button class="modal-close" onclick="closeMemModal()" data-i18n-aria="aria_close" aria-label="close">&#10005;</button>
         </div>
         <div id="memList"><div class="mem-empty" data-i18n="memory_empty">no precedents yet — they accumulate as you adjudicate</div></div>
         <input class="mem-input" id="memInput" data-i18n-ph="memory_add_ph" placeholder="+ note a precedent… (Enter)" onkeydown="onMemInputKey(event)" oninput="setMemError('')">
@@ -1038,9 +1038,9 @@
     <div class="modal-overlay" id="tokenModal" onclick="if (event.target === this) closeTokenModal()">
       <div class="panel modal-box">
         <div class="modal-head">
-          <span class="key">TOKEN</span>
+          <span class="key" data-i18n="token_label">TOKEN</span>
           <span class="dots"></span>
-          <button class="modal-close" onclick="closeTokenModal()" aria-label="close">&#10005;</button>
+          <button class="modal-close" onclick="closeTokenModal()" data-i18n-aria="aria_close" aria-label="close">&#10005;</button>
         </div>
         <div class="conv-text" data-i18n="token_modal_body">No Figma access token. manage_comments and full library catalogs stay locked. Run this in any terminal, then restart your AI session:</div>
         <div class="cmd-block" id="tokenCmdBlock" onclick="copyLoginCmd()">
@@ -1055,9 +1055,9 @@
     <div class="modal-overlay" id="guardsModal" onclick="if (event.target === this) closeGuardsModal()">
       <div class="panel modal-box">
         <div class="modal-head">
-          <span class="key">AI NO-GO</span>
+          <span class="key" data-i18n="guards_modal_label">AI NO-GO</span>
           <span class="dots"></span>
-          <button class="modal-close" onclick="closeGuardsModal()" aria-label="close">&#10005;</button>
+          <button class="modal-close" onclick="closeGuardsModal()" data-i18n-aria="aria_close" aria-label="close">&#10005;</button>
         </div>
         <div id="guardsList"></div>
       </div>
@@ -1067,9 +1067,9 @@
     <div class="modal-overlay" id="rulesetModal" onclick="if (event.target === this) closeRulesetModal()">
       <div class="panel modal-box">
         <div class="modal-head">
-          <span class="key">KITS</span>
+          <span class="key" data-i18n="kits_label">KITS</span>
           <span class="dots"></span>
-          <button class="modal-close" onclick="closeRulesetModal()" aria-label="close">&#10005;</button>
+          <button class="modal-close" onclick="closeRulesetModal()" data-i18n-aria="aria_close" aria-label="close">&#10005;</button>
         </div>
         <div id="rulesetList"></div>
         <div class="rule"><span data-i18n="kit_new">new</span></div>
@@ -1086,9 +1086,9 @@
     <div class="modal-overlay" id="histModal" onclick="if (event.target === this) closeHistModal()">
       <div class="panel modal-box">
         <div class="modal-head">
-          <span class="key">SESSIONS</span>
+          <span class="key" data-i18n="sessions_label">SESSIONS</span>
           <span class="dots"></span>
-          <button class="modal-close" onclick="closeHistModal()" aria-label="close">&#10005;</button>
+          <button class="modal-close" onclick="closeHistModal()" data-i18n-aria="aria_close" aria-label="close">&#10005;</button>
         </div>
         <div id="histList"><div class="mem-empty" data-i18n="hist_empty">no writes recorded yet</div></div>
       </div>
@@ -1110,7 +1110,7 @@
 
     <!-- Moment cards: the file speaks when its law needs a decision -->
     <div class="panel approval-card" id="momentCard">
-      <div class="approval-title">FILE &rsaquo;</div>
+      <div class="approval-title" data-i18n="moment_label">FILE &rsaquo;</div>
       <div class="approval-intent" id="momentBody"></div>
       <div class="approval-actions" id="momentActions"></div>
     </div>
@@ -1135,7 +1135,7 @@
          elastic ::after, which is also what makes the slot's width free. -->
     <div class="rule"><span class="feed-label"><span data-i18n="activity">Activity</span><span class="halt" id="haltSlot"><span class="halt-clip"><button class="halt-btn" id="stopBtn" type="button" tabindex="-1" aria-hidden="true" onclick="stopAll()"><span class="halt-lbl"><span data-i18n="stop">STOP</span><span class="halt-n" id="stopN"></span></span></button></span></span></span><span class="feed-head-extra"><span class="view-link" onclick="openHistModal()" data-i18n="history">history</span></span></div>
     <div class="feed" id="feed">
-      <div class="feed-row in" id="feedEmptyRow"><div class="feed-clip"><div class="feed-empty" id="feedEmpty"><span class="cursor"><span class="pulsor" role="status" aria-label="Loading"><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span></span></span><span data-i18n="feed_empty">awaiting commands</span></div></div></div>
+      <div class="feed-row in" id="feedEmptyRow"><div class="feed-clip"><div class="feed-empty" id="feedEmpty"><span class="cursor"><span class="pulsor" role="status" data-i18n-aria="aria_loading" aria-label="Loading"><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-625ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1250ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-1875ms"></span></span></span><span data-i18n="feed_empty">awaiting commands</span></div></div></div>
     </div>
 
     <!-- Settings -->
@@ -1143,7 +1143,7 @@
     <div class="panel">
       <div class="setting-row stack">
         <span class="label"><span data-i18n="approvals">When to ask</span><span class="sub" data-i18n="approvals_hint">OPEN nothing · RISK ghost-making &amp; irreversible · BULK +code &amp; 10+ layers · ALL every write &amp; script</span></span>
-        <div class="seg approval-seg" role="group" aria-label="Approvals">
+        <div class="seg approval-seg" role="group" data-i18n-aria="aria_approvals" aria-label="Approvals">
           <button id="apprOpen" onclick="setApproval('open')">OPEN</button>
           <button id="apprRisk" onclick="setApproval('risk')">RISK</button>
           <button id="apprBulk" onclick="setApproval('bulk')">BULK</button>
@@ -1376,7 +1376,34 @@
         why_denied: 'denied',
         why_timeout: 'timed out',
         why_stopped: 'stopped',
-        why_undelivered: 'not delivered'
+        why_undelivered: 'not delivered',
+        rules_label: 'RULES',
+        memory_label: 'MEMORY',
+        guards_label: 'NO-GO',
+        guards_modal_label: 'AI NO-GO',
+        token_label: 'TOKEN',
+        token_chip: 'ACCESS TOKEN',
+        kits_label: 'KITS',
+        sessions_label: 'SESSIONS',
+        moment_label: 'FILE ›',
+        aria_language: 'Language',
+        aria_client: 'AI client',
+        aria_approvals: 'Approvals',
+        aria_kit_settings: 'kit settings',
+        aria_close: 'close',
+        aria_loading: 'Loading',
+        aria_promote: 'promote precedent to ruleset',
+        aria_delete_precedent: 'delete precedent',
+        scale_node: '1 node',
+        scale_nodes: '{n} nodes',
+        scale_command: '1 command',
+        scale_commands: '{n} commands',
+        scale_code: 'contains execute_code',
+        scale_ghost: 'ghost-risk',
+        scale_ghost_n: '{n} ghost-risk',
+        scale_irreversible: 'irreversible',
+        scale_irreversible_n: '{n} irreversible',
+        scale_unreadable_n: '{n} unreadable'
       },
       ja: {
         minimize_window: 'ウィンドウを最小化',
@@ -1550,7 +1577,35 @@
         why_denied: '拒否',
         why_timeout: '時間切れ',
         why_stopped: '停止',
-        why_undelivered: '届かず'
+        why_undelivered: '届かず',
+        // Placeholders in English until these are translated
+        rules_label: 'RULES',
+        memory_label: 'MEMORY',
+        guards_label: 'NO-GO',
+        guards_modal_label: 'AI NO-GO',
+        token_label: 'TOKEN',
+        token_chip: 'ACCESS TOKEN',
+        kits_label: 'KITS',
+        sessions_label: 'SESSIONS',
+        moment_label: 'FILE ›',
+        aria_language: 'Language',
+        aria_client: 'AI client',
+        aria_approvals: 'Approvals',
+        aria_kit_settings: 'kit settings',
+        aria_close: 'close',
+        aria_loading: 'Loading',
+        aria_promote: 'promote precedent to ruleset',
+        aria_delete_precedent: 'delete precedent',
+        scale_node: '1 node',
+        scale_nodes: '{n} nodes',
+        scale_command: '1 command',
+        scale_commands: '{n} commands',
+        scale_code: 'contains execute_code',
+        scale_ghost: 'ghost-risk',
+        scale_ghost_n: '{n} ghost-risk',
+        scale_irreversible: 'irreversible',
+        scale_irreversible_n: '{n} irreversible',
+        scale_unreadable_n: '{n} unreadable'
       },
       zh: {
         minimize_window: '最小化窗口',
@@ -1724,7 +1779,35 @@
         why_denied: '已拒绝',
         why_timeout: '超时',
         why_stopped: '已停止',
-        why_undelivered: '没送到'
+        why_undelivered: '没送到',
+        // Placeholders in English until these are translated
+        rules_label: 'RULES',
+        memory_label: 'MEMORY',
+        guards_label: 'NO-GO',
+        guards_modal_label: 'AI NO-GO',
+        token_label: 'TOKEN',
+        token_chip: 'ACCESS TOKEN',
+        kits_label: 'KITS',
+        sessions_label: 'SESSIONS',
+        moment_label: 'FILE ›',
+        aria_language: 'Language',
+        aria_client: 'AI client',
+        aria_approvals: 'Approvals',
+        aria_kit_settings: 'kit settings',
+        aria_close: 'close',
+        aria_loading: 'Loading',
+        aria_promote: 'promote precedent to ruleset',
+        aria_delete_precedent: 'delete precedent',
+        scale_node: '1 node',
+        scale_nodes: '{n} nodes',
+        scale_command: '1 command',
+        scale_commands: '{n} commands',
+        scale_code: 'contains execute_code',
+        scale_ghost: 'ghost-risk',
+        scale_ghost_n: '{n} ghost-risk',
+        scale_irreversible: 'irreversible',
+        scale_irreversible_n: '{n} irreversible',
+        scale_unreadable_n: '{n} unreadable'
       }
     };
     var LOCALES = ['en', 'ja', 'zh'];
@@ -1756,6 +1839,9 @@
       });
       document.querySelectorAll('[data-i18n-title]').forEach(function (el) {
         el.title = t(el.getAttribute('data-i18n-title'));
+      });
+      document.querySelectorAll('[data-i18n-aria]').forEach(function (el) {
+        el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
       });
       document.querySelectorAll('[data-i18n-ph]').forEach(function (el) {
         el.placeholder = t(el.getAttribute('data-i18n-ph'));
@@ -2098,9 +2184,16 @@
         intentEl.textContent = t('approval_no_intent');
         intentEl.className = 'approval-intent none';
       }
-      document.getElementById('approvalCmd').textContent =
-        req.command + (req.scale ? ' · ' + req.scale : '');
+      var scale = scaleText(req.scale);
+      document.getElementById('approvalCmd').textContent = req.command + (scale ? ' · ' + scale : '');
       card.classList.add('show');
+    }
+
+    // The plugin sends the scale line as parts; each is worded here
+    function scaleText(parts) {
+      return parts.map(function (p) {
+        return t('scale_' + p.key).replace('{n}', String(p.n));
+      }).join(' · ');
     }
 
     function answerApproval(approved) {
@@ -2159,7 +2252,7 @@
         up.className = 'mem-del';
         up.textContent = '↑';
         up.title = t('promote_title');
-        up.setAttribute('aria-label', 'promote precedent to ruleset');
+        up.setAttribute('aria-label', t('aria_promote'));
         up.onclick = function () {
           if (memRowErrors[e.id]) { delete memRowErrors[e.id]; renderMemory(); }
           parent.postMessage({ pluginMessage: { type: 'memory-promote', id: e.id } }, '*');
@@ -2167,7 +2260,7 @@
         var del = document.createElement('button');
         del.className = 'mem-del';
         del.innerHTML = MEM_DEL_SVG;
-        del.setAttribute('aria-label', 'delete precedent');
+        del.setAttribute('aria-label', t('aria_delete_precedent'));
         del.onclick = function () {
           parent.postMessage({ pluginMessage: { type: 'memory-remove', id: e.id } }, '*');
         };
@@ -3032,7 +3125,7 @@
       return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
     }
 
-    var RUNNING_MARK = '<span class="pulsor" role="status" aria-label="Loading"><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-667ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-333ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-667ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-667ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-333ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-333ms"></span></span>';
+    var RUNNING_MARK = '<span class="pulsor" role="status" data-i18n-aria="aria_loading" aria-label="Loading"><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-667ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-333ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-667ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-667ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:0ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-333ms"></span><span class="c pulsor-18cxmaf" style="background:currentColor;animation-delay:-333ms"></span></span>';
 
     var FEED_ROW_MS = 260; // just past --dur-med
 
@@ -3079,6 +3172,7 @@
       el.className = 'feed-entry' + (nodeId ? ' clickable' : '');
       el.innerHTML = '<span class="t"></span><span class="st running">' + RUNNING_MARK +
         '</span><span class="cmd"></span><span class="dur"></span>';
+      el.querySelector('.pulsor').setAttribute('aria-label', t('aria_loading'));
       el.querySelector('.t').textContent = timeStamp();
       el.querySelector('.cmd').textContent = command;
       if (nodeId) {

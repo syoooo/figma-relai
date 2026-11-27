@@ -141,12 +141,22 @@ export interface LawNoticeMessage {
 /** Why an approval card closed without the designer approving it. */
 export type ApprovalCause = "designer" | "timeout" | "stop";
 
+/**
+ * One piece of an approval card's scale line. The panel words it from its
+ * dictionary (`scale_<key>`, with `{n}` replaced by n), so the line follows
+ * the panel's language.
+ */
+export interface ScalePart {
+  key: "node" | "nodes" | "command" | "commands" | "code" | "ghost" | "ghost_n" | "irreversible" | "irreversible_n" | "unreadable_n";
+  n?: number; // the count, for the keys that carry one
+}
+
 /** Shows an approval card that counts down to its timeout. */
 export interface ApprovalRequestMessage {
   type: "approval-request";
   id: string; // the command's request id
   command: string;
-  scale: string; // the card's scale line (node count, batch size, why it asks)
+  scale: ScalePart[]; // the card's scale line (node count, batch size, why it asks); [] for none
   intent: string; // the agent's stated intent, or "" when it gave none
   timeoutMs: number; // how long the card waits before it is denied automatically
   deadline: number; // Date.now() in the plugin when the card times out (plugin and panel share the machine's clock)

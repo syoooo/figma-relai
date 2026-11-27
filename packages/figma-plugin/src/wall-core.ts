@@ -21,6 +21,7 @@ import type {
   LawChangeSource,
   LawNotice,
   PageRef,
+  ScalePart,
   ScriptWindowMessage,
   VoiceKey,
   WallField,
@@ -649,14 +650,18 @@ export function batchApproval(level: ConfirmLevel, commands: unknown, rules: Com
   return out;
 }
 
-/** The approval card's scale line for a batch: "12 commands · contains execute_code · 2 ghost-risk". */
-export function batchScale(verdict: BatchApproval): string {
-  const parts = [`${verdict.total} ${verdict.total === 1 ? "command" : "commands"}`];
-  if (verdict.codeRuns > 0) parts.push("contains execute_code");
-  if (verdict.ghostRisk > 0) parts.push(`${verdict.ghostRisk} ghost-risk`);
-  if (verdict.irreversible > 0) parts.push(`${verdict.irreversible} irreversible`);
-  if (verdict.malformed > 0) parts.push(`${verdict.malformed} unreadable`);
-  return parts.join(" · ");
+export const SCALE_KEYS: readonly ScalePart["key"][] = [
+  "node", "nodes", "command", "commands", "code", "ghost", "ghost_n", "irreversible", "irreversible_n", "unreadable_n",
+];
+
+/** The approval card's scale line for a batch, in English "12 commands · contains execute_code · 2 ghost-risk". */
+export function batchScale(verdict: BatchApproval): ScalePart[] {
+  const parts: ScalePart[] = [verdict.total === 1 ? { key: "command" } : { key: "commands", n: verdict.total }];
+  if (verdict.codeRuns > 0) parts.push({ key: "code" });
+  if (verdict.ghostRisk > 0) parts.push({ key: "ghost_n", n: verdict.ghostRisk });
+  if (verdict.irreversible > 0) parts.push({ key: "irreversible_n", n: verdict.irreversible });
+  if (verdict.malformed > 0) parts.push({ key: "unreadable_n", n: verdict.malformed });
+  return parts;
 }
 
 // ── Precedents matched before the write ─────────────────────────────

@@ -203,10 +203,10 @@ describe("migrateConfirmLevel", () => {
 describe("describeScale", () => {
   test("batches count commands, fan-outs count nodes", () => {
     const write = { command: "set_fill_color", params: { nodeId: "1:1" } };
-    expect(describeScale("batch_execute", { commands: [write, write, write] })).toBe("3 commands");
-    expect(describeScale("set_instance_overrides", { targetNodeIds: ["a", "b"] })).toBe("2 nodes");
-    expect(describeScale("delete_node", { nodeId: "1:1" })).toBe("1 node");
-    expect(describeScale("execute_code", {})).toBe("");
+    expect(describeScale("batch_execute", { commands: [write, write, write] })).toEqual([{ key: "commands", n: 3 }]);
+    expect(describeScale("set_instance_overrides", { targetNodeIds: ["a", "b"] })).toEqual([{ key: "nodes", n: 2 }]);
+    expect(describeScale("delete_node", { nodeId: "1:1" })).toEqual([{ key: "node" }]);
+    expect(describeScale("execute_code", {})).toEqual([]);
   });
 });
 
@@ -224,7 +224,7 @@ describe("describeScale batch", () => {
           },
         ],
       })
-    ).toBe("4 commands · contains execute_code · 2 ghost-risk · 1 irreversible");
+    ).toEqual([{ key: "commands", n: 4 }, { key: "code" }, { key: "ghost_n", n: 2 }, { key: "irreversible_n", n: 1 }]);
   });
 });
 

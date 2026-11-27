@@ -3,7 +3,7 @@
 // main.ts), but for batch_execute that one decision looks at every wrapped
 // command, nested batches included; the scope lock is enforced inside
 // dispatch() so batch_execute's nested commands are checked too.
-import { RelaiError } from "@figma-relai/shared";
+import { RelaiError, type ScalePart } from "@figma-relai/shared";
 import { batchApproval, batchScale, type CommandRules } from "./wall-core.js";
 
 // Non-mutating (or harmless-navigation) commands. Everything else is a write.
@@ -115,17 +115,17 @@ export function taxTier(command: string, params: Record<string, unknown>): "ghos
   return null;
 }
 
-/** Human-readable scale of a command, for the approval card */
-export function describeScale(command: string, params: Record<string, unknown>): string {
+/** Scale of a command for the approval card, as parts the panel words in its language */
+export function describeScale(command: string, params: Record<string, unknown>): ScalePart[] {
   // A batch says what is inside it: "12 commands · contains execute_code · 2 ghost-risk"
   if (command === "batch_execute") return batchScale(batchApproval("all", params.commands, COMMAND_RULES));
-  const parts: string[] = [];
+  const parts: ScalePart[] = [];
   const tier = taxTier(command, params);
-  if (tier === "ghost") parts.push("ghost-risk");
-  if (tier === "irreversible") parts.push("irreversible");
+  if (tier === "ghost") parts.push({ key: "ghost" });
+  if (tier === "irreversible") parts.push({ key: "irreversible" });
   const refs = collectNodeRefs(params);
-  if (refs.length > 0) parts.push(refs.length > 1 ? `${refs.length} nodes` : "1 node");
-  return parts.join(" · ");
+  if (refs.length > 0) parts.push(refs.length > 1 ? { key: "nodes", n: refs.length } : { key: "node" });
+  return parts;
 }
 
 /**

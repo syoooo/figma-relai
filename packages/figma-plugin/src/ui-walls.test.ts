@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { LawNotice, PanelFailure } from "@figma-relai/shared";
-import { DESIGNER_ONLY_MESSAGES, VOICE_KEYS } from "./wall-core.js";
+import { DESIGNER_ONLY_MESSAGES, SCALE_KEYS, VOICE_KEYS } from "./wall-core.js";
+import { describeScale } from "./write-guard.js";
 
 // The panel's wall notices, approval countdown and kit refusals, lifted out
 // of ui.html verbatim and run against stand-ins for the DOM and the plugin.
@@ -81,6 +82,7 @@ describe("panel text", () => {
     const families = [
       ...["confirmLevel", "allowCodeExec", "scopeLock"].map((f) => `field_${f}`),
       ...VOICE_KEYS.map((k) => `voice_${k}`),
+      ...SCALE_KEYS.map((k) => `scale_${k}`),
       ...[...DESIGNER_ONLY_MESSAGES].map((m) => `msg_${m.replace(/-/g, "_")}`),
       ...["denied", "timeout", "stopped", "undelivered"].map((w) => `why_${w}`),
     ];
@@ -678,5 +680,55 @@ describe("a card's way out", () => {
     expect(decl(`${base}:disabled:hover`, "color")).toBe(vars.faint);
     expect(decl(`${base}:disabled`, "border-color")).toBe(vars.line);
     expect(decl(`${base}:disabled`, "color")).not.toBe(decl(base, "color"));
+  });
+});
+
+describe("labels the panel words", () => {
+  const body = html.slice(html.indexOf("<body"), html.indexOf("<script>"));
+
+  test("headings and accessible names come from the dictionary", () => {
+    // Every heading span and card title with text of its own names a key,
+    // and its markup text is the English
+    let headings = 0;
+    for (const m of body.matchAll(/<(span|div) class="(?:key|approval-title)"([^>]*)>([^<]*)</g)) {
+      if (m[3] === "") continue;
+      headings++;
+      const key = m[2].match(/data-i18n="([a-z_0-9]+)"/)?.[1];
+      expect(key, m[0]).toBeDefined();
+      expect(m[3].replace("&rsaquo;", "\u203a")).toBe(I18N.en[key!]);
+    }
+    expect(headings).toBeGreaterThanOrEqual(12);
+    expect(body).toContain('<span data-i18n="token_chip">ACCESS TOKEN</span>');
+    // The window buttons get theirs from renderWindowControls
+    for (const m of body.matchAll(/<[^>]*aria-label="([^"]*)"[^>]*>/g)) {
+      if (/id="(?:minimizeBtn|resizeHandle)"/.test(m[0])) continue;
+      const key = m[0].match(/data-i18n-aria="([a-z_0-9]+)"/)?.[1];
+      expect(key, m[0]).toBeDefined();
+      expect(m[1]).toBe(I18N.en[key!]);
+    }
+    for (const m of script.matchAll(/setAttribute\('aria-label', ([^)]*\)?)\)/g)) {
+      expect(m[1], m[0]).toMatch(/^(t\(|button\.title|t\(el\.getAttribute)/);
+    }
+  });
+
+  test("the approval card's scale line reads as before in English and follows the panel's language", () => {
+    const scaleText = (locale: string) =>
+      lift<(parts: unknown) => string>(["scaleText"], "", "scaleText", { t: tFor(locale) });
+    const en = scaleText("en");
+    const batch = describeScale("batch_execute", {
+      commands: [
+        { command: "execute_code", params: { code: "" } },
+        { command: "delete_variable", params: { variableId: "V:1" } },
+        { command: "delete_style", params: { styleId: "S:1" } },
+        { command: "flatten_node", params: { nodeId: "1:1" } },
+      ],
+    });
+    expect(en(batch)).toBe("4 commands · contains execute_code · 2 ghost-risk · 1 irreversible");
+    expect(en(describeScale("delete_node", { nodeId: "1:1" }))).toBe("1 node");
+    expect(en(describeScale("delete_variable", { variableId: "V:1" }))).toBe("ghost-risk");
+    expect(en(describeScale("set_instance_overrides", { targetNodeIds: ["a", "b"] }))).toBe("2 nodes");
+    expect(en(describeScale("execute_code", {}))).toBe("");
+    const ja = scaleText("ja");
+    expect(ja([{ key: "nodes", n: 3 }])).toBe(I18N.ja.scale_nodes.replace("{n}", "3"));
   });
 });

@@ -20,7 +20,7 @@ describe("ui.html", () => {
 
   test("every data-i18n key exists in all three locales", () => {
     const script = html.match(/<script>([\s\S]*)<\/script>/)![1];
-    const keys = [...html.matchAll(/data-i18n(?:-html|-title)?="([a-z_0-9]+)"/g)].map(
+    const keys = [...html.matchAll(/data-i18n(?:-html|-title|-aria)?="([a-z_0-9]+)"/g)].map(
       (m) => m[1]
     );
     for (const locale of ["en", "ja", "zh"]) {
