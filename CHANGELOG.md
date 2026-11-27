@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.8.2
+
+A plugin that goes quiet or steps away is kept and waited for, and the panel speaks the designer's language.
 
 ### Changes
 
