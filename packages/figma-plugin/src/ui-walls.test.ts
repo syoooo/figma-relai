@@ -769,12 +769,24 @@ describe("labels the panel words", () => {
     expect(en(describeScale("execute_code", {}))).toBe("");
     const ja = scaleText("ja");
     expect(ja([{ key: "nodes", n: 3 }])).toBe(I18N.ja.scale_nodes.replace("{n}", "3"));
-    expect(ja(batch)).toBe("コマンド4件 · execute_codeを含む · 2件は見えない参照が残る · 1件は元に戻せない");
+    expect(ja(batch)).toBe("コマンド4件 · execute_codeを含む · 2件は削除後も参照が残る · 1件は元に戻せない");
+    // What stays unseen is the deleted variable or style; the reference itself stays on the layer
+    expect(ja([{ key: "ghost" }])).toBe("削除後も参照が残る");
+    expect(scaleText("zh")([{ key: "ghost_n", n: 2 }])).toBe("其中2条删除后引用仍在");
+  });
+
+  test("the Japanese file card is titled as the file, not as a path, and does not say who deleted a kit", () => {
+    expect(I18N.ja.moment_label).toBe("このファイル");
+    expect(I18N.zh.moment_label).toBe("这个文件");
+    // The kit may have been deleted from another file
+    expect(I18N.ja.moment_kit_gone).toStartWith("ルールセット「{kit}」は削除されました。");
+    // Counts in a row are parted with the same dot as the rest of the panel
+    expect(I18N.ja.kit_meta).toBe("{chars}字 · メモ{seeds}件");
   });
 
   test("the Japanese and Chinese panels word their headings, accessible names and scale line", () => {
-    const keys = Object.keys(I18N.en).filter((k) => /^(rules|memory|guards|guards_modal|token|kits|sessions|moment)_label$|^token_chip$|^aria_|^scale_/.test(k));
-    expect(keys.length).toBeGreaterThanOrEqual(27);
+    const keys = Object.keys(I18N.en).filter((k) => /^(rules|memory|guards|guards_modal|token|kits|sessions|moment|status)_label$|^token_chip$|^aria_|^scale_/.test(k));
+    expect(keys.length).toBeGreaterThanOrEqual(28);
     for (const locale of ["ja", "zh"] as const) {
       for (const k of keys) {
         // execute_code stays the tool's own name; the rest is no longer the English
