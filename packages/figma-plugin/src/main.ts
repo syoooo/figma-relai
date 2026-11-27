@@ -361,7 +361,8 @@ const onPanelMessage = async (msg: any) => {
   if (msg.type === "memory-promote") {
     try {
       const out = (await dispatch("promote_precedent", { id: msg.id })) as { ruleset: string };
-      figma.notify(`Promoted into ruleset "${out.ruleset}"`);
+      // The panel words the notice in its own language
+      figma.notify(String(msg.notice).replace("{kit}", () => out.ruleset));
     } catch (error) {
       figma.ui.postMessage(memoryOpResult("promote", error, msg.id as string));
     }
@@ -394,7 +395,7 @@ const onPanelMessage = async (msg: any) => {
       } catch {
         // The guard itself is on; a full memory must not undo the accept
       }
-      figma.notify(`No-go zone enabled: ${names}`);
+      figma.notify(String(msg.notice).replace("{pages}", () => names));
     }
     return;
   }

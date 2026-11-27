@@ -257,7 +257,7 @@ describe("approval countdown", () => {
 });
 
 describe("a refused designer message", () => {
-  function gate() {
+  function gate(locale = "en") {
     const posted: any[] = [];
     type Fn = (...args: any[]) => any;
     const api = lift<{ answerApproval: Fn; settleApproval: Fn; answerProposal: Fn; onPanelMessageRefused: Fn; setUndo: Fn; state: Fn }>(
@@ -278,6 +278,7 @@ describe("a refused designer message", () => {
       {
         parent: { postMessage: (m: any) => posted.push(m.pluginMessage) },
         document: { getElementById: () => ({ value: "", checked: true }) },
+        t: tFor(locale),
       }
     );
     return { ...api, posted };
@@ -307,6 +308,24 @@ describe("a refused designer message", () => {
     expect(g.state().proposals).toBe(1);
     g.onPanelMessageRefused("guards-set");
     expect(g.posted.at(-1)).toEqual({ type: "guards-refresh" });
+  });
+
+  test("an accepted proposal and a promoted memo are announced in Figma in the panel's language", () => {
+    const g = gate("ja");
+    g.answerProposal(true);
+    expect(g.posted.at(-1)).toEqual({ type: "proposal-response", id: "p", accepted: true, notice: I18N.ja.notice_guarded });
+    expect(I18N.ja.notice_guarded).toContain("保護ページ");
+    expect(I18N.ja.notice_promoted).toContain("ルールセット「{kit}」");
+    expect(I18N.zh.notice_guarded).toContain("保护页面");
+    expect(I18N.zh.notice_promoted).toContain("规则集「{kit}」");
+    expect(script).toContain("{ type: 'memory-promote', id: e.id, notice: t('notice_promoted') }");
+    // The plugin fills in the names and words nothing of its own
+    const main = readFileSync(join(import.meta.dir, "main.ts"), "utf8");
+    const notices = [...main.matchAll(/figma\.notify\(([^;]*)\);/g)].map((m) => m[1]);
+    expect(notices).toEqual([
+      'String(msg.notice).replace("{kit}", () => out.ruleset)',
+      'String(msg.notice).replace("{pages}", () => names)',
+    ]);
   });
 
   test("undoes a refused settings change once", () => {

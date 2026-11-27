@@ -1383,6 +1383,8 @@
         guards_modal_label: 'AI NO-GO',
         token_label: 'TOKEN',
         token_chip: 'ACCESS TOKEN',
+        notice_promoted: 'Promoted into ruleset "{kit}"',
+        notice_guarded: 'No-go zone enabled: {pages}',
         relay_chip: 'RELAY',
         agent_chip: 'AGENT',
         cat_advanced: 'advanced',
@@ -1599,6 +1601,8 @@
         guards_modal_label: 'AIから保護するページ',
         token_label: 'アクセストークン',
         token_chip: 'アクセストークン',
+        notice_promoted: 'このメモをルールセット「{kit}」に入れました',
+        notice_guarded: '保護ページにしました：{pages}',
         relay_chip: 'リレー',
         agent_chip: 'AI',
         cat_advanced: '高度な操作',
@@ -1815,6 +1819,8 @@
         guards_modal_label: '对AI保护的页面',
         token_label: '访问令牌',
         token_chip: '访问令牌',
+        notice_promoted: '已把这条备忘放进规则集「{kit}」',
+        notice_guarded: '已设为保护页面：{pages}',
         relay_chip: '中继',
         agent_chip: 'AI',
         cat_advanced: '高级',
@@ -2300,7 +2306,7 @@
         up.setAttribute('aria-label', t('aria_promote'));
         up.onclick = function () {
           if (memRowErrors[e.id]) { delete memRowErrors[e.id]; renderMemory(); }
-          parent.postMessage({ pluginMessage: { type: 'memory-promote', id: e.id } }, '*');
+          parent.postMessage({ pluginMessage: { type: 'memory-promote', id: e.id, notice: t('notice_promoted') } }, '*');
         };
         var del = document.createElement('button');
         del.className = 'mem-del';
@@ -2727,7 +2733,7 @@
       var p = proposalQueue.shift();
       lastProposalAnswered = p || null;
       if (p) {
-        parent.postMessage({ pluginMessage: { type: 'proposal-response', id: p.id, accepted: accepted } }, '*');
+        parent.postMessage({ pluginMessage: { type: 'proposal-response', id: p.id, accepted: accepted, notice: t('notice_guarded') } }, '*');
       }
       showNextProposal();
     }
