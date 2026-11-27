@@ -4,6 +4,8 @@
 // data on the document root; this module owns validation, capacity and the
 // ref index used for in-band surfacing on write results.
 
+import { PanelFailureError } from "./panel-failure.js";
+
 export type PrecedentKind = "decision" | "intent" | "correction";
 export type PrecedentSource = "gate" | "chat" | "manual";
 
@@ -39,8 +41,9 @@ export function validatePrecedentInput(kind: unknown, text: unknown): { kind: Pr
   }
   const trimmed = text.trim();
   if (trimmed.length > PRECEDENT_TEXT_MAX) {
-    throw new Error(
-      `Precedent text is ${trimmed.length} chars — keep it under ${PRECEDENT_TEXT_MAX} (one adjudication, one sentence).`
+    throw new PanelFailureError(
+      `Precedent text is ${trimmed.length} chars — keep it under ${PRECEDENT_TEXT_MAX} (one adjudication, one sentence).`,
+      { code: "precedent_too_long", chars: trimmed.length, limit: PRECEDENT_TEXT_MAX }
     );
   }
   const k = (kind ?? "intent") as PrecedentKind;
@@ -76,8 +79,9 @@ export function assertCapacity(entries: PrecedentEntry[], candidate: PrecedentEn
   const over = additionOverflow(entries, [candidate]);
   if (!over) return;
   if (over.reason === "entries") {
-    throw new Error(
-      `File memory is full (${MEMORY_MAX_ENTRIES} precedents). Ask the agent to consolidate old precedents into summary entries (list_precedents → merge → remove), then record again.`
+    throw new PanelFailureError(
+      `File memory is full (${MEMORY_MAX_ENTRIES} precedents). Ask the agent to consolidate old precedents into summary entries (list_precedents → merge → remove), then record again.`,
+      { code: "memory_full", limit: MEMORY_MAX_ENTRIES }
     );
   }
   throwSize(over, "consolidate old precedents into summary entries, then record again");
@@ -90,8 +94,10 @@ export function assertUpdateCapacity(entries: PrecedentEntry[], next: PrecedentE
 }
 
 function throwSize(over: SizeOverflow, fix: string): never {
-  throw new Error(
-    `File memory would exceed ${Math.round(MEMORY_MAX_BYTES / 1000)}KB: ${over.after} chars after this write (now ${over.now}), limit ${MEMORY_MAX_BYTES}, ${over.overBy} over. Ask the agent to ${fix}.`
+  const limitKb = Math.round(MEMORY_MAX_BYTES / 1000);
+  throw new PanelFailureError(
+    `File memory would exceed ${limitKb}KB: ${over.after} chars after this write (now ${over.now}), limit ${MEMORY_MAX_BYTES}, ${over.overBy} over. Ask the agent to ${fix}.`,
+    { code: "memory_too_big", limitKb }
   );
 }
 

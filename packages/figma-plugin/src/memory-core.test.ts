@@ -13,6 +13,17 @@ import {
   validatePrecedentInput,
   type PrecedentEntry,
 } from "./memory-core.js";
+import { PanelFailureError } from "./panel-failure.js";
+
+function failureOf(run: () => unknown): unknown {
+  try {
+    run();
+  } catch (error) {
+    expect(error).toBeInstanceOf(PanelFailureError);
+    return { failure: (error as PanelFailureError).failure, message: (error as Error).message };
+  }
+  throw new Error("expected a throw");
+}
 
 const entry = (over: Partial<PrecedentEntry> = {}): PrecedentEntry => ({
   id: makeId(),
@@ -35,6 +46,12 @@ describe("validatePrecedentInput", () => {
       new RegExp(String(PRECEDENT_TEXT_MAX))
     );
   });
+  test("an over-long text carries its length and the limit for the panel; the agent's text is unchanged", () => {
+    expect(failureOf(() => validatePrecedentInput("intent", "x".repeat(300)))).toEqual({
+      failure: { code: "precedent_too_long", chars: 300, limit: PRECEDENT_TEXT_MAX },
+      message: `Precedent text is 300 chars — keep it under ${PRECEDENT_TEXT_MAX} (one adjudication, one sentence).`,
+    });
+  });
   test("rejects unknown kind", () => {
     expect(() => validatePrecedentInput("vibe", "text")).toThrow(/decision \| intent \| correction/);
   });
@@ -52,6 +69,18 @@ describe("assertCapacity", () => {
     const fat = Array.from({ length: 190 }, () => entry({ text: "y".repeat(PRECEDENT_TEXT_MAX) }));
     const candidate = entry({ text: "y".repeat(PRECEDENT_TEXT_MAX) });
     expect(() => assertCapacity(fat, candidate)).toThrow(/KB/);
+  });
+  test("a full memory says which limit it hit, for the panel", () => {
+    const full = Array.from({ length: MEMORY_MAX_ENTRIES }, () => entry());
+    expect(failureOf(() => assertCapacity(full, entry()))).toMatchObject({
+      failure: { code: "memory_full", limit: MEMORY_MAX_ENTRIES },
+      message: expect.stringContaining("File memory is full"),
+    });
+    const fat = Array.from({ length: 190 }, () => entry({ text: "y".repeat(PRECEDENT_TEXT_MAX) }));
+    expect(failureOf(() => assertCapacity(fat, entry({ text: "y".repeat(PRECEDENT_TEXT_MAX) })))).toMatchObject({
+      failure: { code: "memory_too_big", limitKb: Math.round(MEMORY_MAX_BYTES / 1000) },
+      message: expect.stringContaining("File memory would exceed"),
+    });
   });
 });
 

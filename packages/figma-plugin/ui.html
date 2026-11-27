@@ -1355,6 +1355,18 @@
         kit_skipped: '{count} seed precedents were left out (memory holds {limit}).',
         moment_healed: 'My rules had gone missing, so they were put back from “{kit}”.',
         moment_healed_date: 'My rules had gone missing, so they were put back from “{kit}” (the kit’s copy of {date}).',
+        fail_precedent_too_long: 'A precedent can be up to {limit} characters; this one is {chars}. Write one ruling in one sentence.',
+        fail_memory_full: 'This file already holds {limit} precedents, the most it can. Ask your AI to merge old ones, then save this again.',
+        fail_memory_too_big: 'Precedents in this file would go over {kb}KB. Ask your AI to merge old ones, then save this again.',
+        fail_not_linked: 'This file doesn’t use a kit yet. Pick one first.',
+        fail_kit_missing: 'There’s no kit named “{kit}” on this machine.',
+        fail_precedent_missing: 'This precedent is no longer in the file.',
+        fail_no_rules: 'This file has no rules yet, so there’s nothing to put in the kit.',
+        fail_rules_too_long: 'This file’s rules are {chars} characters; a kit holds up to {limit}.',
+        fail_kit_limit: 'This machine already holds {limit} kits, the most it can. Delete one first.',
+        fail_kit_not_kept: 'The kit store didn’t keep this change, so nothing was saved. Keep your own copy of the rules before trying again.',
+        fail_import_empty: 'The file you picked is empty.',
+        fail_import_no_name: 'This file wasn’t exported from a kit, so it has no kit name. Ask your AI to import it with a name.',
         why_denied: 'denied',
         why_timeout: 'timed out',
         why_stopped: 'stopped',
@@ -1516,6 +1528,18 @@
         kit_skipped: '判例の種のうち{count}件は入りませんでした（記憶の上限は{limit}件）。',
         moment_healed: '規約が消えていたので、「{kit}」から戻しました。',
         moment_healed_date: '規約が消えていたので、「{kit}」から戻しました（キットの日付は{date}）。',
+        fail_precedent_too_long: '判例は{limit}字までです（いまは{chars}字）。裁決ひとつを一文で書いてください。',
+        fail_memory_full: 'このファイルの判例は上限の{limit}件に達しています。古い判例をまとめるようAIに頼んでから、もう一度保存してください。',
+        fail_memory_too_big: 'このファイルの判例が上限の{kb}KBを超えてしまいます。古い判例をまとめるようAIに頼んでから、もう一度保存してください。',
+        fail_not_linked: 'このファイルはまだキットを使っていません。先にキットを選んでください。',
+        fail_kit_missing: 'このマシンには「{kit}」というキットがありません。',
+        fail_precedent_missing: 'この判例はもうファイルにありません。',
+        fail_no_rules: 'このファイルにはまだ規約がないので、キットに入れるものがありません。',
+        fail_rules_too_long: 'このファイルの規約は{chars}字あります。キットに入るのは{limit}字までです。',
+        fail_kit_limit: 'このマシンのキットは上限の{limit}個に達しています。先にどれかを削除してください。',
+        fail_kit_not_kept: 'キットの保存先に変更が残らなかったため、何も保存していません。やり直す前に、規約を手元に控えておいてください。',
+        fail_import_empty: '選んだファイルは空です。',
+        fail_import_no_name: 'キットから書き出したファイルではないため、キットの名前が入っていません。名前を付けて読み込むようAIに頼んでください。',
         why_denied: '拒否',
         why_timeout: '時間切れ',
         why_stopped: '停止',
@@ -1677,6 +1701,18 @@
         kit_skipped: '有{count}条种子判例没放进来（记忆上限{limit}条）。',
         moment_healed: '规矩丢了，已从「{kit}」放回。',
         moment_healed_date: '规矩丢了，已从「{kit}」放回（kit的日期是{date}）。',
+        fail_precedent_too_long: '判例最多{limit}字（现在{chars}字）。一条裁决写成一句话。',
+        fail_memory_full: '这个文件的判例已到上限{limit}条。请让AI把旧判例合并后，再保存一次。',
+        fail_memory_too_big: '这个文件的判例总量会超过上限{kb}KB。请让AI把旧判例合并后，再保存一次。',
+        fail_not_linked: '这个文件还没有用kit。请先选一个。',
+        fail_kit_missing: '这台机器上没有叫「{kit}」的kit。',
+        fail_precedent_missing: '这条判例已经不在文件里了。',
+        fail_no_rules: '这个文件还没有规矩，没有可以放进kit的内容。',
+        fail_rules_too_long: '这个文件的规矩有{chars}字，kit最多放{limit}字。',
+        fail_kit_limit: '这台机器上的kit已到上限{limit}个。请先删掉一个。',
+        fail_kit_not_kept: 'kit的存储没有留住这次修改，什么都没保存。重试前请先自己留一份规矩。',
+        fail_import_empty: '选的文件是空的。',
+        fail_import_no_name: '这个文件不是从kit导出的，里面没有kit的名字。请让AI给它起个名字再导入。',
         why_denied: '已拒绝',
         why_timeout: '超时',
         why_stopped: '已停止',
@@ -2148,6 +2184,10 @@
     function setMemError(text) {
       document.getElementById('memErr').textContent = text;
     }
+    function onMemoryOpResult(msg) {
+      if (msg.op === 'promote' && msg.id) { memRowErrors[msg.id] = opFailText(msg); renderMemory(); }
+      else setMemError(opFailText(msg));
+    }
 
     function onMemInputKey(ev) {
       if (ev.key !== 'Enter' || ev.isComposing || ev.keyCode === 229) return;
@@ -2570,6 +2610,19 @@
       return t('kit_skipped').replace('{count}', String(p.count)).replace('{limit}', String(p.limit));
     }
 
+    // A failed panel action, worded from the facts the plugin sent; the
+    // plugin's English text is what the agent reads, and the fallback here
+    function failureText(f) {
+      return t('fail_' + f.code)
+        .replace(/\{kit\}/g, f.kit)
+        .replace('{chars}', String(f.chars))
+        .replace('{limit}', String(f.limit))
+        .replace('{kb}', String(f.limitKb));
+    }
+    function opFailText(msg) {
+      return msg.failure ? failureText(msg.failure) : msg.message;
+    }
+
     function kitRefusalText(r) {
       if (r.code === 'kit_lease') {
         return t(r.updatedBy ? 'kit_lease_by' : 'kit_lease')
@@ -2633,7 +2686,7 @@
         ]);
         return;
       }
-      showMomentCard(msg.message, [{ label: t('moment_ok'), fn: releaseMoment }]);
+      showMomentCard(opFailText(msg), [{ label: t('moment_ok'), fn: releaseMoment }]);
     }
 
     function onRulesetOpResult(msg) {
@@ -2643,7 +2696,7 @@
         if (rsRefusal && (!rsRefusal.refusal || msg.op === 'push' || msg.op === 'restore')) rsRefusal = null;
         rsForceArmed = false;
       } else if (!pending) {
-        rsRefusal = { op: msg.op, refusal: msg.refusal || null, message: msg.message };
+        rsRefusal = { op: msg.op, refusal: msg.refusal || null, message: opFailText(msg) };
         rsForceArmed = false;
       }
       renderRulesetModal();
@@ -3561,8 +3614,7 @@
       }
 
       if (msg.type === 'memory-op-result') {
-        if (msg.op === 'promote' && msg.id) { memRowErrors[msg.id] = msg.message; renderMemory(); }
-        else setMemError(msg.message);
+        onMemoryOpResult(msg);
         return;
       }
 

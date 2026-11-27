@@ -3,7 +3,9 @@
 // shared plugin data on the document root so they travel with the file and
 // reach every future session from any AI client.
 
+import type { MemoryOpResultMessage } from "@figma-relai/shared";
 import { registerHandler } from "../dispatcher.js";
+import { failureField } from "../panel-failure.js";
 import { collectNodeRefs, isWriteCommand } from "../write-guard.js";
 import {
   attachPreflight,
@@ -136,6 +138,18 @@ export async function recordPrecedent(params: {
   const next = [entry, ...entries];
   writeMemory(next);
   return { id: entry.id, count: next.length };
+}
+
+/** The `memory-op-result` message for a precedent action from the panel that threw. */
+export function memoryOpResult(op: MemoryOpResultMessage["op"], error: unknown, id?: string): MemoryOpResultMessage {
+  return {
+    type: "memory-op-result",
+    op,
+    ok: false,
+    ...failureField(error),
+    message: error instanceof Error ? error.message : String(error),
+    ...(id !== undefined ? { id } : {}),
+  };
 }
 
 /** Approval-gate companion recording: reason typed by the designer becomes a decision. */

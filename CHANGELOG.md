@@ -6,6 +6,7 @@
 
 - **`batch_execute` tells the agent when it met the walls.** What the walls did during a batch (a no-go zone or setting put back, a refused panel action, a lost panel) now comes after the batch's results as its own text block, `law` plus the LAW RESTORED warning, the same as a single command reports it, and in the call's `_meta` receipt. The results themselves are unchanged; an older plugin or server sends nothing new.
 - **Deny on an approval card counts the first time.** Right after a script, Deny now applies at once instead of being bounced back. Approve still waits out the script and the 3 seconds after it: the button is held and the card says how long, then it opens by itself.
+- **A panel action that fails says why in the panel's language.** A precedent that is too long, a full file memory, a kit that is missing or full, a file with no rules or too many, and an import that is empty or has no kit name now read in Japanese or Chinese when the panel is set to them. The error text an agent gets for the same failure is unchanged.
 
 ## 0.8.1
 

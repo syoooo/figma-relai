@@ -41,6 +41,7 @@ import { sendProgressUpdate } from "./progress.js";
 import { createApprovalGate } from "./approval-gate.js";
 import {
   attachPrecedents,
+  memoryOpResult,
   preflightPrecedents,
   readMemory,
   recordGatePrecedent,
@@ -317,12 +318,7 @@ const onPanelMessage = async (msg: any) => {
     try {
       await recordPrecedent({ text: msg.text, kind: msg.kind, source: "manual" });
     } catch (error) {
-      figma.ui.postMessage({
-        type: "memory-op-result",
-        op: "record",
-        ok: false,
-        message: error instanceof Error ? error.message : String(error),
-      });
+      figma.ui.postMessage(memoryOpResult("record", error));
     }
     return;
   }
@@ -385,13 +381,7 @@ const onPanelMessage = async (msg: any) => {
       const out = (await dispatch("promote_precedent", { id: msg.id })) as { ruleset: string };
       figma.notify(`Promoted into ruleset "${out.ruleset}"`);
     } catch (error) {
-      figma.ui.postMessage({
-        type: "memory-op-result",
-        op: "promote",
-        ok: false,
-        message: error instanceof Error ? error.message : String(error),
-        id: msg.id as string,
-      });
+      figma.ui.postMessage(memoryOpResult("promote", error, msg.id as string));
     }
     return;
   }

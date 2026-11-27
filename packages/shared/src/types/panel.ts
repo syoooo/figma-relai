@@ -227,6 +227,24 @@ export type KitRefusal =
       fileUpdatedAt: string;
     };
 
+/**
+ * Why an action the designer took in the panel failed, as facts the panel
+ * words in its own language. The error text the agent reads is unchanged.
+ */
+export type PanelFailure =
+  | { code: "precedent_too_long"; chars: number; limit: number }
+  | { code: "memory_full"; limit: number } // most precedents a file holds
+  | { code: "memory_too_big"; limitKb: number }
+  | { code: "not_linked" } // the file uses no kit
+  | { code: "kit_missing"; kit: string } // no kit by that name on this machine
+  | { code: "precedent_missing" }
+  | { code: "no_rules" } // the file has no conventions to save or send
+  | { code: "rules_too_long"; chars: number; limit: number }
+  | { code: "kit_limit"; limit: number } // most kits a machine holds
+  | { code: "kit_not_kept" } // the kit store read back something else
+  | { code: "import_empty" }
+  | { code: "import_no_name" }; // the markdown has no relai-ruleset frontmatter
+
 export type RulesetOp =
   | "save-from-file"
   | "link"
@@ -250,7 +268,8 @@ export type RulesetOpResultMessage =
       type: "ruleset-op-result";
       op: RulesetOp;
       ok: false;
-      refusal?: KitRefusal; // present when the kit guard refused; otherwise only `message`
+      refusal?: KitRefusal; // present when the kit guard refused
+      failure?: PanelFailure; // present for the other failures the panel can word
       message: string; // the handler's error text, unchanged
     };
 
@@ -259,7 +278,8 @@ export interface MemoryOpResultMessage {
   type: "memory-op-result";
   op: "record" | "promote";
   ok: false;
-  message: string;
+  failure?: PanelFailure;
+  message: string; // the handler's error text, unchanged
   id?: string; // promote: the precedent the error belongs to
 }
 

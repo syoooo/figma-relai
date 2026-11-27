@@ -11,6 +11,7 @@ import type { KitRefusal, RulesetHealed, RulesetOp, RulesetOpResultMessage } fro
 import { registerHandler } from "../dispatcher.js";
 import { readMemory, writeMemory } from "./memory.js";
 import { noteVoiceWrite } from "../walls.js";
+import { failureField, PanelFailureError } from "../panel-failure.js";
 import { additionOverflow, type CapacityOverflow, type PrecedentEntry } from "../memory-core.js";
 import { contentHash, kitRefusalMessage, newerSide, pushRefusal, restoreRefusal } from "../ruleset-core.js";
 
@@ -68,9 +69,10 @@ async function writeRulesets(list: Ruleset[]): Promise<void> {
     ? back.map((s) => `${s.name}:${s.conventions.length}:${s.updatedAt}`).join("|")
     : "";
   if (wrote !== read) {
-    throw new Error(
+    throw new PanelFailureError(
       "The ruleset store did not keep that write — clientStorage read back different content. " +
-        "Nothing was saved to the kit. Keep your own copy of the conventions before retrying."
+        "Nothing was saved to the kit. Keep your own copy of the conventions before retrying.",
+      { code: "kit_not_kept" }
     );
   }
 }
@@ -160,7 +162,11 @@ async function requireSet(name: unknown): Promise<{ sets: Ruleset[]; set: Rulese
   if (typeof name !== "string" || !name.trim()) throw new Error("Ruleset name is required.");
   const sets = await readRulesets();
   const index = sets.findIndex((s) => s.name === name);
-  if (index === -1) throw new Error(`No ruleset named "${name}". list_rulesets shows what exists.`);
+  if (index === -1)
+    throw new PanelFailureError(`No ruleset named "${name}". list_rulesets shows what exists.`, {
+      code: "kit_missing",
+      kit: name,
+    });
   return { sets, set: sets[index], index };
 }
 
@@ -203,7 +209,7 @@ export interface RestoreResult {
  */
 export async function restoreFromRuleset(force = false): Promise<RestoreResult> {
   const link = readLink();
-  if (!link) throw new Error("This file is not linked to a ruleset. Use link_ruleset first.");
+  if (!link) throw notLinked("This file is not linked to a ruleset. Use link_ruleset first.");
   const { set } = await requireSet(link.name);
   const before = fileConventions();
   const beforeAt = fileConventionsAt();
@@ -263,10 +269,10 @@ export async function pushToRuleset(
   force = false
 ): Promise<{ pushed: string; conventionsChars: number }> {
   const link = readLink();
-  if (!link) throw new Error("This file is not linked to a ruleset. Use link_ruleset first.");
+  if (!link) throw notLinked("This file is not linked to a ruleset. Use link_ruleset first.");
   const { sets, set, index } = await requireSet(link.name);
   const file = fileConventions();
-  if (!file) throw new Error("This file has no conventions to push.");
+  if (!file) throw new PanelFailureError("This file has no conventions to push.", { code: "no_rules" });
   // force-with-lease: the rulesetLink travels with file COPIES and branches,
   // so a stray copy can aim a push at a kit it has no business rewriting
   // (measured 2026-08-12: a kit overwritten with another file's 2,838
@@ -329,6 +335,14 @@ function skippedCount(skipped: SeedsSkipped): { count: number; limit: number } {
  * The `ruleset-op-result` message for a panel action. `restored` is the
  * restore a link or restore ran, if any; `error` is what the action threw.
  */
+function kitLimit(): PanelFailureError {
+  return new PanelFailureError(`Ruleset limit reached (${MAX_RULESETS}).`, { code: "kit_limit", limit: MAX_RULESETS });
+}
+
+function notLinked(message: string): PanelFailureError {
+  return new PanelFailureError(message, { code: "not_linked" });
+}
+
 export function rulesetOpResult(
   op: RulesetOp,
   outcome: { restored?: RestoreResult | null } | { error: unknown }
@@ -340,6 +354,7 @@ export function rulesetOpResult(
       op,
       ok: false,
       ...(error instanceof KitRefusedError ? { refusal: error.refusal } : {}),
+      ...failureField(error),
       message: error instanceof Error ? error.message : String(error),
     };
   }
@@ -387,9 +402,10 @@ export function markdownToRuleset(markdown: string, fallbackName?: string): Omit
   // A hand-written conventions doc is not an export package: it carries no
   // frontmatter, so say which of the two ways forward is missing.
   if (!name.trim())
-    throw new Error(
+    throw new PanelFailureError(
       "Ruleset name missing — this markdown has no `relai-ruleset:` frontmatter, so it wasn't produced by export. " +
-        "Either import it with a name, or add a frontmatter block (---\\nrelai-ruleset: <name>\\n---) at the top."
+        "Either import it with a name, or add a frontmatter block (---\\nrelai-ruleset: <name>\\n---) at the top.",
+      { code: "import_no_name" }
     );
   const seeds: PrecedentEntry[] = [];
   const seedSection = body.match(/\n## seed-precedents\n([\s\S]*)$/);
@@ -438,15 +454,20 @@ registerHandler("save_ruleset", async (params) => {
     : typeof params.conventions === "string"
       ? params.conventions
       : undefined;
-  if (fromFile && !conventions) throw new Error("This file has no conventions to save from.");
+  if (fromFile && !conventions)
+    throw new PanelFailureError("This file has no conventions to save from.", { code: "no_rules" });
   if (conventions !== undefined && conventions.length > MAX_CONVENTIONS)
-    throw new Error(`Conventions doc is ${conventions.length} chars — keep it under ${MAX_CONVENTIONS}.`);
+    throw new PanelFailureError(`Conventions doc is ${conventions.length} chars — keep it under ${MAX_CONVENTIONS}.`, {
+      code: "rules_too_long",
+      chars: conventions.length,
+      limit: MAX_CONVENTIONS,
+    });
 
   const sets = await readRulesets();
   const index = sets.findIndex((s) => s.name === name);
   if (index === -1) {
     if (conventions === undefined) throw new Error("New ruleset needs conventions (or fromFile: true).");
-    if (sets.length >= MAX_RULESETS) throw new Error(`Ruleset limit reached (${MAX_RULESETS}).`);
+    if (sets.length >= MAX_RULESETS) throw kitLimit();
     sets.push({
       name,
       conventions,
@@ -508,10 +529,10 @@ registerHandler("promote_precedent", async (params) => {
   const id = typeof params.id === "string" ? params.id : "";
   if (!id) throw new Error("Precedent id is required.");
   const link = readLink();
-  if (!link) throw new Error("This file is not linked to a ruleset — link one before promoting.");
+  if (!link) throw notLinked("This file is not linked to a ruleset — link one before promoting.");
   const { sets, set, index } = await requireSet(link.name);
   const entry = readMemory().find((e) => e.id === id);
-  if (!entry) throw new Error(`No precedent with id "${id}".`);
+  if (!entry) throw new PanelFailureError(`No precedent with id "${id}".`, { code: "precedent_missing" });
   if (set.seedPrecedents.some((e) => e.id === id))
     return { promoted: id, ruleset: set.name, alreadyThere: true };
   sets[index] = {
@@ -531,7 +552,7 @@ registerHandler("export_ruleset", async (params) => {
 
 registerHandler("import_ruleset", async (params) => {
   if (typeof params.markdown !== "string" || !params.markdown.trim())
-    throw new Error("Provide the ruleset markdown to import.");
+    throw new PanelFailureError("Provide the ruleset markdown to import.", { code: "import_empty" });
   const parsed = markdownToRuleset(
     params.markdown,
     typeof params.name === "string" ? params.name : undefined
@@ -539,7 +560,7 @@ registerHandler("import_ruleset", async (params) => {
   const sets = await readRulesets();
   const index = sets.findIndex((s) => s.name === parsed.name);
   if (index === -1) {
-    if (sets.length >= MAX_RULESETS) throw new Error(`Ruleset limit reached (${MAX_RULESETS}).`);
+    if (sets.length >= MAX_RULESETS) throw kitLimit();
     sets.push({ ...parsed, createdAt: nowIso(), updatedAt: nowIso() });
   } else {
     // The switch on THIS machine wins: a package exported before it was turned

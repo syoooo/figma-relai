@@ -9,6 +9,8 @@ import {
   type RestoreResult,
   type Ruleset,
 } from "./handlers/rulesets.js";
+import { memoryOpResult } from "./handlers/memory.js";
+import { PanelFailureError } from "./panel-failure.js";
 import { snapshotVoice } from "./walls.js";
 import "./handlers/plugin-data.js";
 import {
@@ -287,6 +289,135 @@ describe("ruleset-op-result", () => {
   test("a plain success is just ok", () => {
     expect(rulesetOpResult("unlink", {})).toEqual({ type: "ruleset-op-result", op: "unlink", ok: true });
     expect(rulesetOpResult("link", { restored: null })).toEqual({ type: "ruleset-op-result", op: "link", ok: true });
+  });
+});
+
+describe("a failed panel action carries why, for the panel to word", () => {
+  async function failed(command: string, params: Record<string, unknown>) {
+    const error = await thrown(() => dispatch(command, params));
+    expect(error).toBeInstanceOf(PanelFailureError);
+    return { failure: (error as PanelFailureError).failure, message: (error as Error).message };
+  }
+  const unlinked = () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", {});
+    shared.delete("relai:rulesetLink");
+  };
+
+  test("an action that needs a kit, on a file that uses none", async () => {
+    unlinked();
+    const message = "This file is not linked to a ruleset. Use link_ruleset first.";
+    expect(await failed("push_to_ruleset", {})).toEqual({ failure: { code: "not_linked" }, message });
+    expect(await failed("restore_from_ruleset", {})).toEqual({ failure: { code: "not_linked" }, message });
+    expect(await failed("promote_precedent", { id: "p1" })).toEqual({
+      failure: { code: "not_linked" },
+      message: "This file is not linked to a ruleset — link one before promoting.",
+    });
+  });
+
+  test("a kit that is not on this machine", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", {});
+    expect(await failed("link_ruleset", { name: "gone" })).toEqual({
+      failure: { code: "kit_missing", kit: "gone" },
+      message: 'No ruleset named "gone". list_rulesets shows what exists.',
+    });
+  });
+
+  test("a precedent that is gone", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", {});
+    expect(await failed("promote_precedent", { id: "nope" })).toEqual({
+      failure: { code: "precedent_missing" },
+      message: 'No precedent with id "nope".',
+    });
+  });
+
+  test("saving or sending a file with no rules, or too many", async () => {
+    linked("", "", {});
+    expect(await failed("save_ruleset", { name: "new", fromFile: true })).toEqual({
+      failure: { code: "no_rules" },
+      message: "This file has no conventions to save from.",
+    });
+    expect(await failed("push_to_ruleset", {})).toEqual({
+      failure: { code: "no_rules" },
+      message: "This file has no conventions to push.",
+    });
+    linked("x".repeat(20001), "2026-09-10T00:00:00.000Z", {});
+    expect(await failed("save_ruleset", { name: "new", fromFile: true })).toEqual({
+      failure: { code: "rules_too_long", chars: 20001, limit: 20000 },
+      message: "Conventions doc is 20001 chars — keep it under 20000.",
+    });
+  });
+
+  test("a machine already holding the most kits", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", {});
+    stored = Array.from({ length: 30 }, (_, i) => ({ ...(stored as Ruleset[])[0], name: `k${i}` }));
+    const full = { failure: { code: "kit_limit" as const, limit: 30 }, message: "Ruleset limit reached (30)." };
+    expect(await failed("save_ruleset", { name: "new", fromFile: true })).toEqual(full);
+    expect(await failed("import_ruleset", { markdown: "---\nrelai-ruleset: new\n---\n\n# law\n" })).toEqual(full);
+  });
+
+  test("an import that is empty or was not exported from a kit", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", {});
+    expect(await failed("import_ruleset", { markdown: "  " })).toEqual({
+      failure: { code: "import_empty" },
+      message: "Provide the ruleset markdown to import.",
+    });
+    expect(await failed("import_ruleset", { markdown: "# law\n" })).toMatchObject({
+      failure: { code: "import_no_name" },
+      message: expect.stringContaining("Ruleset name missing — this markdown has no `relai-ruleset:` frontmatter"),
+    });
+  });
+
+  test("a kit store that did not keep the write", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", {});
+    const storage = (figma as unknown as { clientStorage: { setAsync: unknown } }).clientStorage;
+    const keep = storage.setAsync;
+    // The store answers but keeps something else
+    storage.setAsync = async () => {
+      stored = [];
+    };
+    try {
+      expect(await failed("save_ruleset", { name: "new", fromFile: true })).toMatchObject({
+        failure: { code: "kit_not_kept" },
+        message: expect.stringContaining("The ruleset store did not keep that write"),
+      });
+    } finally {
+      storage.setAsync = keep;
+    }
+  });
+
+  test("the op results carry it beside the unchanged message", async () => {
+    unlinked();
+    const error = await thrown(() => dispatch("push_to_ruleset", {}));
+    expect(rulesetOpResult("push", { error })).toEqual({
+      type: "ruleset-op-result",
+      op: "push",
+      ok: false,
+      failure: { code: "not_linked" },
+      message: "This file is not linked to a ruleset. Use link_ruleset first.",
+    });
+    const tooLong = await thrown(() => dispatch("record_precedent", { text: "x".repeat(300) }));
+    expect(memoryOpResult("record", tooLong)).toEqual({
+      type: "memory-op-result",
+      op: "record",
+      ok: false,
+      failure: { code: "precedent_too_long", chars: 300, limit: PRECEDENT_TEXT_MAX },
+      message: `Precedent text is 300 chars — keep it under ${PRECEDENT_TEXT_MAX} (one adjudication, one sentence).`,
+    });
+    const gone = await thrown(() => dispatch("promote_precedent", { id: "p1" }));
+    expect(memoryOpResult("promote", gone, "p1")).toEqual({
+      type: "memory-op-result",
+      op: "promote",
+      ok: false,
+      failure: { code: "not_linked" },
+      message: "This file is not linked to a ruleset — link one before promoting.",
+      id: "p1",
+    });
+    expect(memoryOpResult("record", new Error("odd"))).toEqual({
+      type: "memory-op-result",
+      op: "record",
+      ok: false,
+      message: "odd",
+    });
   });
 });
 

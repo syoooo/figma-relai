@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { LawNotice } from "@figma-relai/shared";
+import type { LawNotice, PanelFailure } from "@figma-relai/shared";
 import { DESIGNER_ONLY_MESSAGES, VOICE_KEYS } from "./wall-core.js";
 
 // The panel's wall notices, approval countdown and kit refusals, lifted out
@@ -90,7 +90,7 @@ describe("panel text", () => {
 
   test("the Japanese text has no long dash and does not call the AI an agent", () => {
     const fresh = Object.keys(I18N.ja).filter(
-      (k) => /^(law_|breach_|panel_lost|refused_|field_|voice_|msg_|kit_|moment_healed|why_|approval_left|approval_timed_out|approval_hold|allow_exec_hint)/.test(k)
+      (k) => /^(law_|breach_|panel_lost|refused_|field_|voice_|msg_|kit_|moment_healed|why_|approval_left|approval_timed_out|approval_hold|allow_exec_hint|fail_)/.test(k)
     );
     for (const k of fresh) {
       expect({ k, v: I18N.ja[k] }).toEqual({ k, v: expect.not.stringMatching(/[—―]|エージェント/) });
@@ -396,7 +396,7 @@ describe("kit card", () => {
     const box = new El();
     type Fn = (...args: any[]) => any;
     const api = lift<{ momentAct: Fn; onRulesetOpResult: Fn; state: Fn }>(
-      ["fmtDate", "sentSep", "skippedText", "kitRefusalText", "momentAct", "releaseMoment", "showMomentResult", "onRulesetOpResult"],
+      ["fmtDate", "sentSep", "skippedText", "failureText", "opFailText", "kitRefusalText", "momentAct", "releaseMoment", "showMomentResult", "onRulesetOpResult"],
       `var locale = 'en';
        var momentHold = false, momentForceArmed = false, rsPending = null, rsRefusal = null, rsForceArmed = false;
        function rsPost(op, extra) { posts.push([op, extra || null]); }
@@ -500,6 +500,97 @@ describe("kit card", () => {
 
   test("pulling over newer rules keeps the automatic force", () => {
     expect(script).toContain("momentAct('restore', mineNewer ? { force: true } : null, s.linked)");
+  });
+});
+
+describe("a failed panel action reads in the panel's language", () => {
+  // One of each, so the compiler holds this list to the shared type
+  const samples: { [C in PanelFailure["code"]]: Extract<PanelFailure, { code: C }> } = {
+    precedent_too_long: { code: "precedent_too_long", chars: 300, limit: 280 },
+    memory_full: { code: "memory_full", limit: 200 },
+    memory_too_big: { code: "memory_too_big", limitKb: 64 },
+    not_linked: { code: "not_linked" },
+    kit_missing: { code: "kit_missing", kit: "Core" },
+    precedent_missing: { code: "precedent_missing" },
+    no_rules: { code: "no_rules" },
+    rules_too_long: { code: "rules_too_long", chars: 20001, limit: 20000 },
+    kit_limit: { code: "kit_limit", limit: 30 },
+    kit_not_kept: { code: "kit_not_kept" },
+    import_empty: { code: "import_empty" },
+    import_no_name: { code: "import_no_name" },
+  };
+  const agentText = "Precedent text is 300 chars — keep it under 280 (one adjudication, one sentence).";
+
+  function words(locale: string) {
+    return lift<{ failureText: (f: PanelFailure) => string; opFailText: (m: unknown) => string }>(
+      ["failureText", "opFailText"],
+      "",
+      "{ failureText: failureText, opFailText: opFailText }",
+      { t: tFor(locale) }
+    );
+  }
+
+  for (const locale of LOCALES) {
+    test(`every failure reads as filled-in text (${locale})`, () => {
+      const w = words(locale);
+      for (const f of Object.values(samples)) {
+        const text = w.failureText(f);
+        expect({ code: f.code, text }).toEqual({ code: f.code, text: expect.not.stringMatching(/\{|fail_/) });
+        if (locale !== "en") expect(text).not.toBe(words("en").failureText(f));
+      }
+    });
+  }
+
+  test("the facts land in the sentence", () => {
+    const ja = words("ja");
+    expect(ja.failureText(samples.precedent_too_long)).toContain("300");
+    expect(ja.failureText(samples.precedent_too_long)).toContain("280");
+    expect(ja.failureText(samples.kit_missing)).toContain("「Core」");
+    expect(ja.failureText(samples.memory_too_big)).toContain("64KB");
+  });
+
+  test("a failure without one keeps the plugin's own text", () => {
+    expect(words("ja").opFailText({ ok: false, message: "odd" })).toBe("odd");
+    expect(words("ja").opFailText({ ok: false, failure: samples.precedent_too_long, message: agentText })).toBe(
+      words("ja").failureText(samples.precedent_too_long)
+    );
+  });
+
+  test("the precedent dialog shows it under the input or under the row", () => {
+    const memErr = new El();
+    const api = lift<{ onMemoryOpResult: (m: unknown) => void; rows: () => Record<string, string> }>(
+      ["failureText", "opFailText", "setMemError", "onMemoryOpResult"],
+      "var memRowErrors = {}; function renderMemory() {}",
+      "{ onMemoryOpResult: onMemoryOpResult, rows: function () { return memRowErrors; } }",
+      { t: tFor("ja"), document: { getElementById: () => memErr } }
+    );
+    api.onMemoryOpResult({ type: "memory-op-result", op: "record", ok: false, failure: samples.precedent_too_long, message: agentText });
+    expect(memErr.textContent).toBe(words("ja").failureText(samples.precedent_too_long));
+    api.onMemoryOpResult({ type: "memory-op-result", op: "promote", ok: false, failure: samples.not_linked, message: "x", id: "p1" });
+    expect(api.rows()).toEqual({ p1: words("ja").failureText(samples.not_linked) });
+  });
+
+  test("the kit modal and the kit card show it too", () => {
+    const shown: string[] = [];
+    type Fn = (...args: any[]) => any;
+    const api = lift<{ onRulesetOpResult: Fn; momentAct: Fn; refusal: () => any }>(
+      ["failureText", "opFailText", "momentAct", "releaseMoment", "showMomentResult", "onRulesetOpResult"],
+      `var locale = 'ja';
+       var momentHold = false, momentForceArmed = false, rsPending = null, rsRefusal = null, rsForceArmed = false;
+       function rsPost() {}
+       function showMomentCard(body) { shown.push(body); }
+       function hideMomentCard() {}
+       function evalMoments() {}
+       function renderRulesetModal() {}`,
+      "{ onRulesetOpResult: onRulesetOpResult, momentAct: momentAct, refusal: function () { return rsRefusal; } }",
+      { shown, t: tFor("ja"), document: { getElementById: () => new El(), createElement: () => new El() } }
+    );
+    const ja = words("ja");
+    api.onRulesetOpResult({ type: "ruleset-op-result", op: "save-from-file", ok: false, failure: samples.rules_too_long, message: "x" });
+    expect(api.refusal().message).toBe(ja.failureText(samples.rules_too_long));
+    api.momentAct("push", null, "Core");
+    api.onRulesetOpResult({ type: "ruleset-op-result", op: "push", ok: false, failure: samples.no_rules, message: "x" });
+    expect(shown.at(-1)).toBe(ja.failureText(samples.no_rules));
   });
 });
 
