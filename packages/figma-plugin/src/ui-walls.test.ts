@@ -90,7 +90,7 @@ describe("panel text", () => {
 
   test("the Japanese text has no long dash and does not call the AI an agent", () => {
     const fresh = Object.keys(I18N.ja).filter(
-      (k) => /^(law_|breach_|panel_lost|refused_|field_|voice_|msg_|kit_|moment_healed|why_|approval_left|approval_timed_out|allow_exec_hint)/.test(k)
+      (k) => /^(law_|breach_|panel_lost|refused_|field_|voice_|msg_|kit_|moment_healed|why_|approval_left|approval_timed_out|approval_hold|allow_exec_hint)/.test(k)
     );
     for (const k of fresh) {
       expect({ k, v: I18N.ja[k] }).toEqual({ k, v: expect.not.stringMatching(/[—―]|エージェント/) });
@@ -259,8 +259,9 @@ describe("a refused designer message", () => {
     const posted: any[] = [];
     type Fn = (...args: any[]) => any;
     const api = lift<{ answerApproval: Fn; settleApproval: Fn; answerProposal: Fn; onPanelMessageRefused: Fn; setUndo: Fn; state: Fn }>(
-      ["answerApproval", "settleApproval", "answerProposal", "onPanelMessageRefused"],
+      ["approveWaitSeconds", "answerApproval", "settleApproval", "answerProposal", "onPanelMessageRefused"],
       `var approvalQueue = [{ id: 'a' }, { id: 'b' }];
+       var scriptHold = { running: false, approveAt: 0 };
        var approvalAnswered = [];
        var proposalQueue = [{ id: 'p' }];
        var lastProposalAnswered = null;
@@ -313,6 +314,78 @@ describe("a refused designer message", () => {
     g.onPanelMessageRefused("save-settings");
     g.onPanelMessageRefused("save-settings");
     expect(undone).toBe(1);
+  });
+});
+
+describe("approve waits out a script; deny does not", () => {
+  type Fn = (...args: any[]) => any;
+  function card(locale = "ja") {
+    const els: Record<string, any> = {
+      approvalApprove: { disabled: false },
+      approvalHold: { textContent: "" },
+      approvalReason: { value: "" },
+    };
+    const posted: any[] = [];
+    const api = lift<{ onScriptWindow: Fn; answerApproval: Fn; queue: Fn }>(
+      ["approveWaitSeconds", "renderApproveHold", "onScriptWindow", "answerApproval"],
+      `var approvalQueue = [{ id: 'a' }, { id: 'b' }];
+       var approvalAnswered = [];
+       var scriptHold = { running: false, approveAt: 0 };
+       var scriptHoldTimer = null;
+       function showNextApproval() {}`,
+      `{ onScriptWindow: onScriptWindow, answerApproval: answerApproval,
+         queue: function () { return approvalQueue.map(function (r) { return r.id; }); } }`,
+      {
+        document: { getElementById: (id: string) => els[id] },
+        parent: { postMessage: (m: any) => posted.push(m.pluginMessage) },
+        t: tFor(locale),
+        setTimeout: () => 1,
+        clearTimeout: () => {},
+      }
+    );
+    return { ...api, els, posted };
+  }
+
+  test("right after a script, approve is held and the card says how long", () => {
+    const c = card("ja");
+    c.onScriptWindow({ type: "script-window", running: false, approveAt: Date.now() + 2500 });
+    expect(c.els.approvalApprove.disabled).toBe(true);
+    expect(c.els.approvalHold.textContent).toBe("スクリプトが終わった直後です。承認はあと3秒で押せます");
+  });
+
+  test("while a script runs, approve is held without a count", () => {
+    const c = card("en");
+    c.onScriptWindow({ type: "script-window", running: true, approveAt: 0 });
+    expect(c.els.approvalApprove.disabled).toBe(true);
+    expect(c.els.approvalHold.textContent).toBe(I18N.en.approval_hold_running);
+  });
+
+  test("once the wait is over, approve is open and the line is gone", () => {
+    const c = card();
+    c.onScriptWindow({ type: "script-window", running: false, approveAt: Date.now() - 1 });
+    expect(c.els.approvalApprove.disabled).toBe(false);
+    expect(c.els.approvalHold.textContent).toBe("");
+  });
+
+  test("a press on a held approve sends nothing and leaves the card in place", () => {
+    const c = card();
+    c.onScriptWindow({ type: "script-window", running: false, approveAt: Date.now() + 2000 });
+    c.answerApproval(true);
+    expect(c.posted).toEqual([]);
+    expect(c.queue()).toEqual(["a", "b"]);
+  });
+
+  test("deny goes through while approve is held", () => {
+    const c = card();
+    c.onScriptWindow({ type: "script-window", running: true, approveAt: 0 });
+    c.answerApproval(false);
+    expect(c.posted).toEqual([{ type: "approval-response", id: "a", approved: false, reason: "" }]);
+    expect(c.queue()).toEqual(["b"]);
+  });
+
+  test("the panel listens for the plugin's script window", () => {
+    expect(script).toMatch(/msg\.type === 'script-window'\) \{\s*onScriptWindow\(msg\);/);
+    expect(html).toMatch(/id="approvalApprove"[^>]*aria-describedby="approvalHold"/);
   });
 });
 

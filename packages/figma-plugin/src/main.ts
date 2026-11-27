@@ -83,6 +83,7 @@ import {
   panelLost,
   panelVerdict,
   persistOtherSettings,
+  postScriptWindow,
   probePanel,
   scriptEnded,
   scriptStarted,
@@ -270,6 +271,7 @@ const onPanelMessage = async (msg: any) => {
   // a panel replaced or cut off during a command can be noticed
   if (msg.type === "panel-hello") {
     notePanelBoot(msg.relayConnected === true);
+    postScriptWindow();
     return;
   }
   if (msg.type === "relay-state") {
@@ -278,9 +280,10 @@ const onPanelMessage = async (msg: any) => {
   }
 
   // A script can replace the panel and post as it. While one runs, and for a
-  // moment after, messages only the designer may send are not applied.
+  // moment after, messages only the designer may send are not applied (an
+  // approval card's Deny is).
   if (isDesignerOnlyMessage(msg.type)) {
-    const verdict = panelVerdict(msg.type);
+    const verdict = panelVerdict(msg);
     if (!verdict.accept) {
       postLaw([{ kind: "panel_message_refused", message: msg.type, reason: verdict.reason }]);
       return;

@@ -22,10 +22,12 @@ import {
   persistShape,
   reconcileWalls,
   resolveFileWalls,
+  scriptWindowMessage,
   voiceNotices,
   VOICE_KEYS,
   type CheckPoint,
   type FileWalls,
+  type PanelMessageHead,
   type PanelMessageVerdict,
   type PanelProbe,
   type ResolvedFileWalls,
@@ -368,16 +370,23 @@ export function noteVoiceWrite(): void {
 
 export function scriptStarted(): void {
   scripts.running++;
+  postScriptWindow();
 }
 
 export function scriptEnded(now = Date.now()): void {
   scripts.running = Math.max(0, scripts.running - 1);
   scripts.lastEndedAt = now;
+  postScriptWindow();
+}
+
+/** Tells the panel when an approval card's Approve will be applied, so it holds the button until then. */
+export function postScriptWindow(): void {
+  figma.ui.postMessage(scriptWindowMessage(scripts));
 }
 
 /** Whether to apply a panel message now (designer-only ones wait out scripts). */
-export function panelVerdict(type: unknown, now = Date.now()): PanelMessageVerdict {
-  return panelMessageVerdict(type, scripts, now);
+export function panelVerdict(message: PanelMessageHead, now = Date.now()): PanelMessageVerdict {
+  return panelMessageVerdict(message, scripts, now);
 }
 
 /** The panel announced itself (it loaded). */

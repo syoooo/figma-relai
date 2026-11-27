@@ -387,6 +387,7 @@
     }
     .btn:hover { background: var(--amber); color: var(--bg); }
     .btn:focus-visible { outline: 1px dashed var(--amber); outline-offset: 2px; }
+    .btn:disabled, .btn:disabled:hover { border-color: var(--line); background: transparent; color: var(--faint); cursor: default; }
 
     .link-btn {
       display: block; width: 100%;
@@ -724,7 +725,7 @@
       word-break: break-all;
       margin-bottom: var(--sp-8);
     }
-    .approval-actions { display: flex; gap: var(--sp-8); }
+    .approval-actions { display: flex; gap: var(--sp-8); align-items: center; }
     .approval-actions .btn.deny { border-color: var(--line); color: var(--faint); }
     .approval-actions .btn.deny:hover { background: var(--line); color: var(--text); }
     .approval-intent {
@@ -1096,8 +1097,9 @@
       <div class="approval-cmd"><code id="approvalCmd"></code></div>
       <input class="approval-reason" id="approvalReason" data-i18n-ph="approval_reason_ph" placeholder="reason → saved to file memory (optional)">
       <div class="approval-actions">
-        <button class="btn" onclick="answerApproval(true)" data-i18n="approve">Approve</button>
+        <button class="btn" id="approvalApprove" aria-describedby="approvalHold" onclick="answerApproval(true)" data-i18n="approve">Approve</button>
         <button class="btn deny" onclick="answerApproval(false)" data-i18n="deny">Deny</button>
+        <span class="approval-wait" id="approvalHold"></span>
       </div>
     </div>
 
@@ -1308,6 +1310,8 @@
         promote_title: 'promote into the kit',
         approval_left: '{s}s left',
         approval_timed_out: 'No answer in time — denied automatically',
+        approval_hold: 'A script just finished. Approve in {s}s.',
+        approval_hold_running: 'A script is running. Approve once it ends.',
         law_title: 'no-go & settings',
         law_dismiss: 'Dismiss',
         q: '“{x}”',
@@ -1467,6 +1471,8 @@
         promote_title: 'キットへ昇格',
         approval_left: '残り{s}秒',
         approval_timed_out: '時間内に回答がなかったため、自動で拒否しました',
+        approval_hold: 'スクリプトが終わった直後です。承認はあと{s}秒で押せます',
+        approval_hold_running: 'スクリプトの実行中です。承認は終わってから押せます',
         law_title: '立入禁止と設定',
         law_dismiss: '閉じる',
         q: '「{x}」',
@@ -1626,6 +1632,8 @@
         promote_title: '升格进kit',
         approval_left: '剩{s}秒',
         approval_timed_out: '超时没有回答，已自动拒绝',
+        approval_hold: '脚本刚结束，{s}秒后可以批准',
+        approval_hold_running: '脚本运行中，结束后可以批准',
         law_title: '禁区与设置',
         law_dismiss: '关闭',
         q: '「{x}」',
@@ -1989,6 +1997,35 @@
       el.className = 'approval-left' + (left <= APPROVAL_LOW_S ? ' low' : '');
     }
 
+    // Scripts in flight or just ended, as the plugin last reported them. The
+    // plugin applies an Approve only once none runs and the moment after is
+    // over, so the button waits until then; a Deny is applied at any time.
+    var scriptHold = { running: false, approveAt: 0 };
+    var scriptHoldTimer = null;
+
+    // Seconds until an Approve would be applied: -1 while a script runs, 0 now
+    function approveWaitSeconds(hold, now) {
+      if (hold.running) return -1;
+      return Math.max(0, Math.ceil((hold.approveAt - now) / 1000));
+    }
+
+    function renderApproveHold() {
+      var wait = approveWaitSeconds(scriptHold, Date.now());
+      document.getElementById('approvalApprove').disabled = wait !== 0;
+      document.getElementById('approvalHold').textContent =
+        wait < 0 ? t('approval_hold_running') : wait > 0 ? t('approval_hold').replace('{s}', String(wait)) : '';
+    }
+
+    function onScriptWindow(msg) {
+      scriptHold = { running: msg.running === true, approveAt: Number(msg.approveAt) || 0 };
+      if (scriptHoldTimer) clearTimeout(scriptHoldTimer);
+      scriptHoldTimer = null;
+      var ms = scriptHold.approveAt - Date.now();
+      // Opens the button on time; the card's one-second tick counts down meanwhile
+      if (!scriptHold.running && ms > 0) scriptHoldTimer = setTimeout(renderApproveHold, ms + 20);
+      renderApproveHold();
+    }
+
     function showNextApproval() {
       var card = document.getElementById('approvalCard');
       if (approvalQueue.length === 0) {
@@ -2000,7 +2037,8 @@
       document.getElementById('approvalN').textContent =
         approvalQueue.length > 1 ? '\u00d7' + approvalQueue.length : '';
       renderApprovalLeft();
-      if (!approvalTick) approvalTick = setInterval(renderApprovalLeft, 1000);
+      renderApproveHold();
+      if (!approvalTick) approvalTick = setInterval(function () { renderApprovalLeft(); renderApproveHold(); }, 1000);
       var precEl = document.getElementById('approvalPrecedent');
       precEl.textContent = '';
       (req.precedents || []).slice(0, 2).forEach(function (text) {
@@ -2022,6 +2060,8 @@
     }
 
     function answerApproval(approved) {
+      // A held Approve is not sent, so the card stays as it is instead of coming back refused
+      if (approved && approveWaitSeconds(scriptHold, Date.now()) !== 0) return;
       var req = approvalQueue.shift();
       var reasonEl = document.getElementById('approvalReason');
       var reason = reasonEl ? reasonEl.value.trim() : '';
@@ -3560,6 +3600,11 @@
           deadline: msg.deadline, precedents: msg.precedents
         });
         showNextApproval();
+        return;
+      }
+
+      if (msg.type === 'script-window') {
+        onScriptWindow(msg);
         return;
       }
 

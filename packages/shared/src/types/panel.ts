@@ -97,7 +97,8 @@ export type LawNotice =
   // reported as unknown and the designer has to reopen the plugin.
   | { kind: "panel_lost"; panelReloaded: boolean; relayDropped: boolean }
   // A designer-only panel message arrived while a script was running or had
-  // just finished, so it was not applied. The designer may repeat it.
+  // just finished, so it was not applied. The designer may repeat it. An
+  // approval card's Deny is never refused.
   | {
       kind: "panel_message_refused";
       message: DesignerOnlyMessageType;
@@ -150,6 +151,18 @@ export interface ApprovalRequestMessage {
   timeoutMs: number; // how long the card waits before it is denied automatically
   deadline: number; // Date.now() in the plugin when the card times out (plugin and panel share the machine's clock)
   precedents?: string[]; // up to 2 precedent texts the command matched before the write, each at most 160 characters
+}
+
+/**
+ * Sent when a script starts or ends, and when the panel loads. The plugin
+ * applies an approval card's Approve only once no script runs and
+ * `SCRIPT_COOLDOWN_MS` have passed since the last one ended; a Deny is
+ * applied at any time. The panel holds its Approve button until then.
+ */
+export interface ScriptWindowMessage {
+  type: "script-window";
+  running: boolean; // a script is running; Approve waits for it to end
+  approveAt: number; // Date.now() in the plugin from which an Approve is applied, once none runs; 0 when no script has run
 }
 
 /** An approval card closed. */

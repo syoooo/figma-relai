@@ -21,6 +21,7 @@ import {
   legacyConfirmLevel,
   panelLostNotice,
   panelMessageVerdict,
+  scriptWindowMessage,
   persistShape,
   preflightPrecedents,
   reconcileWalls,
@@ -336,21 +337,45 @@ describe("designer-only panel messages", () => {
   const idle = { running: 0, lastEndedAt: null };
 
   test("refused while a script runs and shortly after", () => {
-    expect(panelMessageVerdict("guards-set", { running: 1, lastEndedAt: null }, 1000)).toEqual({
+    expect(panelMessageVerdict({ type: "guards-set" }, { running: 1, lastEndedAt: null }, 1000)).toEqual({
       accept: false,
       reason: "script_running",
     });
-    expect(panelMessageVerdict("save-settings", { running: 0, lastEndedAt: 1000 }, 2500)).toEqual({
+    expect(panelMessageVerdict({ type: "save-settings" }, { running: 0, lastEndedAt: 1000 }, 2500)).toEqual({
       accept: false,
       reason: "script_cooldown",
     });
-    expect(panelMessageVerdict("approval-response", { running: 0, lastEndedAt: 1000 }, 4000)).toEqual({ accept: true });
+    expect(panelMessageVerdict({ type: "approval-response", approved: true }, { running: 0, lastEndedAt: 1000 }, 4000)).toEqual({ accept: true });
+  });
+
+  test("a Deny on an approval card is applied at any time; an Approve waits", () => {
+    const deny = { type: "approval-response", approved: false };
+    const approve = { type: "approval-response", approved: true };
+    expect(panelMessageVerdict(deny, { running: 1, lastEndedAt: null }, 1000)).toEqual({ accept: true });
+    expect(panelMessageVerdict(deny, { running: 0, lastEndedAt: 1000 }, 1500)).toEqual({ accept: true });
+    expect(panelMessageVerdict(approve, { running: 0, lastEndedAt: 1000 }, 1500)).toEqual({
+      accept: false,
+      reason: "script_cooldown",
+    });
+    // Anything but a plain yes counts as a no, as the gate reads it
+    expect(panelMessageVerdict({ type: "approval-response" }, { running: 1, lastEndedAt: null }, 0)).toEqual({ accept: true });
+    // Only the approval card's No passes; other designer-only answers still wait
+    expect(panelMessageVerdict({ type: "proposal-response", approved: false }, { running: 1, lastEndedAt: null }, 0)).toEqual({
+      accept: false,
+      reason: "script_running",
+    });
+  });
+
+  test("the panel is told when an Approve will be applied again", () => {
+    expect(scriptWindowMessage({ running: 1, lastEndedAt: 500 })).toEqual({ type: "script-window", running: true, approveAt: 3500 });
+    expect(scriptWindowMessage({ running: 0, lastEndedAt: 1000 })).toEqual({ type: "script-window", running: false, approveAt: 4000 });
+    expect(scriptWindowMessage({ running: 0, lastEndedAt: null })).toEqual({ type: "script-window", running: false, approveAt: 0 });
   });
 
   test("other messages always pass", () => {
-    expect(panelMessageVerdict("focus-node", { running: 2, lastEndedAt: null }, 0)).toEqual({ accept: true });
-    expect(panelMessageVerdict("cancel-command", { running: 1, lastEndedAt: null }, 0)).toEqual({ accept: true });
-    expect(panelMessageVerdict("scope-lock", idle, 0)).toEqual({ accept: true });
+    expect(panelMessageVerdict({ type: "focus-node" }, { running: 2, lastEndedAt: null }, 0)).toEqual({ accept: true });
+    expect(panelMessageVerdict({ type: "cancel-command" }, { running: 1, lastEndedAt: null }, 0)).toEqual({ accept: true });
+    expect(panelMessageVerdict({ type: "scope-lock" }, idle, 0)).toEqual({ accept: true });
   });
 
   test("a reloaded panel or a dropped relay link is reported", () => {

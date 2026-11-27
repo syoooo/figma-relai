@@ -327,11 +327,23 @@ describe("set_guards through the real handler", () => {
 describe("panel messages while a script runs", () => {
   test("designer-only messages wait out the script and 3 s after it", () => {
     scriptStarted();
-    expect(panelVerdict("guards-set", 0)).toEqual({ accept: false, reason: "script_running" });
-    expect(panelVerdict("focus-node", 0)).toEqual({ accept: true });
+    expect(panelVerdict({ type: "guards-set" }, 0)).toEqual({ accept: false, reason: "script_running" });
+    expect(panelVerdict({ type: "focus-node" }, 0)).toEqual({ accept: true });
     scriptEnded(1000);
-    expect(panelVerdict("save-settings", 2000)).toEqual({ accept: false, reason: "script_cooldown" });
-    expect(panelVerdict("save-settings", 4000)).toEqual({ accept: true });
+    expect(panelVerdict({ type: "save-settings" }, 2000)).toEqual({ accept: false, reason: "script_cooldown" });
+    expect(panelVerdict({ type: "save-settings" }, 4000)).toEqual({ accept: true });
+  });
+
+  test("a Deny on an approval card is applied mid-script; the panel hears when an Approve will be", () => {
+    posted.length = 0;
+    scriptStarted();
+    expect(panelVerdict({ type: "approval-response", approved: false }, 0)).toEqual({ accept: true });
+    expect(panelVerdict({ type: "approval-response", approved: true }, 0)).toEqual({ accept: false, reason: "script_running" });
+    scriptEnded(10000);
+    expect(posted.filter((m) => m.type === "script-window")).toEqual([
+      { type: "script-window", running: true, approveAt: expect.any(Number) },
+      { type: "script-window", running: false, approveAt: 13000 },
+    ]);
   });
 });
 

@@ -21,6 +21,7 @@ import type {
   LawChangeSource,
   LawNotice,
   PageRef,
+  ScriptWindowMessage,
   VoiceKey,
   WallField,
 } from "@figma-relai/shared";
@@ -440,24 +441,44 @@ export type PanelMessageVerdict =
   | { accept: true }
   | { accept: false; reason: "script_running" | "script_cooldown" };
 
+/** The fields of a panel message the verdict reads. */
+export interface PanelMessageHead {
+  type: unknown;
+  approved?: unknown;
+}
+
 /**
  * Whether to apply a panel message now. While a script runs, and for
  * `cooldownMs` after the last one ends, a message on the designer-only list
  * may come from a script posing as the panel, so it is refused; the caller
- * tells the designer it was not applied. Everything else is accepted.
+ * tells the designer it was not applied. An approval card's Deny is accepted
+ * even then: posed as the panel, a script could only stop a command (as Stop,
+ * never held, already does) and note a reason in file memory (which a script
+ * can write anyway). Everything else is accepted.
  */
 export function panelMessageVerdict(
-  type: unknown,
+  message: PanelMessageHead,
   window: ScriptWindow,
   now: number,
   cooldownMs = SCRIPT_COOLDOWN_MS
 ): PanelMessageVerdict {
-  if (!isDesignerOnlyMessage(type)) return { accept: true };
+  if (!isDesignerOnlyMessage(message.type)) return { accept: true };
+  // The gate reads anything but `approved: true` as a no
+  if (message.type === "approval-response" && message.approved !== true) return { accept: true };
   if (window.running > 0) return { accept: false, reason: "script_running" };
   if (window.lastEndedAt !== null && now - window.lastEndedAt < cooldownMs) {
     return { accept: false, reason: "script_cooldown" };
   }
   return { accept: true };
+}
+
+/** Tells the panel when an Approve will be applied (see ScriptWindowMessage). */
+export function scriptWindowMessage(window: ScriptWindow, cooldownMs = SCRIPT_COOLDOWN_MS): ScriptWindowMessage {
+  return {
+    type: "script-window",
+    running: window.running > 0,
+    approveAt: window.lastEndedAt === null ? 0 : window.lastEndedAt + cooldownMs,
+  };
 }
 
 /** What the plugin knows about its panel at one moment. */
