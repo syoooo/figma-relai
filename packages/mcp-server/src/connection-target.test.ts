@@ -242,6 +242,42 @@ describe("following a plugin that moved", () => {
   });
 });
 
+describe("a plugin between reconnects", () => {
+  // The relay drops an idle plugin and the plugin dials back on a page timer,
+  // which a hidden window can hold back. A call that finds no plugin anywhere
+  // waits for it to return to its room instead of failing at once.
+  const away = 5000;
+
+  test("an auto-paired session reaches the plugin when it comes back to its room", async () => {
+    await relay();
+    const first = await plugin("room-a", { fileName: "Alpha" });
+    const conn = connection();
+    await conn.sendCommandDetailed("get_selection", {}, 5000);
+    await first.leave();
+    const back = new Promise<FakePlugin>((resolve) =>
+      setTimeout(() => resolve(plugin("room-a", { fileName: "Alpha" })), away)
+    );
+
+    await conn.sendCommandDetailed("create_frame", {}, 5000);
+    expect((await back).commands.map((c) => c.command)).toEqual(["create_frame"]);
+    expect(conn.room).toBe("room-a");
+  }, 15000);
+
+  test("a session that joined a room reaches the plugin when it comes back to it", async () => {
+    await relay();
+    const first = await plugin("room-a", { fileName: "Alpha" });
+    const conn = connection();
+    await conn.joinRoom("room-a");
+    await first.leave();
+    const back = new Promise<FakePlugin>((resolve) =>
+      setTimeout(() => resolve(plugin("room-a", { fileName: "Alpha" })), away)
+    );
+
+    await conn.sendCommandDetailed("create_frame", {}, 5000);
+    expect((await back).commands.map((c) => c.command)).toEqual(["create_frame"]);
+  }, 15000);
+});
+
 describe("join report", () => {
   test("names the file, the branch's main file and whether a plugin is there", async () => {
     await relay();

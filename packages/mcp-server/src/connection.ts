@@ -63,6 +63,10 @@ export interface JoinReport {
 }
 
 const LINK_DROPPED_BEFORE_ANSWER = "The link to the relay dropped";
+// How long a call waits for an absent plugin: first to appear at all (or to
+// show up in another room it moved to), then to come back to its own room.
+const PLUGIN_APPEAR_MS = 2500;
+const PLUGIN_RETURN_MS = 30_000;
 const OUTCOMES: readonly string[] = ["applied", "not_applied", "unknown"];
 const RETRY_CLASSES: readonly string[] = ["retryable", "read_canvas_first", "fix_input", "needs_human"];
 
@@ -593,6 +597,12 @@ export class FigmaConnection {
    * open" about a plugin sitting right there — while list_rooms, which asks
    * the relay instead of trusting the cache, happily lists it.
    */
+  // Whether a plugin is live in a room other than the current one
+  private async pluginElsewhere(): Promise<boolean> {
+    const rooms = await this.listRooms().catch((): RoomSummary[] => []);
+    return rooms.some((r) => r.hasPlugin && r.room !== this.currentRoom);
+  }
+
   private async waitForPlugin(ms: number): Promise<void> {
     const deadline = Date.now() + ms;
     while (Date.now() < deadline) {
@@ -644,13 +654,23 @@ export class FigmaConnection {
   // Pick the session's default room, following the plugin if it moved
   private async defaultRoom(target: CallTarget): Promise<string> {
     await this.ensureRoom();
-    // Presence said the room has no plugin — fail fast, not a 30s timeout.
-    // But a session that starts while Figma is still dialling would fail on
-    // its very first question, so give the plugin a moment to appear before
-    // believing the answer. Waiting costs seconds only when it is genuinely
-    // absent; failing early costs the user their first command every time.
+    // Presence said the room has no plugin. A session that starts while Figma
+    // is still dialling would fail on its very first question, so give the
+    // plugin a moment to appear before believing the answer.
     if (this.currentRoom && this.presenceByRoom.get(this.currentRoom) === false) {
-      await this.waitForPlugin(2500);
+      await this.waitForPlugin(PLUGIN_APPEAR_MS);
+    }
+    // Still absent, and no plugin elsewhere to follow: it may be between
+    // reconnects. The relay drops an idle plugin, and the plugin dials back on
+    // a page timer that a hidden window (display asleep, screen saver) can
+    // hold back. Nothing has been sent, so waiting longer is safe; the cost is
+    // a later error when the plugin is really closed.
+    if (
+      this.currentRoom &&
+      this.presenceByRoom.get(this.currentRoom) === false &&
+      (this.roomWasChosenByCaller || !(await this.pluginElsewhere()))
+    ) {
+      await this.waitForPlugin(PLUGIN_RETURN_MS - PLUGIN_APPEAR_MS);
     }
     if (this.currentRoom && this.presenceByRoom.get(this.currentRoom) === false) {
       // The plugin may not be gone — it may have MOVED. Reopening it, or
