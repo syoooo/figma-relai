@@ -720,6 +720,9 @@
     .approval-precedent div::before { content: "\2691\FE0E  "; color: var(--amber-dim); }
     /* A card waiting on the plugin's answer: the actions give way to one grey line */
     .approval-wait { color: var(--faint); font-size: 10px; }
+    /* Why Approve waits takes its own row under the buttons, so their labels never break */
+    #approvalHold { margin-top: var(--sp-6); }
+    #approvalHold:empty { display: none; }
     .approval-cmd {
       font-size: 10px; color: var(--text);
       word-break: break-all;
@@ -1103,8 +1106,8 @@
       <div class="approval-actions">
         <button class="btn" id="approvalApprove" aria-describedby="approvalHold" onclick="answerApproval(true)" data-i18n="approve">Approve</button>
         <button class="btn deny" onclick="answerApproval(false)" data-i18n="deny">Deny</button>
-        <span class="approval-wait" id="approvalHold"></span>
       </div>
+      <div class="approval-wait" id="approvalHold"></div>
     </div>
 
     <!-- Moment cards: the file speaks when its law needs a decision -->

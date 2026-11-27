@@ -408,6 +408,12 @@ describe("approve waits out a script; deny does not", () => {
     expect(script).toMatch(/msg\.type === 'script-window'\) \{\s*onScriptWindow\(msg\);/);
     expect(html).toMatch(/id="approvalApprove"[^>]*aria-describedby="approvalHold"/);
   });
+
+  test("the line on why Approve waits sits under the buttons, not beside them", () => {
+    const actions = html.match(/<div class="approval-actions">([\s\S]*?)<\/div>\s*<div class="approval-wait" id="approvalHold"><\/div>/);
+    expect(actions).not.toBeNull();
+    expect(actions![1]).toContain('id="approvalApprove"');
+  });
 });
 
 describe("kit card", () => {
