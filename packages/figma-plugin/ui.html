@@ -728,6 +728,10 @@
     .approval-actions { display: flex; gap: var(--sp-8); align-items: center; }
     .approval-actions .btn.deny { border-color: var(--line); color: var(--faint); }
     .approval-actions .btn.deny:hover { background: var(--line); color: var(--text); }
+    /* A moment card's way out is a plain secondary button, not one that reads
+       as disabled; three choices stand one to a row, the main one on top. */
+    #momentActions .btn.deny { border-color: var(--faint); color: var(--muted); }
+    #momentActions.stacked { flex-direction: column; align-items: stretch; }
     .approval-intent {
       color: var(--text); font-size: 11px; line-height: 1.5;
       margin-bottom: var(--sp-4); overflow-wrap: anywhere;
@@ -2676,7 +2680,7 @@
             showMomentResult(msg, kit);
           } },
           { label: t('moment_later'), quiet: true, fn: releaseMoment }
-        ]);
+        ], true);
         return;
       }
       if (r && r.code === 'kit_older') {
@@ -2707,10 +2711,11 @@
       document.getElementById('momentCard').classList.remove('show');
     }
 
-    function showMomentCard(body, actions) {
+    function showMomentCard(body, actions, stacked) {
       document.getElementById('momentBody').textContent = body;
       var box = document.getElementById('momentActions');
       box.textContent = '';
+      box.classList.toggle('stacked', !!stacked);
       actions.forEach(function (a) {
         var b = document.createElement('button');
         b.className = 'btn' + (a.quiet ? ' deny' : '');

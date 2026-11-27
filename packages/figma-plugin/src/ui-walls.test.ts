@@ -392,7 +392,7 @@ describe("approve waits out a script; deny does not", () => {
 describe("kit card", () => {
   function card() {
     const posts: any[] = [];
-    const shown: { body: string; actions: { label: string; fn: () => void; quiet?: boolean }[] }[] = [];
+    const shown: { body: string; actions: { label: string; fn: () => void; quiet?: boolean }[]; stacked?: boolean }[] = [];
     const box = new El();
     type Fn = (...args: any[]) => any;
     const api = lift<{ momentAct: Fn; onRulesetOpResult: Fn; state: Fn }>(
@@ -400,7 +400,7 @@ describe("kit card", () => {
       `var locale = 'en';
        var momentHold = false, momentForceArmed = false, rsPending = null, rsRefusal = null, rsForceArmed = false;
        function rsPost(op, extra) { posts.push([op, extra || null]); }
-       function showMomentCard(body, actions) { shown.push({ body: body, actions: actions }); }
+       function showMomentCard(body, actions, stacked) { shown.push({ body: body, actions: actions, stacked: stacked }); }
        function hideMomentCard() {}
        function evalMoments() {}
        function renderRulesetModal() {}`,
@@ -435,6 +435,8 @@ describe("kit card", () => {
       I18N.en.kit_force,
       I18N.en.moment_later,
     ]);
+    // Three choices do not fit side by side in the panel: one to a row
+    expect(last.stacked).toBe(true);
     expect(c.state().hold).toBe(true);
   });
 
