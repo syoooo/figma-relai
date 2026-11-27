@@ -3,7 +3,7 @@
 Run against a real Figma file after changing plugin handlers, the transport, or pairing.
 Setup: MCP client (Claude Code / Cursor) started — the relay is embedded, no `bun socket` needed. Figma plugin installed.
 
-Items 1–39 are the core sheet (~25 min). Items 40–57 cover 0.5–0.7 and need things a driver cannot fake: two files open at once, a branch, a REST token, and a component set that is genuinely broken. Items 58–66 cover what 0.7.11 changed, and 67–79 what 0.8.0 changed. Run the section that matches what you touched; run all of it before a release that changes pairing, the kit, or the transport.
+Items 1–39 are the core sheet (~25 min). Items 40–57 cover 0.5–0.7 and need things a driver cannot fake: two files open at once, a branch, a REST token, and a component set that is genuinely broken. Items 58–66 cover what 0.7.11 changed, 67–79 what 0.8.0 changed, 80–99 what 0.8.1 changed, and 100–110 what 0.8.2 changed. Run the section that matches what you touched; run all of it before a release that changes pairing, the kit, or the transport.
 
 ## Pairing & connection
 
@@ -11,7 +11,7 @@ Items 1–39 are the core sheet (~25 min). Items 40–57 cover 0.5–0.7 and nee
 2. **Room persistence**: close and reopen the plugin → same room name reappears; the AI keeps working without re-pairing.
 3. **Figma restart**: quit and relaunch Figma Desktop, run the plugin → auto-connects to the same room; next AI command succeeds without `join_room`.
 4. **Relay handover**: with two MCP clients running (e.g. Claude Code + Cursor), kill the one that started first (hosting the relay) → within a few seconds the other takes over; plugin badge flips to "Reconnecting…" then back to connected; commands work again.
-5. **Presence**: with the plugin closed, ask the AI to run a command → immediate "No Figma plugin is connected" (not a 30 s timeout). Open the plugin → its badge shows "AI connected ✓" once the agent is in the room.
+5. **Presence**: with no plugin open since the MCP client started, ask the AI to run a command → immediate "No Figma plugin is connected" (not a 30 s timeout). A plugin that was open and then closed is waited for first (item 104). Open the plugin → its badge shows "AI connected ✓" once the agent is in the room.
 6. **Stop button**: run a large `set_text` bulk edit (50+ nodes), press **Stop** in the plugin → remaining items are skipped and reported as `cancelled`, the items already written as applied, and the result is `partial` (see item 67 for the full Stop check).
 7. **Code-exec toggle**: turn "Allow code execution" OFF → `execute_figma` returns the disabled-error naming the toggle. Turn ON → a small script (e.g. `return figma.currentPage.name`) succeeds, logs appear.
 8. **Designer events**: click a different node between two AI commands → the second response contains `designer_events` with the selection change (or `get_events` returns it).
@@ -173,3 +173,29 @@ Run these on a scratch file with at least one page fenced off in the panel, code
 98. **The write log says why**: deny one approval, let one time out and Stop one → `get_events scope:"agent"` lists them as denied, timeout and stopped.
 99. **The panel reports itself lost**: start a 20-second script and, while it runs, stop the only MCP client (the relay goes with it) → when the script ends the feed shows a `panel_lost` notice saying the relay link dropped.
 
+## 0.8.2 additions — a plugin that steps away, and the panel's language
+
+Same setup as the 0.8.1 additions. Items 103–105 need the plugin closed and reopened while a call waits, and 107–108 are read off the panel.
+
+### The walls and the approval card
+
+100. **A batch reports the walls**: a `batch_execute` whose first item is a script that clears `relai/guards` → after the batch's results, a separate text block carries `law` (a `law_restored` notice) and the LAW RESTORED warning, the `_meta` receipt's call carries the same `law`, each item still reports its own result, and the guard is back.
+101. **Deny counts the first time**: start a 12-second script and, while it runs, a write that asks (a variable delete at RISK) → press Deny once just after the script ends → `denied_by_designer` at once, the card does not come back, and the feed has no "not applied" line. Repeat with Approve in a panel about 320 px wide → Approve is held while the script runs and for 3 seconds after, the wait is on its own line under the buttons, Approve and Deny stay on one line, and the card opens by itself; then the write is `applied`.
+102. **Panel failures in the panel's language**: with the panel set to 日, save a memo over 280 characters and import an empty kit and one with no kit name → each failure reads in Japanese; set to 中 → Chinese. An agent's `record_precedent` over 280 characters still gets the English error.
+
+### A plugin that goes quiet or steps away
+
+103. **An idle plugin stays connected**: leave the plugin untouched for 5 minutes, then 5 more with the Figma window hidden → `join_room` with no argument lists it at every 30-second look, the server log has no "Closing stale connection" and no "terminating unresponsive socket", and the next call answers at once.
+104. **A call waits 30 s for a plugin between reconnects**: one plugin, calls without `room`; close the panel and send a write, reopen within 20 s → `applied` after the wait. Leave it closed → `plugin_absent` / `not_applied` about 30 s later. After `join_room` to a room with no plugin, a call waits the same 30 s, even with another file's plugin live.
+105. **A call that names its room waits 10 s**: close the panel, send a write with `room`, reopen within 5 s → `applied`. Leave it closed → `plugin_absent` after about 10 s, "No Figma plugin came back to room … within 10 seconds", nothing sent. A mistyped `room` fails at once, and `join_room` with no argument afterwards does not list it.
+
+### Shapes and the panel
+
+106. **Shapes take their colors**: `create_node` rectangle, ellipse, polygon and star with `fillColor` red and `strokeColor` blue → each has a red fill and a blue stroke. A rectangle without them keeps the default grey fill and no stroke.
+107. **Stacked card buttons**: the refused-push card (item 91) → Export to compare, Overwrite anyway and Not now stand one to a row, Export on top, no word wrapped. Not now, Deny on an approval card and Dismiss on a proposal are a plain secondary button, readable when hovered. A file card whose rules differ from its kit stacks its three choices the same way.
+108. **Everyday names in the panel**: in 日, every window says ルールセット, 接続名, メモ, ルール and 保護ページ, and none says キット, ルーム, 判例, 規約 or 立入禁止. Headings, accessible names, the approval card's scale line, the connection chips, the tool list's groups and the Figma notice after promoting a memo or accepting a no-go page follow the language; OPEN, RISK, BULK and ALL stay. 中 uses the same names; English is unchanged.
+
+### What the agent is told
+
+109. **The kit's name per language**: `tools/list` → `manage_rulesets` names ルールセット and 规则集 and where the KITS window opens, and no longer says to call it a kit or points to a KIT row.
+110. **A refused kit command is `not_applied`**: `manage_rulesets` link to a kit that does not exist, and restore on a file with no link → `not_applied` with code `handler_error`, and the file's link is unchanged.
