@@ -831,6 +831,14 @@ describe("labels the panel words", () => {
     }
   });
 
+  test("the memory skill gives the AI the panel's names in Japanese and Chinese", () => {
+    const skill = readFileSync(join(import.meta.dir, "..", "..", "..", "docs", "skills", "memory-and-precedents.md"), "utf8");
+    for (const k of ["memory_label", "rules_label", "kits_label", "guards_label"]) {
+      expect(skill).toContain(`${I18N.ja[k]} (${I18N.zh[k]})`);
+    }
+    expect(skill).not.toMatch(/判例|规约|キット|規約/);
+  });
+
   test("the Japanese file card is titled as the file, not as a path, and does not say who deleted a kit", () => {
     expect(I18N.ja.moment_label).toBe("このファイル");
     expect(I18N.zh.moment_label).toBe("这个文件");

@@ -4,6 +4,8 @@ Every Figma file this plugin touches can carry its own case law: **precedents** 
 
 When a write touches something a precedent references, **the file speaks**: the ruling arrives attached to your tool result. Treat it as the designer's voice from a past session calling a halt — the four-act shape is always the same: they said it once, the file kept it, you came to "fix" it knowing nothing, their words stop you. Back off before you undo something intentional.
 
+When you talk to the designer in Japanese or Chinese, use the names the panel shows them rather than translating "precedent" or "kit": a precedent is メモ (备忘), the conventions are ルール (规则), a kit is ルールセット (规则集), and a no-go page is 保護ページ (保护页面).
+
 ## Read before you work
 
 At the start of any session that will modify the file, call `manage_conventions action:get`. Treat what comes back the way you treat user instructions:
@@ -23,14 +25,14 @@ Record a precedent (`action:record_precedent`) when the designer **rules** on so
 
 One precedent = one sentence (≤280 chars), written so a future session with zero context understands the ruling. Attach `refs` — the variable IDs, node IDs, or page IDs the ruling concerns — because refs power in-band surfacing: any future write that touches them gets the precedent attached to its result automatically.
 
-**Always say in your reply that you recorded it** ("已记入文件记忆: …"). Recording silently breaks the designer's trust in what the file knows.
+**Always say in your reply that you recorded it** ("已记进备忘：…"). Recording silently breaks the designer's trust in what the file knows.
 
 ## When NOT to record
 
 - Transient, one-off choices ("make this one red for the screenshot").
 - Anything already in the conventions doc (point to it instead; propose a conventions edit if it deserves statute status).
 - Secrets, personal information, or anything about people rather than the file.
-- Your own inferences the designer has not confirmed. Precedents are the DESIGNER's rulings, not your observations. When unsure, ask: "记为判例吗?"
+- Your own inferences the designer has not confirmed. Precedents are the DESIGNER's rulings, not your observations. When unsure, ask: "要记进备忘吗？"
 
 ## Promote rulings into enforcement
 
@@ -51,7 +53,7 @@ When the designer rules something clearly product-wide (not one-file-local), off
 
 ## Reporting style as trust matures
 
-Early sessions: report every change. Once the designer clearly stops reading full receipts (they say "简报就好" or approve digests), switch to digest mode: lead with **the two changes you are least sure about** and anything a precedent or guard touched, then one line for the rest ("其余 N 处按规约"). Full detail must always remain one question away — digest is a summary, never a omission. Never digest away errors, guard rejections, or precedent hits.
+Early sessions: report every change. Once the designer clearly stops reading full receipts (they say "简报就好" or approve digests), switch to digest mode: lead with **the two changes you are least sure about** and anything a precedent or guard touched, then one line for the rest ("其余 N 处按规则"). Full detail must always remain one question away — digest is a summary, never a omission. Never digest away errors, guard rejections, or precedent hits.
 
 ## Maintenance
 
