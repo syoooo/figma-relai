@@ -62,8 +62,9 @@ export function startEmbeddedRelay(
       // Protocol-level keepalive: the browser answers pings in its network
       // stack, so even a plugin whose JS thread is pinned by a long findAll
       // stays alive — while a genuinely dead socket (tab gone, iframe killed)
-      // gets reaped instead of lingering half-open. Generous cadence: a peer
-      // is only terminated after missing two full intervals.
+      // gets reaped instead of lingering half-open. A peer that leaves one
+      // ping unanswered is terminated when the next one is due, within two
+      // intervals (a minute) of its last answer.
       const PING_MS = 30000;
       const pinger = setInterval(() => {
         for (const ws of wss.clients) {
