@@ -7,7 +7,7 @@ export const translations = {
     hero: {
       eyebrow: 'FIGMA × ANY AGENT',
       title: 'Agents get the pen.\nThe file keeps the veto.',
-      body: 'Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma. The file carries your conventions, your rulings, your fences; every client that opens it inherits them. Which is why you can finally let the agents run.',
+      body: 'Relai connects Claude Code, Cursor, Codex — any MCP client — to Figma. The file carries your conventions, your rulings, your fences; every client that opens it inherits them. Which is why you can let the agents run.',
       mono: 'open source · local · node-level read/write/delete',
       install: 'Install the plugin',
       github: 'GitHub',
