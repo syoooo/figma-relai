@@ -6,6 +6,7 @@ import {
   reconcileOnLoad,
   restoreFromRuleset,
   rulesetOpResult,
+  rulesetToMarkdown,
   type RestoreResult,
   type Ruleset,
 } from "./handlers/rulesets.js";
@@ -250,6 +251,37 @@ describe("kit refusals", () => {
     linked("# newer", "2026-09-10T00:00:00.000Z", {});
     await dispatch("restore_from_ruleset", { force: true });
     expect(shared.get("relai:conventions")).toBe(LAW);
+  });
+});
+
+describe("the auto-restore switch", () => {
+  test("off: a load that finds the file's law gone writes nothing", async () => {
+    setup([], [precedent("s1")], false);
+    expect(await reconcileOnLoad()).toMatchObject({ healed: false, status: { state: "file-empty", autoRestore: false } });
+    expect(shared.get("relai:conventions")).toBeUndefined();
+    expect(shared.get("relai:conventionsAt")).toBeUndefined();
+    expect(memoryIds()).toEqual([]);
+  });
+
+  test("on: a load that finds the file's own law writes nothing", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", { autoRestore: true, seedPrecedents: [precedent("s1")] });
+    const link = shared.get("relai:rulesetLink");
+    expect(await reconcileOnLoad()).toMatchObject({ healed: false, status: { state: "drifted", autoRestore: true } });
+    expect(shared.get("relai:conventions")).toBe("# mine");
+    expect(shared.get("relai:conventionsAt")).toBe("2026-09-10T00:00:00.000Z");
+    expect(shared.get("relai:rulesetLink")).toBe(link);
+    expect(shared.get("relai:memory")).toBeUndefined();
+  });
+
+  test("import keeps this machine's switch, either way", async () => {
+    for (const local of [true, false]) {
+      linked(LAW, "2026-09-10T00:00:00.000Z", { autoRestore: local });
+      const kit = (stored as Ruleset[])[0];
+      const markdown = rulesetToMarkdown({ ...kit, conventions: "# imported", autoRestore: !local });
+      const out = (await dispatch("import_ruleset", { markdown })) as { overwrote: boolean; autoRestore: boolean };
+      expect(out).toMatchObject({ overwrote: true, autoRestore: local });
+      expect((stored as Ruleset[])[0]).toMatchObject({ conventions: "# imported", autoRestore: local });
+    }
   });
 });
 
