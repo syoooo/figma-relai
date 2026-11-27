@@ -775,6 +775,24 @@ describe("labels the panel words", () => {
     expect(scaleText("zh")([{ key: "ghost_n", n: 2 }])).toBe("其中2条删除后引用仍在");
   });
 
+  test("the connection chips and the tool list's groups are worded by the dictionary", () => {
+    expect(body).toContain('<span data-i18n="relay_chip">RELAY</span>');
+    expect(body).toContain('<span data-i18n="agent_chip">AGENT</span>');
+    expect([I18N.ja.relay_chip, I18N.ja.agent_chip]).toEqual(["リレー", "AI"]);
+    expect([I18N.zh.relay_chip, I18N.zh.agent_chip]).toEqual(["中继", "AI"]);
+    // The build writes the groups from the server's catalog; each names its key
+    const tools = body.slice(body.indexOf("<!-- TOOLS:START -->"), body.indexOf("<!-- TOOLS:END -->"));
+    const groups = [...tools.matchAll(/<summary>(.*?)<\/summary>/g)].map((m) => m[1]);
+    expect(groups.length).toBeGreaterThanOrEqual(10);
+    for (const g of groups) {
+      const m = g.match(/<span data-i18n="(cat_[a-z_]+)">([a-z-]+)<\/span> \(\d+\)$/);
+      expect(m, g).not.toBeNull();
+      expect(m![1]).toBe(`cat_${m![2].replace(/-/g, "_")}`);
+      expect(I18N.en[m![1]]).toBe(m![2]);
+      for (const locale of ["ja", "zh"] as const) expect({ g, v: I18N[locale][m![1]] }).not.toEqual({ g, v: m![2] });
+    }
+  });
+
   test("the Japanese file card is titled as the file, not as a path, and does not say who deleted a kit", () => {
     expect(I18N.ja.moment_label).toBe("このファイル");
     expect(I18N.zh.moment_label).toBe("这个文件");

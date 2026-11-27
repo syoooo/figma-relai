@@ -1,6 +1,7 @@
 // Regenerates the tool list inside ui.html from the built MCP server so the
 // plugin UI can never drift from the real tool surface.
 // Runs as part of `bun run build` (after the mcp-server build).
+// Each group's name is a panel dictionary key (cat_<name>), so it follows the panel's language.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -35,7 +36,7 @@ const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;")
 const html = [...byCategory.entries()]
   .map(
     ([category, names]) =>
-      `        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> ${escapeHtml(category)} (${names.length})</summary><div class="cat-tools">${names
+      `        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_${category.replace(/-/g, "_")}">${escapeHtml(category)}</span> (${names.length})</summary><div class="cat-tools">${names
         .map((n) => `<span class="tool-tag">${escapeHtml(n)}</span>`)
         .join("")}</div></details>`
   )

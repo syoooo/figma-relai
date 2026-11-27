@@ -974,8 +974,8 @@
     <!-- Session plumbing left, account-level token right; quiet when green -->
     <div class="chips">
       <div class="chip-group">
-        <span class="chip"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M128,84a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,84Zm0,64a20,20,0,1,1,20-20A20,20,0,0,1,128,148Zm77.39,12.7A83.94,83.94,0,0,1,190.61,184a12,12,0,0,1-17.89-16,59.92,59.92,0,0,0,0-80,12,12,0,0,1,17.89-16,84.07,84.07,0,0,1,14.78,88.7ZM83.28,168a12,12,0,0,1-17.89,16,83.94,83.94,0,0,1,0-112A12,12,0,0,1,83.28,88a59.92,59.92,0,0,0,0,80ZM252,128a123.63,123.63,0,0,1-35.43,86.78A12,12,0,1,1,199.43,198a99.88,99.88,0,0,0,0-140,12,12,0,0,1,17.14-16.8A123.63,123.63,0,0,1,252,128ZM56.57,198a12,12,0,0,1-17.14,16.8,123.89,123.89,0,0,1,0-173.56A12,12,0,0,1,56.57,58a99.88,99.88,0,0,0,0,140Z"/></svg></span> RELAY <span class="val ok" id="relayVal"><span class="lamp on"></span> <span id="relayText"></span></span></span>
-        <span class="chip"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M72,104a16,16,0,1,1,16,16A16,16,0,0,1,72,104Zm96,16a16,16,0,1,0-16-16A16,16,0,0,0,168,120Zm68-40V192a36,36,0,0,1-36,36H56a36,36,0,0,1-36-36V80A36,36,0,0,1,56,44h60V16a12,12,0,0,1,24,0V44h60A36,36,0,0,1,236,80Zm-24,0a12,12,0,0,0-12-12H56A12,12,0,0,0,44,80V192a12,12,0,0,0,12,12H200a12,12,0,0,0,12-12Zm-12,82a30,30,0,0,1-30,30H86a30,30,0,0,1,0-60h84A30,30,0,0,1,200,162Zm-80-6v12h16V156ZM86,168H96V156H86a6,6,0,0,0,0,12Zm90-6a6,6,0,0,0-6-6H160v12h10A6,6,0,0,0,176,162Z"/></svg></span> AGENT <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText"></span></span></span>
+        <span class="chip"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M128,84a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,84Zm0,64a20,20,0,1,1,20-20A20,20,0,0,1,128,148Zm77.39,12.7A83.94,83.94,0,0,1,190.61,184a12,12,0,0,1-17.89-16,59.92,59.92,0,0,0,0-80,12,12,0,0,1,17.89-16,84.07,84.07,0,0,1,14.78,88.7ZM83.28,168a12,12,0,0,1-17.89,16,83.94,83.94,0,0,1,0-112A12,12,0,0,1,83.28,88a59.92,59.92,0,0,0,0,80ZM252,128a123.63,123.63,0,0,1-35.43,86.78A12,12,0,1,1,199.43,198a99.88,99.88,0,0,0,0-140,12,12,0,0,1,17.14-16.8A123.63,123.63,0,0,1,252,128ZM56.57,198a12,12,0,0,1-17.14,16.8,123.89,123.89,0,0,1,0-173.56A12,12,0,0,1,56.57,58a99.88,99.88,0,0,0,0,140Z"/></svg></span> <span data-i18n="relay_chip">RELAY</span> <span class="val ok" id="relayVal"><span class="lamp on"></span> <span id="relayText"></span></span></span>
+        <span class="chip"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M72,104a16,16,0,1,1,16,16A16,16,0,0,1,72,104Zm96,16a16,16,0,1,0-16-16A16,16,0,0,0,168,120Zm68-40V192a36,36,0,0,1-36,36H56a36,36,0,0,1-36-36V80A36,36,0,0,1,56,44h60V16a12,12,0,0,1,24,0V44h60A36,36,0,0,1,236,80Zm-24,0a12,12,0,0,0-12-12H56A12,12,0,0,0,44,80V192a12,12,0,0,0,12,12H200a12,12,0,0,0,12-12Zm-12,82a30,30,0,0,1-30,30H86a30,30,0,0,1,0-60h84A30,30,0,0,1,200,162Zm-80-6v12h16V156ZM86,168H96V156H86a6,6,0,0,0,0,12Zm90-6a6,6,0,0,0-6-6H160v12h10A6,6,0,0,0,176,162Z"/></svg></span> <span data-i18n="agent_chip">AGENT</span> <span class="val muted" id="agentVal"><span class="lamp off" id="agentLamp"></span> <span id="agentText"></span></span></span>
       </div>
       <div class="chip-group">
         <span class="chip" id="tokenChip" style="display:none" title="" onclick="onTokenChipClick()"><span class="ico"><svg viewBox="0 0 256 256" width="10" height="10" fill="currentColor" aria-hidden="true"><path d="M198.15,96A44,44,0,0,0,168,20H96A44,44,0,0,0,65.85,96a43.9,43.9,0,0,0,1.23,65.12A48,48,0,1,0,148,196V167.17A44,44,0,0,0,198.15,96ZM188,64a20,20,0,0,1-20,20H148V44h20A20,20,0,0,1,188,64ZM76,64A20,20,0,0,1,96,44h28V84H96A20,20,0,0,1,76,64Zm20,84a20,20,0,0,1,0-40h28v40H96Zm28,48a24,24,0,1,1-24-24h24Zm44-48a20,20,0,1,1,20-20A20,20,0,0,1,168,148Z"/></svg></span> <span data-i18n="token_chip">ACCESS TOKEN</span> <span class="val muted" id="tokenVal"><span class="lamp off" id="tokenLamp"></span> <span id="tokenText"></span></span></span>
@@ -1168,19 +1168,19 @@
     <div class="rule clickable" id="toolsToggle" onclick="toggleTools()"><span class="chev">&#9654;</span> <span data-i18n="tools_title">Toolset</span></div>
     <div class="tools-list collapse-body" id="toolsContent">
       <!-- TOOLS:START -->
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> advanced (3)</summary><div class="cat-tools"><span class="tool-tag">join_room</span><span class="tool-tag">batch_execute</span><span class="tool-tag">execute_figma</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> context (7)</summary><div class="cat-tools"><span class="tool-tag">get_events</span><span class="tool-tag">get_document_overview</span><span class="tool-tag">get_selection_context</span><span class="tool-tag">get_node_details</span><span class="tool-tag">search_nodes</span><span class="tool-tag">get_design_tokens</span><span class="tool-tag">screenshot</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> analysis (2)</summary><div class="cat-tools"><span class="tool-tag">diff_nodes</span><span class="tool-tag">analyze_design</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> verification (3)</summary><div class="cat-tools"><span class="tool-tag">verify_changes</span><span class="tool-tag">validate_design_rules</span><span class="tool-tag">verify_visual</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> read (1)</summary><div class="cat-tools"><span class="tool-tag">get_node_data</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> create (1)</summary><div class="cat-tools"><span class="tool-tag">create_node</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> edit (3)</summary><div class="cat-tools"><span class="tool-tag">set_properties</span><span class="tool-tag">edit_structure</span><span class="tool-tag">set_text</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> components (1)</summary><div class="cat-tools"><span class="tool-tag">manage_components</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> design-system (6)</summary><div class="cat-tools"><span class="tool-tag">manage_variables</span><span class="tool-tag">manage_styles</span><span class="tool-tag">import_from_library</span><span class="tool-tag">get_design_system</span><span class="tool-tag">manage_conventions</span><span class="tool-tag">manage_rulesets</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> document (2)</summary><div class="cat-tools"><span class="tool-tag">manage_pages</span><span class="tool-tag">navigate</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> assets (2)</summary><div class="cat-tools"><span class="tool-tag">export_asset</span><span class="tool-tag">add_image</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> annotations (1)</summary><div class="cat-tools"><span class="tool-tag">annotate</span></div></details>
-        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> comments (1)</summary><div class="cat-tools"><span class="tool-tag">manage_comments</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_advanced">advanced</span> (3)</summary><div class="cat-tools"><span class="tool-tag">join_room</span><span class="tool-tag">batch_execute</span><span class="tool-tag">execute_figma</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_context">context</span> (7)</summary><div class="cat-tools"><span class="tool-tag">get_events</span><span class="tool-tag">get_document_overview</span><span class="tool-tag">get_selection_context</span><span class="tool-tag">get_node_details</span><span class="tool-tag">search_nodes</span><span class="tool-tag">get_design_tokens</span><span class="tool-tag">screenshot</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_analysis">analysis</span> (2)</summary><div class="cat-tools"><span class="tool-tag">diff_nodes</span><span class="tool-tag">analyze_design</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_verification">verification</span> (3)</summary><div class="cat-tools"><span class="tool-tag">verify_changes</span><span class="tool-tag">validate_design_rules</span><span class="tool-tag">verify_visual</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_read">read</span> (1)</summary><div class="cat-tools"><span class="tool-tag">get_node_data</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_create">create</span> (1)</summary><div class="cat-tools"><span class="tool-tag">create_node</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_edit">edit</span> (3)</summary><div class="cat-tools"><span class="tool-tag">set_properties</span><span class="tool-tag">edit_structure</span><span class="tool-tag">set_text</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_components">components</span> (1)</summary><div class="cat-tools"><span class="tool-tag">manage_components</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_design_system">design-system</span> (6)</summary><div class="cat-tools"><span class="tool-tag">manage_variables</span><span class="tool-tag">manage_styles</span><span class="tool-tag">import_from_library</span><span class="tool-tag">get_design_system</span><span class="tool-tag">manage_conventions</span><span class="tool-tag">manage_rulesets</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_document">document</span> (2)</summary><div class="cat-tools"><span class="tool-tag">manage_pages</span><span class="tool-tag">navigate</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_assets">assets</span> (2)</summary><div class="cat-tools"><span class="tool-tag">export_asset</span><span class="tool-tag">add_image</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_annotations">annotations</span> (1)</summary><div class="cat-tools"><span class="tool-tag">annotate</span></div></details>
+        <details class="cat-details"><summary><span class="cat-arrow">&#9654;</span> <span data-i18n="cat_comments">comments</span> (1)</summary><div class="cat-tools"><span class="tool-tag">manage_comments</span></div></details>
       <!-- TOOLS:END -->
     </div>
 
@@ -1383,6 +1383,21 @@
         guards_modal_label: 'AI NO-GO',
         token_label: 'TOKEN',
         token_chip: 'ACCESS TOKEN',
+        relay_chip: 'RELAY',
+        agent_chip: 'AGENT',
+        cat_advanced: 'advanced',
+        cat_context: 'context',
+        cat_analysis: 'analysis',
+        cat_verification: 'verification',
+        cat_read: 'read',
+        cat_create: 'create',
+        cat_edit: 'edit',
+        cat_components: 'components',
+        cat_design_system: 'design-system',
+        cat_document: 'document',
+        cat_assets: 'assets',
+        cat_annotations: 'annotations',
+        cat_comments: 'comments',
         kits_label: 'KITS',
         sessions_label: 'SESSIONS',
         moment_label: 'FILE ›',
@@ -1584,6 +1599,21 @@
         guards_modal_label: 'AIから保護するページ',
         token_label: 'アクセストークン',
         token_chip: 'アクセストークン',
+        relay_chip: 'リレー',
+        agent_chip: 'AI',
+        cat_advanced: '高度な操作',
+        cat_context: '状況の確認',
+        cat_analysis: '分析',
+        cat_verification: '検証',
+        cat_read: '読み取り',
+        cat_create: '作成',
+        cat_edit: '編集',
+        cat_components: 'コンポーネント',
+        cat_design_system: 'デザインシステム',
+        cat_document: 'ドキュメント',
+        cat_assets: 'アセット',
+        cat_annotations: '注釈',
+        cat_comments: 'コメント',
         kits_label: 'ルールセット',
         sessions_label: '履歴',
         moment_label: 'このファイル',
@@ -1785,6 +1815,21 @@
         guards_modal_label: '对AI保护的页面',
         token_label: '访问令牌',
         token_chip: '访问令牌',
+        relay_chip: '中继',
+        agent_chip: 'AI',
+        cat_advanced: '高级',
+        cat_context: '查看现状',
+        cat_analysis: '分析',
+        cat_verification: '验证',
+        cat_read: '读取',
+        cat_create: '创建',
+        cat_edit: '编辑',
+        cat_components: '组件',
+        cat_design_system: '设计系统',
+        cat_document: '文档',
+        cat_assets: '资源',
+        cat_annotations: '注释',
+        cat_comments: '评论',
         kits_label: '规则集',
         sessions_label: '历史',
         moment_label: '这个文件',
