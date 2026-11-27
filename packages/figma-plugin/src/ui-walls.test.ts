@@ -713,12 +713,11 @@ describe("a card's way out", () => {
     expect(contrast(hover, hoverBg)).toBeGreaterThanOrEqual(4.5);
   });
 
-  test("its border is visible and a disabled one looks disabled", () => {
+  test("its border is visible, and only Approve is ever disabled", () => {
     expect(decl(base, "border-color")).toBe(vars.faint);
-    expect(decl(`${base}:disabled`, "color")).toBe(vars.faint);
-    expect(decl(`${base}:disabled:hover`, "color")).toBe(vars.faint);
-    expect(decl(`${base}:disabled`, "border-color")).toBe(vars.line);
-    expect(decl(`${base}:disabled`, "color")).not.toBe(decl(base, "color"));
+    // So no rule keeps a disabled way out grey
+    expect([...script.matchAll(/\.disabled = /g)].length).toBe(1);
+    expect(script).toContain("document.getElementById('approvalApprove').disabled = ");
   });
 });
 

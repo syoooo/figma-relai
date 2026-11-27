@@ -650,9 +650,12 @@ export function batchApproval(level: ConfirmLevel, commands: unknown, rules: Com
   return out;
 }
 
-export const SCALE_KEYS: readonly ScalePart["key"][] = [
-  "node", "nodes", "command", "commands", "code", "ghost", "ghost_n", "irreversible", "irreversible_n", "unreadable_n",
-];
+// A Record, so a key added to ScalePart does not compile until it is listed here
+const SCALE_KEY_SET: Record<ScalePart["key"], true> = {
+  node: true, nodes: true, command: true, commands: true, code: true,
+  ghost: true, ghost_n: true, irreversible: true, irreversible_n: true, unreadable_n: true,
+};
+export const SCALE_KEYS = Object.keys(SCALE_KEY_SET) as readonly ScalePart["key"][];
 
 /** The approval card's scale line for a batch, in English "12 commands · contains execute_code · 2 ghost-risk". */
 export function batchScale(verdict: BatchApproval): ScalePart[] {

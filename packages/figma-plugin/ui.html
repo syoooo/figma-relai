@@ -727,10 +727,9 @@
     }
     .approval-actions { display: flex; gap: var(--sp-8); align-items: center; }
     /* A card's way out (Deny, Dismiss, Not now) is a plain secondary button,
-       not one that reads as disabled; a disabled one keeps the disabled grey. */
+       not one that reads as disabled. It is never disabled. */
     .approval-actions .btn.deny { border-color: var(--faint); color: var(--muted); }
     .approval-actions .btn.deny:hover { background: var(--line); color: var(--text); }
-    .approval-actions .btn.deny:disabled, .approval-actions .btn.deny:disabled:hover { border-color: var(--line); background: transparent; color: var(--faint); }
     /* Three choices stand one to a row, the main one on top. */
     #momentActions.stacked { flex-direction: column; align-items: stretch; }
     .approval-intent {
