@@ -84,7 +84,12 @@ const ENVELOPED_SERVER = Symbol("relai.envelopedServer");
 
 // The two arguments every enveloped tool accepts on top of its own
 const TARGET_SHAPE = {
-  room: z.string().optional().describe("Target this plugin room for this call only (see join_room)."),
+  room: z
+    .string()
+    .optional()
+    .describe(
+      "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
+    ),
   expect_file: z.string().optional().describe("Refuse unless the target file's name is exactly this."),
 };
 

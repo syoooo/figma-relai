@@ -69,6 +69,8 @@ const PLUGIN_APPEAR_MS = 2500;
 const PLUGIN_RETURN_MS = 30_000;
 // How often the relay is asked during the longer wait
 const PLUGIN_ASK_EVERY_MS = 2500;
+// How long a call that names a room the relay has waits for its plugin
+const NAMED_ROOM_WAIT_MS = 10_000;
 const OUTCOMES: readonly string[] = ["applied", "not_applied", "unknown"];
 const RETRY_CLASSES: readonly string[] = ["retryable", "read_canvas_first", "fix_input", "needs_human"];
 
@@ -679,7 +681,7 @@ export class FigmaConnection {
     }
     // Still absent, and either the caller chose this room (join_room; it is
     // never left for another) or no plugin elsewhere to follow: it may be
-    // between reconnects. A call that names its room skips this (namedRoom).
+    // between reconnects. A call that names its room waits less (namedRoom).
     // The relay drops an idle plugin, and the plugin dials back on a page
     // timer that a hidden window (display asleep, screen saver) can hold back.
     // Nothing has been sent, so waiting longer is safe; the cost is a later
@@ -726,21 +728,42 @@ export class FigmaConnection {
     return this.currentRoom!;
   }
 
-  // A room a single call named: join it if needed, never re-pair away from it
+  /**
+   * A room a single call named: join it if needed, never re-pair away from it.
+   *
+   * A room the relay does not have (no plugin and no session in it) fails at
+   * once, so a mistyped name is not waited on, and is not joined. A room it
+   * has may hold a plugin between reconnects, so the call waits a little for
+   * the plugin to come back, asking the relay every few seconds. Nothing has
+   * been sent while it waits.
+   */
   private async namedRoom(room: string): Promise<string> {
-    if (!this.joinedRooms.has(room)) await this.relayJoin(room);
-    if (this.presenceByRoom.get(room) !== true) {
-      // Presence for a room joined a moment ago may still be on its way
-      const live = (await this.listRooms()).find((r) => r.room === room);
-      if (!live?.hasPlugin) {
-        throw new RelaiError(
-          "plugin_absent",
-          `No Figma plugin is in room ${room}. Nothing was sent. Open that file's plugin, or call join_room without a room to see which are live.`
-        );
-      }
-      this.presenceByRoom.set(room, true);
-      if (live.fileName && !this.knownFile(room)) this.pluginMetaByRoom.set(room, { fileName: live.fileName });
+    const absent = (what: string) =>
+      new RelaiError(
+        "plugin_absent",
+        `${what}. Nothing was sent. Open that file's plugin, or call join_room without a room to see which are live.`
+      );
+    if (this.presenceByRoom.get(room) === true) {
+      if (!this.joinedRooms.has(room)) await this.relayJoin(room);
+      return room;
     }
+    // Presence for a room joined a moment ago may still be on its way
+    let live = (await this.listRooms()).find((r) => r.room === room);
+    if (!live) throw absent(`No Figma plugin is in room ${room}`);
+    if (!this.joinedRooms.has(room)) await this.relayJoin(room);
+    const deadline = Date.now() + NAMED_ROOM_WAIT_MS;
+    while (!live?.hasPlugin) {
+      if (Date.now() >= deadline) {
+        throw absent(`No Figma plugin came back to room ${room} within ${NAMED_ROOM_WAIT_MS / 1000} seconds`);
+      }
+      const askAt = Math.min(deadline, Date.now() + PLUGIN_ASK_EVERY_MS);
+      while (Date.now() < askAt && this.presenceByRoom.get(room) !== true) {
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      live = (await this.listRooms()).find((r) => r.room === room);
+    }
+    this.presenceByRoom.set(room, true);
+    if (live.fileName && !this.knownFile(room)) this.pluginMetaByRoom.set(room, { fileName: live.fileName });
     return room;
   }
 

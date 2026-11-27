@@ -78,6 +78,8 @@ READING RESULTS:
 TARGETING A FILE (every tool except join_room and get_events):
 - room: send this one call to that plugin room; the session's default room
   (set by join_room, shared by every agent in this server process) stays put
+  A plugin between reconnects is waited for up to 10 seconds (nothing is
+  sent meanwhile); a room the relay does not have fails at once (plugin_absent)
 - expect_file: refuse unless the target file's name is exactly this
   (a branch has its own name); a refusal changes nothing (not_applied)
 - room_changed: the plugin moved to a different file since the last call;

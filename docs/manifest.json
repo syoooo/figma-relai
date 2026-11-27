@@ -11,7 +11,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -60,7 +60,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -113,7 +113,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -170,7 +170,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -209,7 +209,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -274,7 +274,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -332,7 +332,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -374,7 +374,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -437,7 +437,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -561,7 +561,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -581,7 +581,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -621,7 +621,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -648,7 +648,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -668,7 +668,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -692,7 +692,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -727,7 +727,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -924,7 +924,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -952,7 +952,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -988,7 +988,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -1075,7 +1075,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -1150,7 +1150,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -1333,7 +1333,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -1458,7 +1458,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -1547,7 +1547,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -1606,7 +1606,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -1689,7 +1689,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -2068,7 +2068,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -2148,7 +2148,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -2200,7 +2200,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -2232,7 +2232,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",
@@ -2265,7 +2265,7 @@
         "properties": {
           "room": {
             "type": "string",
-            "description": "Target this plugin room for this call only (see join_room)."
+            "description": "Target this plugin room for this call only (see join_room). Waits up to 10 seconds for its plugin to come back; a room the relay does not have fails at once."
           },
           "expect_file": {
             "type": "string",

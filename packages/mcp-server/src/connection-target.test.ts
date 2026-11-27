@@ -123,7 +123,7 @@ describe("per-call room", () => {
     expect(alpha.commands.length).toBe(1);
   });
 
-  test("a plugin absent from the named room fails fast without re-pairing", async () => {
+  test("a room the relay does not have fails fast, without joining it or re-pairing", async () => {
     await relay();
     await plugin("room-a", { fileName: "Alpha" });
     const conn = connection();
@@ -134,7 +134,42 @@ describe("per-call room", () => {
     expect(err.outcome).toBe("not_applied");
     expect(Date.now() - t0).toBeLessThan(1500);
     expect(conn.room).toBe("room-a");
+    expect((await conn.listRooms()).map((r) => r.room)).toEqual(["room-a"]);
   });
+
+  // A named room the relay still has (this session or another is in it) may
+  // have a plugin between reconnects, so the call waits a little for it.
+  test("a plugin that comes back to a named room within the wait gets the call", async () => {
+    await relay();
+    const first = await plugin("room-b", { fileName: "Beta" });
+    const conn = connection();
+    await conn.sendCommandDetailed("get_selection", {}, 5000, { room: "room-b" });
+    await first.leave();
+    const back = new Promise<FakePlugin>((resolve) =>
+      setTimeout(() => resolve(plugin("room-b", { fileName: "Beta" })), 4000)
+    );
+
+    const { receipt } = await conn.sendCommandDetailed("create_frame", {}, 5000, { room: "room-b" });
+    expect(receipt.outcome).toBe("applied");
+    expect((await back).commands.map((c) => c.command)).toEqual(["create_frame"]);
+  }, 15000);
+
+  test("a plugin that does not come back to a named room fails after about 10 seconds, nothing sent", async () => {
+    await relay();
+    const first = await plugin("room-b", { fileName: "Beta" });
+    const conn = connection();
+    await conn.sendCommandDetailed("get_selection", {}, 5000, { room: "room-b" });
+    await first.leave();
+
+    const t0 = Date.now();
+    const err = await failure(conn.sendCommandDetailed("create_frame", {}, 5000, { room: "room-b" }));
+    const waited = Date.now() - t0;
+    expect(err.code).toBe("plugin_absent");
+    expect(err.outcome).toBe("not_applied");
+    expect(waited).toBeGreaterThanOrEqual(9500);
+    expect(waited).toBeLessThan(13000);
+    expect(conn.room).toBeNull();
+  }, 20000);
 
   test("events from other rooms are not collected", async () => {
     await relay();
