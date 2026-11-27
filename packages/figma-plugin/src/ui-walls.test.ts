@@ -622,3 +622,61 @@ describe("panel liveness", () => {
     expect(posted).toEqual([{ pluginMessage: { type: "relay-state", connected: false } }]);
   });
 });
+
+describe("a card's way out", () => {
+  // Deny, Dismiss and a file card's Not now share one secondary color. The
+  // label is 10px bold, so each state it can be pressed in needs 4.5:1
+  // (WCAG 1.4.3); a disabled one is exempt and keeps the disabled grey.
+  const css = html.match(/<style>([\s\S]*?)<\/style>/)![1];
+  const vars = Object.fromEntries([...css.matchAll(/--([\w-]+): (#[0-9a-f]{6});/gi)].map((m) => [m[1], m[2]]));
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+    selectors: m[1].replace(/\/\*[\s\S]*?\*\//g, "").split(",").map((s) => s.trim()),
+    body: m[2],
+  }));
+  const decl = (selector: string, prop: string): string | undefined => {
+    const hits = rules.filter((r) => r.selectors.includes(selector));
+    const values = hits.flatMap((r) => [...r.body.matchAll(new RegExp(`(?:^|;|\\s)${prop}:\\s*([^;]+)`, "g"))].map((m) => m[1].trim()));
+    const value = values.at(-1);
+    return value?.replace(/^var\(--([\w-]+)\)$/, (_, name) => vars[name]);
+  };
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contrast = (a: string, b: string) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const base = ".approval-actions .btn.deny";
+
+  test("every card's quiet button is styled by the same rules", () => {
+    const selectors = rules.flatMap((r) => r.selectors).filter((s) => s.includes(".deny"));
+    expect(selectors.every((s) => s.startsWith(base))).toBe(true);
+    expect(html).toContain(`<button class="btn deny" onclick="answerApproval(false)"`);
+    expect(html).toContain(`<button class="btn deny" onclick="answerProposal(false)"`);
+    expect(script).toContain(`b.className = 'btn' + (a.quiet ? ' deny' : '');`);
+  });
+
+  test("at rest, focused and hovered it reads at 4.5:1 or more", () => {
+    const rest = decl(base, "color")!;
+    expect(rest).toBe(vars.muted);
+    expect(contrast(rest, vars.panel)).toBeGreaterThanOrEqual(4.5);
+    // Focus changes only the outline
+    expect(decl(".btn:focus-visible", "color")).toBeUndefined();
+    expect(decl(`${base}:focus-visible`, "color")).toBeUndefined();
+    const hover = decl(`${base}:hover`, "color")!;
+    const hoverBg = decl(`${base}:hover`, "background")!;
+    expect(contrast(hover, hoverBg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("its border is visible and a disabled one looks disabled", () => {
+    expect(decl(base, "border-color")).toBe(vars.faint);
+    expect(decl(`${base}:disabled`, "color")).toBe(vars.faint);
+    expect(decl(`${base}:disabled:hover`, "color")).toBe(vars.faint);
+    expect(decl(`${base}:disabled`, "border-color")).toBe(vars.line);
+    expect(decl(`${base}:disabled`, "color")).not.toBe(decl(base, "color"));
+  });
+});
