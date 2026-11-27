@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { CALL_META_KEY, RelaiError, type CallMeta, type ResultMeta } from "@figma-relai/shared";
+import { CALL_META_KEY, RelaiError, type CallMeta, type LawNotice, type ResultMeta } from "@figma-relai/shared";
 import {
   withCallEnvelope,
   isEnveloped,
@@ -124,6 +124,22 @@ describe("successful calls", () => {
       { command: "set_fill_color", outcome: "not_applied", code: "node_not_found" },
     ]);
     expect(receipt(result)).toContain("partly");
+  });
+
+  test("a batch that met the walls tells the agent, after its unchanged body", async () => {
+    const law: LawNotice[] = [{ kind: "law_restored", key: "settings", fields: ["confirmLevel"], by: "unknown" }];
+    const items = [{ command: "set_fill_color", success: true, result: {}, outcome: "applied" }];
+    const pluginMeta: ResultMeta = { protocol: 2, write: true, file: "F", outcome: "applied", law };
+    const env = envelope(viaTracker((t, id) => t.resolve(id, items, pluginMeta)));
+    registerAllTools(env.server, env.sendCommand);
+    const result = await env.call("batch_execute", { commands: [{ command: "set_fill_color" }] });
+    expect(texts(result)[0]).toBe(JSON.stringify(items));
+    expect(result.content).toHaveLength(3);
+    const told = JSON.parse(texts(result)[1]!);
+    expect(told.law).toEqual(law);
+    expect(told.warnings[0]).toStartWith("LAW RESTORED:");
+    expect(texts(result).at(-1)).toStartWith(`${RECEIPT_LABEL} applied`);
+    expect(meta(result).calls[0].law).toEqual(law);
   });
 
   test("a tool that never reaches the plugin reports no outcome", async () => {

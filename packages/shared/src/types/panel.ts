@@ -104,6 +104,19 @@ export type LawNotice =
       reason: "script_running" | "script_cooldown";
     };
 
+/** The warning added to a result whose command had walls put back. */
+export function lawRestoredWarning(notices: readonly LawNotice[]): string | null {
+  const restored = notices.filter((n) => n.kind === "law_restored");
+  if (restored.length === 0) return null;
+  const parts: string[] = [];
+  for (const n of restored) {
+    if (n.kind !== "law_restored") continue;
+    if (n.key === "guards") parts.push(`no-go zones: ${n.pages.map((p) => `"${p.name}"`).join(", ")}`);
+    else parts.push(`settings: ${n.fields.join(", ")}`);
+  }
+  return `LAW RESTORED: Relai's own law was changed outside the panel (${parts.join("; ")}). Relai put the designer's value back. No-go zones are lifted, and the confirmation level, the code toggle and the lock are changed, only in the panel.`;
+}
+
 /** Fields a command result may carry about the walls (they also cross the relay). */
 export interface WallResultFields {
   law?: LawNotice[]; // what the walls did around this command; absent when nothing

@@ -6,6 +6,7 @@
 // - Renaming or removing a code, a field or the metadata key is breaking.
 // - Codes are lowercase snake_case and never change meaning once published.
 
+import type { LawNotice } from "./panel.js";
 import type { ErrorCategory } from "./tool-error.js";
 
 // ── Outcome ─────────────────────────────────────────────────────────
@@ -200,6 +201,9 @@ export interface ResultMeta {
   file: string; // the plugin's live figma.root.name when the result was sent
   outcome: Outcome; // applied for a finished command; a batch aggregates its items
   partial?: boolean; // true when some items applied and others did not
+  // What the walls did around the command, when the result itself cannot
+  // carry it as `law` (a batch's array); the server passes it on
+  law?: LawNotice[];
 }
 
 /** The error object the plugin sends when a command fails. */
@@ -234,6 +238,7 @@ export interface CallReceipt {
   write?: boolean; // known only when the plugin reported it
   code?: ErrorCode;
   items?: Array<{ command: string; outcome: Outcome; code?: ErrorCode }>; // batch_execute, one per sub-command
+  law?: LawNotice[]; // what the walls did around a command whose result could not carry it (batch_execute)
 }
 
 /** The text handed back to the model was cut; the full text may sit in a local file. */

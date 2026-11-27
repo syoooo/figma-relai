@@ -8,9 +8,11 @@ import {
   aggregateOutcome,
   inferLegacyCode,
   isErrorCode,
+  lawRestoredWarning,
   type CallMeta,
   type CallReceipt,
   type ErrorCode,
+  type LawNotice,
   type Outcome,
   type RetryClass,
   type TransportTruncation,
@@ -33,6 +35,8 @@ import { writeResultFile } from "./result-files.js";
 //   own error handling passes the code along,
 // - sets isError on failures, including tools that still print "Error: …",
 // - cuts text over MAX_TEXT_CHARS and saves the full text to a local file,
+// - passes on, as its own text block, what the walls did around a command
+//   whose result could not carry it as `law` (a batch's array),
 // - appends a one-line receipt the model can read (it cannot see _meta)
 //   to every call that reached the plugin or named a target,
 // - stores the machine-readable CallMeta under _meta[CALL_META_KEY].
@@ -194,6 +198,7 @@ function recordSuccess(scope: CallScope, command: string, slot: CommandSlot, res
   if (typeof meta?.write === "boolean") receipt.write = meta.write;
   if (meta?.partial) scope.partial = true;
   if (meta?.file) scope.file = meta.file;
+  if (Array.isArray(meta?.law) && meta.law.length > 0) receipt.law = meta.law;
   if (slot.settled?.cancelRequested) scope.cancelRequested = true;
 
   if (command === "batch_execute" && Array.isArray(result)) {
@@ -314,6 +319,14 @@ export function finalizeResult(
       : {}),
     ...(truncated ? { truncated } : {}),
   };
+
+  // The wall notices a result could not carry, with the same keys and warning
+  // an object result gets; the body above stays as the tool returned it
+  const law: LawNotice[] = calls.flatMap((r) => r.law ?? []);
+  if (law.length > 0) {
+    const warning = lawRestoredWarning(law);
+    content.push({ type: "text", text: JSON.stringify({ law, ...(warning ? { warnings: [warning] } : {}) }) });
+  }
 
   const showReceipt =
     isError ||

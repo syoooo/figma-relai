@@ -6,6 +6,7 @@ import {
   ERROR_DEFAULTS,
   RelaiError,
   type ErrorCode,
+  type LawNotice,
   type Outcome,
   type PluginErrorPayload,
   type ResultMeta,
@@ -114,9 +115,29 @@ export function resultOutcome(command: string, result: unknown): { outcome: Outc
   return aggregateOutcome(outcomes);
 }
 
-/** What rides on a successful command result. */
-export function resultMeta(command: string, write: boolean, result: unknown, file: string): ResultMeta {
-  return { protocol: 2, write, file, ...resultOutcome(command, result) };
+/** Whether a result is an object that can carry the wall notices as its own `law`. */
+export function carriesLaw(result: unknown): result is Record<string, unknown> {
+  return result !== null && typeof result === "object" && !Array.isArray(result);
+}
+
+/**
+ * What rides on a successful command result. The wall notices ride here only
+ * when the result cannot carry them itself (a batch's array).
+ */
+export function resultMeta(
+  command: string,
+  write: boolean,
+  result: unknown,
+  file: string,
+  law: LawNotice[] = []
+): ResultMeta {
+  return {
+    protocol: 2,
+    write,
+    file,
+    ...resultOutcome(command, result),
+    ...(law.length > 0 && !carriesLaw(result) ? { law } : {}),
+  };
 }
 
 /** The outcome fields of an item a multi-item command skipped after Stop. */

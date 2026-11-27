@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changes
+
+- **`batch_execute` tells the agent when it met the walls.** What the walls did during a batch (a no-go zone or setting put back, a refused panel action, a lost panel) now comes after the batch's results as its own text block, `law` plus the LAW RESTORED warning, the same as a single command reports it, and in the call's `_meta` receipt. The results themselves are unchanged; an older plugin or server sends nothing new.
+
 ## 0.8.1
 
 The walls hold against the agent in the same session, and the panel no longer goes quiet.

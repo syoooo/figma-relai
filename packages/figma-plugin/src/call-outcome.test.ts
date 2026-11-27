@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { RelaiError } from "@figma-relai/shared";
+import { RelaiError, type LawNotice } from "@figma-relai/shared";
 import {
   checkExpectedFile,
   classifyError,
@@ -156,6 +156,28 @@ describe("the outcome of a command that returned", () => {
       outcome: "applied",
       partial: true,
     });
+  });
+
+  test("a batch's wall notices ride the metadata, since its array result has no place for them", () => {
+    const law: LawNotice[] = [{ kind: "law_restored", key: "settings", fields: ["confirmLevel"], by: "unknown" }];
+    expect(resultMeta("batch_execute", true, [{ outcome: "applied" }], "Checkout", law)).toEqual({
+      protocol: 2,
+      write: true,
+      file: "Checkout",
+      outcome: "applied",
+      law,
+    });
+  });
+
+  test("an object result carries its own law, so the metadata does not repeat it", () => {
+    const law: LawNotice[] = [{ kind: "law_restored", key: "settings", fields: ["confirmLevel"], by: "unknown" }];
+    expect(resultMeta("set_fill_color", true, { id: "1:2", law }, "Checkout", law)).toEqual({
+      protocol: 2,
+      write: true,
+      file: "Checkout",
+      outcome: "applied",
+    });
+    expect(resultMeta("batch_execute", true, [{ outcome: "applied" }], "Checkout", [])).not.toHaveProperty("law");
   });
 });
 

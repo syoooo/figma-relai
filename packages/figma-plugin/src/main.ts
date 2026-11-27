@@ -59,7 +59,7 @@ import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timelin
 import { pendingProposals } from "./handlers/proposals.js";
 import { postFileIdentity } from "./handlers/file-identity.js";
 import { createWindowControls, DEFAULT_WINDOW_SIZE } from "./window-controls.js";
-import { checkExpectedFile, denialError, resultMeta, toErrorPayload, type Phase } from "./call-outcome.js";
+import { carriesLaw, checkExpectedFile, denialError, resultMeta, toErrorPayload, type Phase } from "./call-outcome.js";
 import {
   batchApproval,
   cardPrecedents,
@@ -243,12 +243,13 @@ const SHAPE_RULES: CommandRules = {
 /**
  * An object result carries the wall notices as `law`, after any the handler
  * already put there (execute_code's own check), with a warning when this
- * command's checks put something back.
+ * command's checks put something back. Any other result (a batch's array)
+ * leaves them to the result metadata.
  */
 function withLaw(result: unknown, notices: LawNotice[]): unknown {
-  if (notices.length === 0 || result === null || typeof result !== "object" || Array.isArray(result)) return result;
-  const own = (result as Params).law;
-  const out: Params = { ...(result as Params), law: [...(Array.isArray(own) ? own : []), ...notices] };
+  if (notices.length === 0 || !carriesLaw(result)) return result;
+  const own = result.law;
+  const out: Params = { ...result, law: [...(Array.isArray(own) ? own : []), ...notices] };
   const warning = lawRestoredWarning(notices);
   if (warning) out.warnings = [...(Array.isArray(out.warnings) ? out.warnings : []), warning];
   return out;
@@ -627,7 +628,7 @@ const onPanelMessage = async (msg: any) => {
         type: "command-result",
         id,
         result,
-        meta: resultMeta(command, write, result, figma.root.name),
+        meta: resultMeta(command, write, result, figma.root.name, notices),
         ...(law ? { law } : {}),
         ...(violations ? { violations } : {}),
         ...(events.length > 0 ? { events } : {}),
