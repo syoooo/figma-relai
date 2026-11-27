@@ -8,6 +8,7 @@ import {
   currentWalls,
   initWalls,
   judgeAgentGuards,
+  notePanelBoot,
   noteVoiceWrite,
   panelVerdict,
   persistSettings,
@@ -344,6 +345,16 @@ describe("panel messages while a script runs", () => {
       { type: "script-window", running: true, approveAt: expect.any(Number) },
       { type: "script-window", running: false, approveAt: 13000 },
     ]);
+  });
+
+  test("a panel that loads mid-script hears the script window at once", () => {
+    scriptStarted();
+    posted.length = 0;
+    notePanelBoot(true);
+    expect(posted.filter((m) => m.type === "script-window")).toEqual([
+      { type: "script-window", running: true, approveAt: expect.any(Number) },
+    ]);
+    scriptEnded(20000);
   });
 });
 

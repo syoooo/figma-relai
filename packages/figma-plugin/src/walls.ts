@@ -380,7 +380,7 @@ export function scriptEnded(now = Date.now()): void {
 }
 
 /** Tells the panel when an approval card's Approve will be applied, so it holds the button until then. */
-export function postScriptWindow(): void {
+function postScriptWindow(): void {
   figma.ui.postMessage(scriptWindowMessage(scripts));
 }
 
@@ -389,10 +389,14 @@ export function panelVerdict(message: PanelMessageHead, now = Date.now()): Panel
   return panelMessageVerdict(message, scripts, now);
 }
 
-/** The panel announced itself (it loaded). */
+/**
+ * The panel announced itself (it loaded). A new panel has not seen the
+ * script window, so it is sent again.
+ */
 export function notePanelBoot(relayConnected: boolean): void {
   panel.panelBoots++;
   panel.relayConnected = relayConnected;
+  postScriptWindow();
 }
 
 /** The panel reported its relay link. */

@@ -4,6 +4,7 @@
 import {
   aggregateOutcome,
   ERROR_DEFAULTS,
+  lawRestoredWarning,
   RelaiError,
   type ErrorCode,
   type LawNotice,
@@ -137,6 +138,45 @@ export function resultMeta(
     file,
     ...resultOutcome(command, result),
     ...(law.length > 0 && !carriesLaw(result) ? { law } : {}),
+  };
+}
+
+/**
+ * An object result carries the wall notices as `law`, after any the handler
+ * already put there (execute_code's own check), with a warning when this
+ * command's checks put something back. Any other result (a batch's array)
+ * leaves them to the result metadata.
+ */
+function withLaw(result: unknown, notices: LawNotice[]): unknown {
+  if (notices.length === 0 || !carriesLaw(result)) return result;
+  const own = result.law;
+  const out: Record<string, unknown> = { ...result, law: [...(Array.isArray(own) ? own : []), ...notices] };
+  const warning = lawRestoredWarning(notices);
+  if (warning) out.warnings = [...(Array.isArray(out.warnings) ? out.warnings : []), warning];
+  return out;
+}
+
+/**
+ * The fields of a successful command's message to the panel: the result with
+ * this command's wall notices, its metadata, and for the panel row the same
+ * notices and violations as the result (a batch's array result has no room
+ * for them; the row still gets this command's own).
+ */
+export function toResultPayload(
+  result: unknown,
+  notices: LawNotice[],
+  ctx: { command: string; write: boolean; file: string }
+): { result: unknown; meta: ResultMeta; law?: unknown[]; violations?: unknown[] } {
+  const out = withLaw(result, notices);
+  const field = (key: string) =>
+    carriesLaw(out) && Array.isArray(out[key]) ? (out[key] as unknown[]) : undefined;
+  const law = field("law") ?? (notices.length > 0 ? notices : undefined);
+  const violations = field("violations");
+  return {
+    result: out,
+    meta: resultMeta(ctx.command, ctx.write, out, ctx.file, notices),
+    ...(law ? { law } : {}),
+    ...(violations ? { violations } : {}),
   };
 }
 

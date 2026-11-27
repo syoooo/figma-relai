@@ -9,6 +9,7 @@ import {
   scanCancelled,
   SKIPPED_ITEM,
   toErrorPayload,
+  toResultPayload,
 } from "./call-outcome.js";
 
 describe("classifying a failed command", () => {
@@ -178,6 +179,39 @@ describe("the outcome of a command that returned", () => {
       outcome: "applied",
     });
     expect(resultMeta("batch_execute", true, [{ outcome: "applied" }], "Checkout", [])).not.toHaveProperty("law");
+  });
+});
+
+describe("a successful command's message to the panel", () => {
+  const restored: LawNotice[] = [{ kind: "law_restored", key: "settings", fields: ["confirmLevel"], by: "unknown" }];
+  const ctx = { command: "batch_execute", write: true, file: "Checkout" };
+
+  test("a batch's wall notices ride its metadata and its panel row, its array unchanged", () => {
+    const items = [{ outcome: "applied" }];
+    const out = toResultPayload(items, restored, ctx);
+    expect(out.result).toBe(items);
+    expect(out.meta.law).toEqual(restored);
+    expect(out.law).toEqual(restored);
+  });
+
+  test("an object result carries the notices after its own, with a warning, and the metadata does not repeat them", () => {
+    const own: LawNotice[] = [{ kind: "law_restored", key: "guards", pages: [{ id: "1:3", name: "Legal" }], by: "unknown" }];
+    const out = toResultPayload({ id: "1:2", law: own, violations: ["v"] }, restored, { ...ctx, command: "set_fill_color" });
+    const result = out.result as { law: LawNotice[]; warnings: string[] };
+    expect(result.law).toEqual([...own, ...restored]);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toStartWith("LAW RESTORED");
+    expect(out.meta).not.toHaveProperty("law");
+    expect(out.law).toEqual([...own, ...restored]);
+    expect(out.violations).toEqual(["v"]);
+  });
+
+  test("a command with no notices passes its result through", () => {
+    const result = { id: "1:2" };
+    expect(toResultPayload(result, [], { ...ctx, command: "set_fill_color" })).toEqual({
+      result,
+      meta: { protocol: 2, write: true, file: "Checkout", outcome: "applied" },
+    });
   });
 });
 

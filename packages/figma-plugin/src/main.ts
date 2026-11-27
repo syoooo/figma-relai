@@ -60,13 +60,12 @@ import { appendWriteLog, stampCheckup, getLastCheckup } from "./handlers/timelin
 import { pendingProposals } from "./handlers/proposals.js";
 import { postFileIdentity } from "./handlers/file-identity.js";
 import { createWindowControls, DEFAULT_WINDOW_SIZE } from "./window-controls.js";
-import { carriesLaw, checkExpectedFile, denialError, resultMeta, toErrorPayload, type Phase } from "./call-outcome.js";
+import { checkExpectedFile, denialError, toErrorPayload, toResultPayload, type Phase } from "./call-outcome.js";
 import {
   batchApproval,
   cardPrecedents,
   isConfirmLevel,
   isDesignerOnlyMessage,
-  lawRestoredWarning,
   MAX_BATCH_DEPTH,
   wallsKey,
   type CommandRules,
@@ -84,7 +83,6 @@ import {
   panelLost,
   panelVerdict,
   persistOtherSettings,
-  postScriptWindow,
   probePanel,
   scriptEnded,
   scriptStarted,
@@ -242,21 +240,6 @@ const SHAPE_RULES: CommandRules = {
   bulkThreshold: Number.POSITIVE_INFINITY,
 };
 
-/**
- * An object result carries the wall notices as `law`, after any the handler
- * already put there (execute_code's own check), with a warning when this
- * command's checks put something back. Any other result (a batch's array)
- * leaves them to the result metadata.
- */
-function withLaw(result: unknown, notices: LawNotice[]): unknown {
-  if (notices.length === 0 || !carriesLaw(result)) return result;
-  const own = result.law;
-  const out: Params = { ...result, law: [...(Array.isArray(own) ? own : []), ...notices] };
-  const warning = lawRestoredWarning(notices);
-  if (warning) out.warnings = [...(Array.isArray(out.warnings) ? out.warnings : []), warning];
-  return out;
-}
-
 // Commands inside their handler, by request id, so a Stop can be
 // acknowledged to the server only for a command that is still running
 const runningCommands = new Map<string, string>();
@@ -272,7 +255,6 @@ const onPanelMessage = async (msg: any) => {
   // a panel replaced or cut off during a command can be noticed
   if (msg.type === "panel-hello") {
     notePanelBoot(msg.relayConnected === true);
-    postScriptWindow();
     return;
   }
   if (msg.type === "relay-state") {
@@ -604,26 +586,14 @@ const onPanelMessage = async (msg: any) => {
       if (CHECKUP_COMMANDS.has(command)) void stampCheckup();
 
       closeNotices();
-      result = withLaw(result, notices);
-      // The panel row gets the same notices and violations as the result (a
-      // batch's array result has no room for them; the row still gets this
-      // command's own)
-      const field = (key: string) =>
-        result !== null && typeof result === "object" && Array.isArray((result as Params)[key])
-          ? ((result as Params)[key] as unknown[])
-          : undefined;
-      const law = field("law") ?? (notices.length > 0 ? notices : undefined);
-      const violations = field("violations");
+      const payload = toResultPayload(result, notices, { command, write, file: figma.root.name });
 
       // Piggyback designer activity that happened since the last command
       const events = drainEvents();
       figma.ui.postMessage({
         type: "command-result",
         id,
-        result,
-        meta: resultMeta(command, write, result, figma.root.name, notices),
-        ...(law ? { law } : {}),
-        ...(violations ? { violations } : {}),
+        ...payload,
         ...(events.length > 0 ? { events } : {}),
       });
     } catch (error) {
