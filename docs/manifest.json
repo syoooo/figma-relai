@@ -827,11 +827,11 @@
           },
           "fillColor": {
             "$ref": "#/properties/fontColor",
-            "description": "frame/rectangle/section fill"
+            "description": "frame/rectangle/ellipse/polygon/star/section fill"
           },
           "strokeColor": {
             "$ref": "#/properties/fontColor",
-            "description": "frame/rectangle/section stroke"
+            "description": "frame/rectangle/ellipse/polygon/star/section stroke"
           },
           "cornerRadius": {
             "type": "number",

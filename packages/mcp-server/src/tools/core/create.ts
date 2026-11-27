@@ -57,8 +57,8 @@ export function register(server: McpServer, sendCommand: SendCommandFn): void {
       fontSize: z.number().positive().optional().describe("text only"),
       fontWeight: z.number().optional().describe("text only (e.g. 400, 700)"),
       fontColor: colorSchema.optional().describe("text only"),
-      fillColor: colorSchema.optional().describe("frame/rectangle/section fill"),
-      strokeColor: colorSchema.optional().describe("frame/rectangle/section stroke"),
+      fillColor: colorSchema.optional().describe("frame/rectangle/ellipse/polygon/star/section fill"),
+      strokeColor: colorSchema.optional().describe("frame/rectangle/ellipse/polygon/star/section stroke"),
       cornerRadius: z
         .number()
         .min(0)

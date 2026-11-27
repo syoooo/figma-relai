@@ -3,12 +3,20 @@ import { appendToParent, getNodeById, serializeNode } from "../utils/node-helper
 import { solidPaint, toFigmaRGB } from "../utils/color.js";
 import { loadFont } from "../utils/font-loader.js";
 
+// fillColor and strokeColor for the plain shapes; without them a shape keeps
+// Figma's default fill
+function paintShape(node: GeometryMixin, params: Record<string, unknown>): void {
+  if (params.fillColor) node.fills = [solidPaint(params.fillColor as RGBA)];
+  if (params.strokeColor) node.strokes = [solidPaint(params.strokeColor as RGBA)];
+}
+
 registerHandler("create_rectangle", async (params) => {
   const rect = figma.createRectangle();
   rect.x = params.x as number;
   rect.y = params.y as number;
   rect.resize(params.width as number, params.height as number);
   rect.name = (params.name as string) || "Rectangle";
+  paintShape(rect, params);
   await appendToParent(rect, params.parentId as string | undefined);
   return { id: rect.id, name: rect.name };
 });
@@ -95,6 +103,7 @@ registerHandler("create_ellipse", async (params) => {
   ellipse.y = params.y as number;
   ellipse.resize(params.width as number, params.height as number);
   ellipse.name = (params.name as string) || "Ellipse";
+  paintShape(ellipse, params);
   await appendToParent(ellipse, params.parentId as string | undefined);
   return { id: ellipse.id, name: ellipse.name };
 });
@@ -106,6 +115,7 @@ registerHandler("create_polygon", async (params) => {
   polygon.resize(params.width as number, params.height as number);
   polygon.pointCount = (params.pointCount as number) || 3;
   polygon.name = (params.name as string) || "Polygon";
+  paintShape(polygon, params);
   await appendToParent(polygon, params.parentId as string | undefined);
   return { id: polygon.id, name: polygon.name };
 });
@@ -118,6 +128,7 @@ registerHandler("create_star", async (params) => {
   star.pointCount = (params.pointCount as number) || 5;
   star.innerRadius = (params.innerRadius as number) || 0.382;
   star.name = (params.name as string) || "Star";
+  paintShape(star, params);
   await appendToParent(star, params.parentId as string | undefined);
   return { id: star.id, name: star.name };
 });
