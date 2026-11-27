@@ -8,6 +8,7 @@
 - **Deny on an approval card counts the first time.** Right after a script, Deny now applies at once instead of being bounced back. Approve still waits out the script and the 3 seconds after it: the button is held and the card says how long, then it opens by itself.
 - **A panel action that fails says why in the panel's language.** A precedent that is too long, a full file memory, a kit that is missing or full, a file with no rules or too many, and an import that is empty or has no kit name now read in Japanese or Chinese when the panel is set to them. The error text an agent gets for the same failure is unchanged.
 - **A call waits up to 30 seconds for a plugin that is between reconnects.** When the plugin has left its room and no other plugin is live to follow, a call now waits for it to come back instead of failing with `plugin_absent` after 2.5 seconds. Nothing is sent while it waits. A plugin that moved to another room is still followed after 2.5 seconds; a plugin that is really closed is reported about 30 seconds later than before.
+- **A refused kit or memory command reports `not_applied`.** A push over a kit that moved, a restore over newer file law, a missing kit, an unlinked file, a full file memory and the other refusals the panel words are thrown before anything is written, but the result said `unknown` and asked the agent to read the file first. They now say `not_applied`; the code stays `handler_error`. A restore refused after `link_ruleset` wrote the link, and a kit store that did not keep a write, still say `unknown`.
 
 ## 0.8.1
 

@@ -15,6 +15,7 @@ import {
   type WsCallInfo,
 } from "@figma-relai/shared";
 import type { ApprovalCause } from "./approval-gate.js";
+import { wroteNothing } from "./panel-failure.js";
 
 /**
  * Where a command was when it failed.
@@ -55,9 +56,9 @@ export function classifyError(error: unknown, ctx: { phase: Phase; write: boolea
   }
   const message = error instanceof Error ? error.message : String(error);
   const code: ErrorCode = FIGMA_INTERNAL.test(message) ? "figma_internal" : "handler_error";
-  // A read that failed changed nothing; a write that failed may have
-  // changed part of the file before it threw.
-  const outcome: Outcome = ctx.phase === "preflight" || !ctx.write ? "not_applied" : "unknown";
+  // A read that failed changed nothing, nor did a refusal thrown before any
+  // write; any other write that failed may have changed part of the file.
+  const outcome: Outcome = ctx.phase === "preflight" || !ctx.write || wroteNothing(error) ? "not_applied" : "unknown";
   return { code, outcome, retry: ERROR_DEFAULTS[code].retry };
 }
 

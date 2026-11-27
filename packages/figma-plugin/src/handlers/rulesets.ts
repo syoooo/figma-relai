@@ -175,6 +175,9 @@ async function requireSet(name: unknown): Promise<{ sets: Ruleset[]; set: Rulese
  * reads; `refusal` carries the same facts for the panel's kit card.
  */
 export class KitRefusedError extends Error {
+  /** Refused before any write; see wroteNothing() in panel-failure.ts. */
+  wroteNothing = true;
+
   constructor(readonly refusal: KitRefusal) {
     super(kitRefusalMessage(refusal));
     this.name = "KitRefusedError";
@@ -506,7 +509,15 @@ registerHandler("link_ruleset", async (params) => {
   const { set } = await requireSet(params.name);
   writeLink({ name: set.name, lastSyncHash: contentHash(set.conventions) });
   let restored: RestoreResult | null = null;
-  if (params.restore === true) restored = await restoreFromRuleset(params.force === true);
+  if (params.restore === true) {
+    try {
+      restored = await restoreFromRuleset(params.force === true);
+    } catch (error) {
+      // The link above is already written
+      if (error instanceof KitRefusedError || error instanceof PanelFailureError) error.wroteNothing = false;
+      throw error;
+    }
+  }
   await postRulesetState();
   return { linked: set.name, restored };
 });

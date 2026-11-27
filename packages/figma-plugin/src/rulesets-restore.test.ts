@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { classifyError } from "./call-outcome.js";
 import { dispatch } from "./dispatcher.js";
+import { isWriteCommand } from "./write-guard.js";
 import {
   contentHash,
   KitRefusedError,
@@ -251,6 +253,42 @@ describe("kit refusals", () => {
     linked("# newer", "2026-09-10T00:00:00.000Z", {});
     await dispatch("restore_from_ruleset", { force: true });
     expect(shared.get("relai:conventions")).toBe(LAW);
+  });
+});
+
+describe("what a refused kit command reports to the agent", () => {
+  const outcomeOf = async (command: string, params: Record<string, unknown> = {}) =>
+    classifyError(await thrown(() => dispatch(command, params)), {
+      phase: "handler",
+      write: isWriteCommand(command, params),
+    });
+
+  test("a refusal thrown before anything is written is not_applied, keeping its code", async () => {
+    linked("# mine", "2026-09-10T00:00:00.000Z", {}, "# older");
+    expect(await outcomeOf("push_to_ruleset")).toEqual({ code: "handler_error", outcome: "not_applied", retry: "read_canvas_first" });
+    linked("# newer", "2026-09-10T00:00:00.000Z", {});
+    expect((await outcomeOf("restore_from_ruleset")).outcome).toBe("not_applied");
+    expect((await outcomeOf("link_ruleset", { name: "nope" })).outcome).toBe("not_applied");
+    shared.delete("relai:rulesetLink");
+    expect((await outcomeOf("restore_from_ruleset")).outcome).toBe("not_applied");
+  });
+
+  test("a restore refused after link_ruleset wrote the link stays unknown", async () => {
+    linked("# newer", "2026-09-10T00:00:00.000Z", {});
+    shared.delete("relai:rulesetLink");
+    expect((await outcomeOf("link_ruleset", { name: "kit", restore: true })).outcome).toBe("unknown");
+    expect(shared.get("relai:rulesetLink")).toBeDefined();
+  });
+
+  test("a kit store that did not keep its write stays unknown", async () => {
+    linked(LAW, "2026-09-10T00:00:00.000Z", {});
+    const keep = figma.clientStorage.getAsync;
+    figma.clientStorage.getAsync = async () => [];
+    try {
+      expect((await outcomeOf("save_ruleset", { name: "kit", conventions: "# other" })).outcome).toBe("unknown");
+    } finally {
+      figma.clientStorage.getAsync = keep;
+    }
   });
 });
 
