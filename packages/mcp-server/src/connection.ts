@@ -587,6 +587,12 @@ export class FigmaConnection {
     );
   }
 
+  // Whether a plugin is live in a room other than the current one
+  private async pluginElsewhere(): Promise<boolean> {
+    const rooms = await this.listRooms().catch((): RoomSummary[] => []);
+    return rooms.some((r) => r.hasPlugin && r.room !== this.currentRoom);
+  }
+
   /**
    * Poll the presence map briefly, then ASK.
    *
@@ -597,12 +603,6 @@ export class FigmaConnection {
    * open" about a plugin sitting right there — while list_rooms, which asks
    * the relay instead of trusting the cache, happily lists it.
    */
-  // Whether a plugin is live in a room other than the current one
-  private async pluginElsewhere(): Promise<boolean> {
-    const rooms = await this.listRooms().catch((): RoomSummary[] => []);
-    return rooms.some((r) => r.hasPlugin && r.room !== this.currentRoom);
-  }
-
   private async waitForPlugin(ms: number): Promise<void> {
     const deadline = Date.now() + ms;
     while (Date.now() < deadline) {
