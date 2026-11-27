@@ -194,6 +194,27 @@ describe("a successful command's message to the panel", () => {
     expect(out.law).toEqual(restored);
   });
 
+  test("the notices a batch's items carried in their own results ride its metadata too, before the batch's own", () => {
+    const script: LawNotice[] = [{ kind: "law_restored", key: "guards", pages: [{ id: "1:3", name: "Legal" }], by: "unknown" }];
+    const nested: LawNotice[] = [{ kind: "law_restored", key: "settings", fields: ["allowCodeExec"], by: "unknown" }];
+    const items = [
+      { command: "execute_code", success: true, result: { result: "cleared", law: script }, outcome: "applied" },
+      { command: "get_document_info", success: true, result: { name: "Checkout" }, outcome: "applied" },
+      {
+        command: "batch_execute",
+        success: true,
+        result: [{ command: "execute_code", success: true, result: { law: nested }, outcome: "applied" }],
+        outcome: "applied",
+      },
+    ];
+    const out = toResultPayload(items, restored, ctx);
+    expect(out.result).toBe(items);
+    expect(out.meta.law).toEqual([...script, ...nested, ...restored]);
+    expect(toResultPayload(items, [], ctx).meta.law).toEqual([...script, ...nested]);
+    // The items' own notices already reached the panel from the item itself
+    expect(out.law).toEqual(restored);
+  });
+
   test("an object result carries the notices after its own, with a warning, and the metadata does not repeat them", () => {
     const own: LawNotice[] = [{ kind: "law_restored", key: "guards", pages: [{ id: "1:3", name: "Legal" }], by: "unknown" }];
     const out = toResultPayload({ id: "1:2", law: own, violations: ["v"] }, restored, { ...ctx, command: "set_fill_color" });

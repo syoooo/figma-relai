@@ -158,6 +158,19 @@ function withLaw(result: unknown, notices: LawNotice[]): unknown {
 }
 
 /**
+ * The wall notices a batch's items carried in their own results (execute_code
+ * puts back what its script changed before the batch ends), nested batches
+ * included, in item order.
+ */
+function batchItemLaw(items: unknown[]): LawNotice[] {
+  return items.flatMap((item) => {
+    const { command, result } = (item ?? {}) as { command?: unknown; result?: unknown };
+    if (command === "batch_execute" && Array.isArray(result)) return batchItemLaw(result);
+    return carriesLaw(result) && Array.isArray(result.law) ? (result.law as LawNotice[]) : [];
+  });
+}
+
+/**
  * The fields of a successful command's message to the panel: the result with
  * this command's wall notices, its metadata, and for the panel row the same
  * notices and violations as the result (a batch's array result has no room
@@ -175,7 +188,15 @@ export function toResultPayload(
   const violations = field("violations");
   return {
     result: out,
-    meta: resultMeta(ctx.command, ctx.write, out, ctx.file, notices),
+    // A batch's metadata also carries what its items' own checks put back;
+    // the panel row does not, since each item already posted its own
+    meta: resultMeta(
+      ctx.command,
+      ctx.write,
+      out,
+      ctx.file,
+      ctx.command === "batch_execute" && Array.isArray(out) ? [...batchItemLaw(out), ...notices] : notices
+    ),
     ...(law ? { law } : {}),
     ...(violations ? { violations } : {}),
   };
