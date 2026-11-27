@@ -45,7 +45,7 @@ Guards belong to the designer. Add one only when the designer asks; lifting a gu
 
 ## Kits — the law's common ancestor
 
-A designer who runs one product keeps its shared law as a **kit** (`manage_rulesets`; the panel's KIT row) — named, stored by the plugin on their machine, spanning every file. The file's carried law stays the working copy; the kit is the ancestor it descends from. When speaking to the designer, say kit.
+A designer who runs one product keeps its shared law as a **kit** (`manage_rulesets`; in the panel, the KITS window opens from the gear in the RULES window) — named, stored by the plugin on their machine, spanning every file. The file's carried law stays the working copy; the kit is the ancestor it descends from. When speaking to the designer, use the name the panel shows them: kit in English, ルールセット in Japanese, 规则集 in Chinese.
 
 This matters because **Figma discards file-carried law on branch→main merges**. At session start, if `manage_rulesets action:status` says `file-empty`, the law was wiped: say so, and restore it (`action:restore`) with the designer's consent — or note it happened automatically when the set's autoRestore is on. Other states: `drifted` means file and ancestor differ — the designer chooses pull (`restore`) or promote the file's version (`push`); never resolve drift on your own.
 
