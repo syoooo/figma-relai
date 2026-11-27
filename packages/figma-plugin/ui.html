@@ -1853,6 +1853,8 @@
       refreshStatusTexts();
       renderClient();
       renderWindowControls();
+      // An open approval card words its scale line when drawn
+      if (approvalQueue.length) showNextApproval();
     }
     function setLang(l) {
       locale = l;

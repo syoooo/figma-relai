@@ -711,6 +711,45 @@ describe("labels the panel words", () => {
     }
   });
 
+  test("switching the language rewords accessible names and an open approval card", () => {
+    const named = { key: "aria_close", label: "close" };
+    const el = {
+      getAttribute: (name: string) => (name === "data-i18n-aria" ? named.key : null),
+      setAttribute: (name: string, value: string) => {
+        if (name === "aria-label") named.label = value;
+      },
+    };
+    const redrawn: number[] = [];
+    const run = (queue: unknown[]) =>
+      lift<() => void>(
+        ["applyI18n"],
+        `var locale = 'ja';
+         var approvalQueue = queue;
+         function renderMemory() {}
+         function refreshStatusTexts() {}
+         function renderClient() {}
+         function renderWindowControls() {}
+         function showNextApproval() { redrawn.push(approvalQueue.length); }`,
+        "applyI18n",
+        {
+          queue,
+          redrawn,
+          t: tFor("ja"),
+          document: {
+            documentElement: {},
+            querySelectorAll: (sel: string) => (sel === "[data-i18n-aria]" ? [el] : []),
+            getElementById: () => new El(),
+          },
+        }
+      )();
+    run([]);
+    expect(named.label).toBe(I18N.ja.aria_close);
+    expect(redrawn).toEqual([]);
+    // The card's scale line and "no description" line are worded when it is drawn
+    run([{ id: "a1" }]);
+    expect(redrawn).toEqual([1]);
+  });
+
   test("the approval card's scale line reads as before in English and follows the panel's language", () => {
     const scaleText = (locale: string) =>
       lift<(parts: unknown) => string>(["scaleText"], "", "scaleText", { t: tFor(locale) });
