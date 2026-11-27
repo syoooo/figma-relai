@@ -160,6 +160,41 @@ describe("RelayCore", () => {
   });
 });
 
+describe("RelayCore stale sweep", () => {
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  test("touch keeps a quiet socket open; an untouched one is swept", async () => {
+    const core = new RelayCore<FakeSocket>();
+    const quiet = connect(core);
+    const answering = connect(core);
+    core.startStaleCleanup(100, 20);
+    try {
+      for (let i = 0; i < 10; i++) {
+        await wait(30);
+        core.touch(answering);
+      }
+    } finally {
+      core.stop();
+    }
+    expect(quiet.closed).toBe(true);
+    expect(answering.closed).toBe(false);
+  });
+
+  test("touch does not bring back a socket that already closed", async () => {
+    const core = new RelayCore<FakeSocket>();
+    const ws = connect(core);
+    core.handleClose(ws);
+    core.touch(ws);
+    core.startStaleCleanup(0, 10);
+    try {
+      await wait(40);
+    } finally {
+      core.stop();
+    }
+    expect(ws.closed).toBe(false);
+  });
+});
+
 describe("isAllowedOrigin", () => {
   test("clients that send no Origin (the MCP server, doctor) are let in", () => {
     expect(isAllowedOrigin(undefined)).toBe(true);

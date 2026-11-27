@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import WebSocket from "ws";
+import { RelayCore } from "@figma-relai/shared";
 import { startEmbeddedRelay, type EmbeddedRelay } from "./embedded-relay.js";
 import { loadState, saveState } from "./state.js";
 
@@ -60,6 +61,42 @@ describe("startEmbeddedRelay (bind-or-connect)", () => {
 
     expect(reply.server).toBe("figma-relai");
     expect(reply.version).toBe("test");
+  });
+});
+
+describe("embedded relay keepalive", () => {
+  test("a pong counts as activity, so an idle plugin is not swept as stale", async () => {
+    const relay = await start(TEST_PORT + 4);
+    expect(relay).not.toBeNull();
+    const proto = RelayCore.prototype as unknown as { touch?: (ws: unknown) => void };
+    const original = proto.touch;
+    let touched = 0;
+    proto.touch = function (this: unknown, ws: unknown) {
+      touched++;
+      return original?.call(this, ws);
+    };
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const ws = new WebSocket(`ws://127.0.0.1:${TEST_PORT + 4}`);
+        const timer = setTimeout(() => reject(new Error("pong never counted")), 3000);
+        ws.on("open", () => {
+          // What a browser's network stack sends while the page's JS is throttled
+          ws.pong();
+          const poll = setInterval(() => {
+            if (touched > 0) {
+              clearInterval(poll);
+              clearTimeout(timer);
+              ws.close();
+              resolve();
+            }
+          }, 20);
+        });
+        ws.on("error", reject);
+      });
+    } finally {
+      proto.touch = original;
+    }
+    expect(touched).toBeGreaterThan(0);
   });
 });
 

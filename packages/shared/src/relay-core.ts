@@ -188,6 +188,14 @@ export class RelayCore<S extends RelaySocket = RelaySocket> {
     }
   }
 
+  // A transport-level sign of life (a pong) counts as activity. Browsers
+  // answer pings in the network stack, so a plugin whose page is hidden and
+  // whose timers are throttled stays connected instead of being swept as
+  // stale. A socket that already closed is not brought back.
+  touch(ws: S): void {
+    if (this.lastActivity.has(ws)) this.lastActivity.set(ws, Date.now());
+  }
+
   handleClose(ws: S): void {
     this.lastActivity.delete(ws);
     const affected: string[] = [];

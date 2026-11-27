@@ -49,6 +49,7 @@ export function startEmbeddedRelay(
         (ws as WebSocket & { isAlive?: boolean }).isAlive = true;
         ws.on("pong", () => {
           (ws as WebSocket & { isAlive?: boolean }).isAlive = true;
+          core.touch(ws);
         });
         ws.on("message", (data) => core.handleMessage(ws, data.toString()));
         ws.on("close", (code, reason) => {
