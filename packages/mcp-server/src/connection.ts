@@ -67,6 +67,8 @@ const LINK_DROPPED_BEFORE_ANSWER = "The link to the relay dropped";
 // show up in another room it moved to), then to come back to its own room.
 const PLUGIN_APPEAR_MS = 2500;
 const PLUGIN_RETURN_MS = 30_000;
+// How often the relay is asked during the longer wait
+const PLUGIN_ASK_EVERY_MS = 2500;
 const OUTCOMES: readonly string[] = ["applied", "not_applied", "unknown"];
 const RETRY_CLASSES: readonly string[] = ["retryable", "read_canvas_first", "fix_input", "needs_human"];
 
@@ -620,6 +622,21 @@ export class FigmaConnection {
   }
 
   /**
+   * Wait for the plugin to come back to its room, asking the relay every few
+   * seconds instead of only at the end: a lost presence event would otherwise
+   * hold the call for the whole wait, and so would a plugin that reopened in
+   * a new room an auto-paired session can follow.
+   */
+  private async waitForReturn(ms: number): Promise<void> {
+    const deadline = Date.now() + ms;
+    while (this.currentRoom && Date.now() < deadline) {
+      await this.waitForPlugin(Math.min(PLUGIN_ASK_EVERY_MS, deadline - Date.now()));
+      if (this.presenceByRoom.get(this.currentRoom) !== false) return;
+      if (!this.roomWasChosenByCaller && (await this.pluginElsewhere())) return;
+    }
+  }
+
+  /**
    * The paired room went quiet. Ask the relay who is actually there and, if
    * exactly one plugin is connected, move to it.
    *
@@ -670,7 +687,7 @@ export class FigmaConnection {
       this.presenceByRoom.get(this.currentRoom) === false &&
       (this.roomWasChosenByCaller || !(await this.pluginElsewhere()))
     ) {
-      await this.waitForPlugin(PLUGIN_RETURN_MS - PLUGIN_APPEAR_MS);
+      await this.waitForReturn(PLUGIN_RETURN_MS - PLUGIN_APPEAR_MS);
     }
     if (this.currentRoom && this.presenceByRoom.get(this.currentRoom) === false) {
       // The plugin may not be gone — it may have MOVED. Reopening it, or

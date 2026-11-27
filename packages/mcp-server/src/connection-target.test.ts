@@ -276,6 +276,48 @@ describe("a plugin between reconnects", () => {
     await conn.sendCommandDetailed("create_frame", {}, 5000);
     expect((await back).commands.map((c) => c.command)).toEqual(["create_frame"]);
   }, 15000);
+
+  // The relay is asked every few seconds while waiting, so the wait ends soon
+  // after the answer changes instead of running to its end.
+  test("an auto-paired session follows a plugin that reopens in a new room during the wait", async () => {
+    await relay();
+    const first = await plugin("room-a", { fileName: "Alpha" });
+    const conn = connection();
+    await conn.sendCommandDetailed("get_selection", {}, 5000);
+    await first.leave();
+    const reopened = new Promise<FakePlugin>((resolve) =>
+      setTimeout(() => resolve(plugin("room-c", { fileName: "Alpha" })), away)
+    );
+
+    const start = Date.now();
+    await conn.sendCommandDetailed("create_frame", {}, 5000);
+    expect(Date.now() - start).toBeLessThan(away + 5000);
+    expect((await reopened).commands.map((c) => c.command)).toEqual(["create_frame"]);
+    expect(conn.room).toBe("room-c");
+  }, 40000);
+
+  test("a plugin that comes back to its room is found even when its presence event is lost", async () => {
+    const port = PORT + 4;
+    const { sockets } = await closableRelay(port);
+    const first = await plugin("room-a", { fileName: "Alpha" }, undefined, port);
+    const conn = connection({}, port);
+    await conn.joinRoom("room-a");
+    const agentSocket = [...sockets].at(-1)!;
+    await first.leave();
+    // The session heard the plugin leave; drop the presence that says it is back
+    const send = agentSocket.send.bind(agentSocket);
+    agentSocket.send = ((data: string) => {
+      if (JSON.parse(data).type !== "presence") send(data);
+    }) as typeof agentSocket.send;
+    const back = new Promise<FakePlugin>((resolve) =>
+      setTimeout(() => resolve(plugin("room-a", { fileName: "Alpha" }, undefined, port)), away)
+    );
+
+    const start = Date.now();
+    await conn.sendCommandDetailed("create_frame", {}, 5000);
+    expect(Date.now() - start).toBeLessThan(away + 5000);
+    expect((await back).commands.map((c) => c.command)).toEqual(["create_frame"]);
+  }, 40000);
 });
 
 describe("join report", () => {
