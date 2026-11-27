@@ -101,8 +101,8 @@ describe("panel text", () => {
 
   test("the code-execution hint says scripts reach no-go pages and are reported", () => {
     expect(I18N.en.allow_exec_hint).toContain("no-go");
-    expect(I18N.ja.allow_exec_hint).toContain("立入禁止");
-    expect(I18N.zh.allow_exec_hint).toContain("禁区");
+    expect(I18N.ja.allow_exec_hint).toContain("保護ページ");
+    expect(I18N.zh.allow_exec_hint).toContain("保护页面");
     expect(html).toContain(`data-i18n="allow_exec_hint">${I18N.en.allow_exec_hint}<`);
   });
 });
@@ -352,7 +352,7 @@ describe("approve waits out a script; deny does not", () => {
     const c = card("ja");
     c.onScriptWindow({ type: "script-window", running: false, approveAt: Date.now() + 2500 });
     expect(c.els.approvalApprove.disabled).toBe(true);
-    expect(c.els.approvalHold.textContent).toBe("スクリプトが終わった直後です。承認はあと3秒で押せます");
+    expect(c.els.approvalHold.textContent).toBe("スクリプトが終わった直後です。承認はあと3秒で押せます。");
   });
 
   test("while a script runs, approve is held without a count", () => {
@@ -730,5 +730,17 @@ describe("labels the panel words", () => {
     expect(en(describeScale("execute_code", {}))).toBe("");
     const ja = scaleText("ja");
     expect(ja([{ key: "nodes", n: 3 }])).toBe(I18N.ja.scale_nodes.replace("{n}", "3"));
+    expect(ja(batch)).toBe("コマンド4件 · execute_codeを含む · 2件は見えない参照が残る · 1件は元に戻せない");
+  });
+
+  test("the Japanese and Chinese panels word their headings, accessible names and scale line", () => {
+    const keys = Object.keys(I18N.en).filter((k) => /^(rules|memory|guards|guards_modal|token|kits|sessions|moment)_label$|^token_chip$|^aria_|^scale_/.test(k));
+    expect(keys.length).toBeGreaterThanOrEqual(27);
+    for (const locale of ["ja", "zh"] as const) {
+      for (const k of keys) {
+        // execute_code stays the tool's own name; the rest is no longer the English
+        expect({ k, v: I18N[locale][k] }).toEqual({ k, v: expect.not.stringMatching(/^[A-Z\s›-]+$|\b(node|command|ghost|irreversible|unreadable|close|kit|precedent|Loading|Language|Approvals|client)\b/) });
+      }
+    }
   });
 });
