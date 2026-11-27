@@ -154,6 +154,35 @@ describe("per-call room", () => {
     expect((await back).commands.map((c) => c.command)).toEqual(["create_frame"]);
   }, 15000);
 
+  // Presence can say the plugin is in while the relay's list says it is not
+  // (it joined and left again in between); the wait still paces its asks.
+  test("a named room whose presence and room list disagree is not asked in a tight loop", async () => {
+    await relay();
+    const first = await plugin("room-b", { fileName: "Beta" });
+    const conn = connection();
+    await conn.sendCommandDetailed("get_selection", {}, 5000, { room: "room-b" });
+    await first.leave();
+    const listRooms = conn.listRooms.bind(conn);
+    let asks = 0;
+    conn.listRooms = async () => {
+      const rooms = await listRooms();
+      asks++;
+      if (!rooms.find((r) => r.room === "room-b")?.hasPlugin) {
+        (conn as unknown as { presenceByRoom: Map<string, boolean> }).presenceByRoom.set("room-b", true);
+      }
+      return rooms;
+    };
+    const back = new Promise<FakePlugin>((resolve) =>
+      setTimeout(() => resolve(plugin("room-b", { fileName: "Beta" })), 1000)
+    );
+
+    const { receipt } = await conn.sendCommandDetailed("create_frame", {}, 5000, { room: "room-b" });
+    expect(receipt.outcome).toBe("applied");
+    await back;
+    // About one ask per 150ms over the second the plugin was away
+    expect(asks).toBeLessThan(15);
+  }, 15000);
+
   test("a plugin that does not come back to a named room fails after about 10 seconds, nothing sent", async () => {
     await relay();
     const first = await plugin("room-b", { fileName: "Beta" });

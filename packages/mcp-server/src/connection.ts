@@ -756,10 +756,12 @@ export class FigmaConnection {
       if (Date.now() >= deadline) {
         throw absent(`No Figma plugin came back to room ${room} within ${NAMED_ROOM_WAIT_MS / 1000} seconds`);
       }
+      // At least one pause per ask: presence can say the plugin is in while
+      // the relay's list says it already left again
       const askAt = Math.min(deadline, Date.now() + PLUGIN_ASK_EVERY_MS);
-      while (Date.now() < askAt && this.presenceByRoom.get(room) !== true) {
+      do {
         await new Promise((r) => setTimeout(r, 150));
-      }
+      } while (Date.now() < askAt && this.presenceByRoom.get(room) !== true);
       live = (await this.listRooms()).find((r) => r.room === room);
     }
     this.presenceByRoom.set(room, true);
