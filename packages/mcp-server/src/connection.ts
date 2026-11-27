@@ -677,8 +677,9 @@ export class FigmaConnection {
     if (this.currentRoom && this.presenceByRoom.get(this.currentRoom) === false) {
       await this.waitForPlugin(PLUGIN_APPEAR_MS);
     }
-    // Still absent, and no plugin elsewhere to follow: it may be between
-    // reconnects. The relay drops an idle plugin, and the plugin dials back on
+    // Still absent, and either the caller chose this room (join_room; it is
+    // never left for another) or no plugin elsewhere to follow: it may be
+    // between reconnects. A call that names its room skips this (namedRoom). The relay drops an idle plugin, and the plugin dials back on
     // a page timer that a hidden window (display asleep, screen saver) can
     // hold back. Nothing has been sent, so waiting longer is safe; the cost is
     // a later error when the plugin is really closed.
