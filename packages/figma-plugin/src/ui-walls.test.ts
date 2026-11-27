@@ -461,6 +461,26 @@ describe("kit card", () => {
     expect(c.state().hold).toBe(true);
   });
 
+  test("a rule set that differs from the file offers its three choices one to a row", () => {
+    for (const newer of ["file", "kit"]) {
+      const shown: { actions: unknown[]; stacked?: boolean }[] = [];
+      lift<() => void>(
+        ["evalMoments"],
+        `var momentHold = false, kitGoneName = null, healedNotice = null, rsList = [];
+         var momentAnswered = { wound: false, drift: false, first: false };
+         var rsStatusData = { linked: 'Core', state: 'drifted', newer: newer, fileChars: 1500, setChars: 1234 };
+         function showMomentCard(body, actions, stacked) { shown.push({ actions: actions, stacked: stacked }); }
+         function hideMomentCard() {}
+         function momentAct() {}`,
+        "evalMoments",
+        { shown, newer, t: tFor("ja") }
+      )();
+      expect(shown.length).toBe(1);
+      expect(shown[0].actions.length).toBe(3);
+      expect(shown[0].stacked).toBe(true);
+    }
+  });
+
   test("overwriting someone else's push takes two clicks", () => {
     const c = card();
     c.momentAct("push", null, "Core");

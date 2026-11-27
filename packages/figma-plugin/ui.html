@@ -2919,7 +2919,8 @@
         var pull = { label: fill('moment_drift_pull', s.linked), fn: function () { momentAnswered.drift = true; momentAct('restore', mineNewer ? { force: true } : null, s.linked); } };
         var push = { label: fill('moment_drift_push', s.linked), fn: function () { momentAnswered.drift = true; momentAct('push', null, s.linked); } };
         var later = { label: t('moment_later'), quiet: true, fn: function () { momentAnswered.drift = true; hideMomentCard(); } };
-        showMomentCard(head, mineNewer ? [push, pull, later] : [pull, push, later]);
+        // Three choices do not fit side by side in a narrow panel: one to a row
+        showMomentCard(head, mineNewer ? [push, pull, later] : [pull, push, later], true);
         return;
       }
       if (s.state === 'unlinked' && s.fileChars === 0 && rsList.length > 0 && !momentAnswered.first) {
